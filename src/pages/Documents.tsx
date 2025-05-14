@@ -22,6 +22,7 @@ const Documents: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [editingDocument, setEditingDocument] = useState<{ id: string; title: string } | null>(null);
   const [newTitle, setNewTitle] = useState('');
+  const documentRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     console.log('Documents component mounted');
@@ -34,6 +35,23 @@ const Documents: React.FC = () => {
       documents
     });
   }, [documents]);
+
+  useEffect(() => {
+    const handleScrollToDocument = (e: CustomEvent) => {
+      const documentId = e.detail.documentId;
+      const el = documentRefs.current[documentId];
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Optional: Add a temporary highlight effect
+        el.classList.add('ring', 'ring-teal-400', 'transition-all', 'duration-300');
+        setTimeout(() => {
+          el.classList.remove('ring', 'ring-teal-400');
+        }, 2000); // Highlight for 2 seconds
+      }
+    };
+    window.addEventListener('scroll-to-document', handleScrollToDocument as EventListener);
+    return () => window.removeEventListener('scroll-to-document', handleScrollToDocument as EventListener);
+  }, []);
 
   // Handle document creation
   const handleCreateDocument = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -255,8 +273,13 @@ const Documents: React.FC = () => {
       {/* Documents Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredDocuments.map((doc) => (
-          <div key={doc.id} className="card hover:shadow-md transition-shadow">
-            <div className="flex justify-between">
+          <div 
+            key={doc.id}
+            ref={el => (documentRefs.current[doc.id] = el)}
+            data-document-id={doc.id}
+            className="document-card bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 ease-in-out"
+          >
+            <div className="flex items-center justify-between mb-2">
               {editingDocument?.id === doc.id ? (
                 <div className="flex-1 mr-2">
                   <input

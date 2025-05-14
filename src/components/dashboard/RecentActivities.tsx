@@ -401,22 +401,21 @@ const RecentActivities: React.FC = () => {
     } else if (activity.type === 'essay') {
       navigate(`/dashboard/saos?saoId=${activity.id}`);
     } else if (activity.type === 'document') {
-      console.log('View document activity (preview removed):', activity);
-    } else if (activity.type === 'job' || activity.type === 'reference' || activity.type === 'validator') {
-      console.log('Navigating to references page for:', activity);
-      navigate('/dashboard/references');
+      navigate('/dashboard/documents');
       setTimeout(() => {
-        console.log('Dispatching scroll event for:', activity);
-        const event = new CustomEvent('scroll-to-item', { 
-          detail: { 
-            itemId: activity.id,
-            itemType: activity.type,
+        window.dispatchEvent(new CustomEvent('scroll-to-document', {
+          detail: {
+            documentId: activity.id,
             timestamp: Date.now()
-          } 
-        });
-        console.log('Event details:', event.detail);
-        window.dispatchEvent(event);
-      }, 1000);
+          }
+        }));
+      }, 500);
+    } else if (activity.type === 'job' || activity.type === 'reference' || activity.type === 'validator') {
+      sessionStorage.setItem('pendingScroll', JSON.stringify({
+        itemId: activity.id,
+        itemType: activity.type
+      }));
+      navigate('/dashboard/references');
     }
   };
 

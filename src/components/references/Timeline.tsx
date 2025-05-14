@@ -198,46 +198,33 @@ const Timeline: React.FC = () => {
     description: '',
     skills: []
   });
+  const [pendingScroll, setPendingScroll] = useState<{ itemId: string; itemType: string } | null>(null);
 
   useEffect(() => {
     loadJobs();
     loadReferences();
     loadValidators();
 
+    // Check for pending scroll in sessionStorage (for cross-page navigation)
+    const storedScroll = sessionStorage.getItem('pendingScroll');
+    if (storedScroll) {
+      try {
+        const parsed = JSON.parse(storedScroll);
+        if (parsed && parsed.itemId && parsed.itemType) {
+          setPendingScroll({ itemId: parsed.itemId, itemType: parsed.itemType });
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+      sessionStorage.removeItem('pendingScroll');
+    }
+
     // Add event listener for scrolling to specific items
     const handleScrollToItem = (event: CustomEvent) => {
-      console.log('Scroll event received:', event.detail);
+      console.log('Scroll event received, queuing:', event.detail);
       const { itemId, itemType } = event.detail;
-      
-      // Find the element to scroll to
-      let elementToScroll: HTMLElement | null = null;
-      
-      if (itemType === 'job') {
-        const selector = `[data-job-id="${itemId}"]`;
-        console.log('Looking for job element with selector:', selector);
-        elementToScroll = document.querySelector(selector);
-      } else if (itemType === 'reference') {
-        const selector = `[data-reference-id="${itemId}"]`;
-        console.log('Looking for reference element with selector:', selector);
-        elementToScroll = document.querySelector(selector);
-      } else if (itemType === 'validator') {
-        const selector = `[data-validator-id="${itemId}"]`;
-        console.log('Looking for validator element with selector:', selector);
-        elementToScroll = document.querySelector(selector);
-      }
-
-      console.log('Found element:', elementToScroll);
-
-      if (elementToScroll) {
-        console.log('Scrolling to element');
-        elementToScroll.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        // Add highlight effect
-        elementToScroll.classList.add('highlight-item');
-        setTimeout(() => {
-          elementToScroll?.classList.remove('highlight-item');
-        }, 2000);
-      } else {
-        console.log('No element found to scroll to');
+      if (itemId && itemType) {
+        setPendingScroll({ itemId, itemType });
       }
     };
 
@@ -247,6 +234,111 @@ const Timeline: React.FC = () => {
       window.removeEventListener('scroll-to-item', handleScrollToItem as EventListener);
     };
   }, []);
+
+  useEffect(() => {
+    if (!pendingScroll || loading) {
+      if (pendingScroll && loading) {
+        console.log('Holding scroll for item', pendingScroll.itemId, 'due to main loading state.');
+      }
+      return;
+    }
+
+    const { itemId, itemType } = pendingScroll;
+    let elementToScroll: HTMLElement | null = null;
+    let canAttemptQuery = false;
+
+    console.log(`Processing pending scroll for ${itemType} ${itemId}`);
+
+    if (itemType === 'job') {
+      canAttemptQuery = true;
+      const selector = `[data-job-id="${itemId}"]`;
+      console.log('Attempting to find job element with selector:', selector);
+      elementToScroll = document.querySelector(selector);
+    } else if (itemType === 'reference') {
+      // Check if references data seems populated enough
+      if (Object.keys(references).length > 0 || jobs.some(j => references[j.id]?.some(r => r.id === itemId))) {
+        canAttemptQuery = true;
+        const selector = `[data-reference-id="${itemId}"]`;
+        console.log('Attempting to find reference element with selector:', selector);
+        elementToScroll = document.querySelector(selector);
+      } else {
+        console.log('References data not yet populated enough to find item:', itemId);
+      }
+    } else if (itemType === 'validator') {
+      // Check if validators data seems populated enough
+      let validatorDataSufficient = Object.keys(validators).length > 0;
+      let validatorSkillId: string | null = null;
+      for (const skillIdKey in validators) {
+        if (validators[skillIdKey].some(v => v.id === itemId)) {
+          validatorSkillId = skillIdKey;
+          break;
+        }
+      }
+
+      if (validatorSkillId && jobs.some(job => job.skills?.includes(validatorSkillId))) {
+        canAttemptQuery = true; // Specific validator's job and skill context seems loaded
+      } else if (validatorDataSufficient) {
+        // Fallback: some validators are loaded, so the specific one might be there
+        canAttemptQuery = true;
+        console.log('Validator data seems generally loaded, attempting query for:', itemId);
+      } else {
+         console.log('Validators data not yet populated enough to find item:', itemId);
+      }
+      
+      if (canAttemptQuery) {
+        const selector = `[data-validator-id="${itemId}"]`;
+        console.log('Attempting to find validator element with selector:', selector);
+        elementToScroll = document.querySelector(selector);
+      }
+    }
+
+    if (canAttemptQuery && elementToScroll) {
+      console.log(`Performing queued scroll for ${itemType} ${itemId} to element:`, elementToScroll);
+      // Polling not needed if already found, but keep for consistency
+      let raf = requestAnimationFrame(() => {
+        raf = requestAnimationFrame(() => {
+          elementToScroll.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          elementToScroll.classList.add('highlight-item');
+          setTimeout(() => {
+            elementToScroll?.classList.remove('highlight-item');
+          }, 2000);
+        });
+      });
+      setPendingScroll(null); // Clear pending scroll
+    } else if (canAttemptQuery && !elementToScroll) {
+      // Poll for the element to appear in the DOM (up to 3 seconds)
+      let attempts = 0;
+      const maxAttempts = 30; // 30 x 100ms = 3s
+      const selector =
+        itemType === 'job' ? `[data-job-id="${itemId}"]` :
+        itemType === 'reference' ? `[data-reference-id="${itemId}"]` :
+        itemType === 'validator' ? `[data-validator-id="${itemId}"]` : '';
+      if (!selector) {
+        setPendingScroll(null);
+        return;
+      }
+      const poller = setInterval(() => {
+        const el = document.querySelector(selector);
+        attempts++;
+        if (el) {
+          console.log(`Polling found element for ${itemType} ${itemId} after ${attempts} attempts.`);
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add('highlight-item');
+          setTimeout(() => {
+            el.classList.remove('highlight-item');
+          }, 2000);
+          clearInterval(poller);
+          setPendingScroll(null);
+        } else if (attempts >= maxAttempts) {
+          console.warn(`Polling failed to find element for ${itemType} ${itemId} after ${attempts} attempts.`);
+          clearInterval(poller);
+          setPendingScroll(null);
+        }
+      }, 100);
+    } else if (!canAttemptQuery) {
+      console.log(`Data not yet ready for ${itemType} ${itemId}. Scroll remains pending. Will retry on next data update.`);
+    }
+  }, [pendingScroll, jobs, references, validators, loading]);
 
   const loadJobs = async () => {
     try {
@@ -701,7 +793,11 @@ const Timeline: React.FC = () => {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {references[job.id].map((reference) => (
-                            <div key={reference.id} className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                            <div 
+                              key={reference.id} 
+                              data-reference-id={reference.id}
+                              className="bg-slate-50 rounded-lg p-3 border border-slate-200"
+                            >
                               <div className="flex justify-between items-start">
                                 <div>
                                   <p className="font-medium text-sm text-slate-900">{reference.full_name}</p>
