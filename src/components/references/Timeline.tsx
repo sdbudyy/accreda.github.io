@@ -1,0 +1,613 @@
+import React, { useState } from 'react';
+import { Plus, Calendar, MapPin, Briefcase, Edit2, Trash2, X } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import { useSkillsStore } from '../../store/skills';
+
+interface Job {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  start_date: string;
+  end_date: string | null;
+  description: string;
+  skills?: string[]; // Array of skill IDs
+}
+
+interface JobFormProps {
+  onSubmit: () => void;
+  onCancel: () => void;
+  isEditing: boolean;
+  job: Partial<Job>;
+  onJobChange: (field: keyof Job, value: string) => void;
+  onSkillsToggle: (skillId: string) => void;
+  onSkillsPopupOpen: () => void;
+  skillCategories: Array<{
+    name: string;
+    skills: Array<{
+      id: string;
+      name: string;
+    }>;
+  }>;
+}
+
+const JobForm: React.FC<JobFormProps> = ({
+  onSubmit,
+  onCancel,
+  isEditing,
+  job,
+  onJobChange,
+  onSkillsToggle,
+  onSkillsPopupOpen,
+  skillCategories
+}) => {
+  return (
+    <div className="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+      <h3 className="font-medium mb-4">{isEditing ? 'Edit Job' : 'Add New Job'}</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Job Title</label>
+          <input
+            type="text"
+            value={job.title || ''}
+            onChange={(e) => onJobChange('title', e.target.value)}
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 min-w-[200px]"
+            placeholder="e.g., Software Engineer"
+            maxLength={100}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Company</label>
+          <input
+            type="text"
+            value={job.company || ''}
+            onChange={(e) => onJobChange('company', e.target.value)}
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 min-w-[200px]"
+            placeholder="e.g., Tech Corp"
+            maxLength={100}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
+          <input
+            type="text"
+            value={job.location || ''}
+            onChange={(e) => onJobChange('location', e.target.value)}
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 min-w-[200px]"
+            placeholder="e.g., San Francisco, CA"
+            maxLength={100}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
+            <input
+              type="date"
+              value={job.start_date || ''}
+              onChange={(e) => onJobChange('start_date', e.target.value)}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 min-w-[150px]"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">End Date</label>
+            <input
+              type="date"
+              value={job.end_date || ''}
+              onChange={(e) => onJobChange('end_date', e.target.value)}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 min-w-[150px]"
+              placeholder="Present"
+            />
+          </div>
+        </div>
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+          <textarea
+            value={job.description || ''}
+            onChange={(e) => onJobChange('description', e.target.value)}
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 min-w-[200px]"
+            rows={3}
+            placeholder="Brief description of your role and responsibilities"
+            maxLength={500}
+          />
+        </div>
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-slate-700 mb-1">Skills</label>
+          <div className="flex flex-wrap gap-2 mb-2">
+            {(job.skills || []).map((skillId) => {
+              const skill = skillCategories
+                .flatMap(cat => cat.skills)
+                .find(s => s.id === skillId);
+              return skill ? (
+                <span
+                  key={skillId}
+                  className="px-2 py-1 bg-slate-100 text-slate-700 rounded-full text-xs flex items-center gap-1"
+                >
+                  {skill.name}
+                  <button
+                    onClick={() => onSkillsToggle(skillId)}
+                    className="text-slate-400 hover:text-red-600"
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              ) : null;
+            })}
+          </div>
+          <button
+            onClick={onSkillsPopupOpen}
+            className="btn btn-secondary w-full"
+          >
+            {job.skills?.length ? 'Edit Skills' : 'Select Skills'}
+          </button>
+        </div>
+      </div>
+      <div className="flex justify-end gap-2 mt-4">
+        <button
+          onClick={onCancel}
+          className="btn btn-secondary"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={onSubmit}
+          className="btn btn-primary"
+        >
+          {isEditing ? 'Update Job' : 'Save Job'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Timeline: React.FC = () => {
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [isAddingJob, setIsAddingJob] = useState(false);
+  const [isEditingJob, setIsEditingJob] = useState<string | null>(null);
+  const [isSkillsPopupOpen, setIsSkillsPopupOpen] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { skillCategories } = useSkillsStore();
+  const [newJob, setNewJob] = useState<Partial<Job>>({
+    title: '',
+    company: '',
+    location: '',
+    start_date: '',
+    end_date: '',
+    description: '',
+    skills: []
+  });
+
+  // Load jobs on component mount
+  React.useEffect(() => {
+    loadJobs();
+  }, []);
+
+  const loadJobs = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('jobs')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('start_date', { ascending: false });
+
+      if (error) throw error;
+      setJobs(data || []);
+    } catch (error) {
+      console.error('Error loading jobs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddJob = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('jobs')
+        .insert([{
+          ...newJob,
+          user_id: user.id,
+          skills: newJob.skills || [] // Ensure skills array is included
+        }]);
+
+      if (error) throw error;
+
+      // Reset form and reload jobs
+      setNewJob({
+        title: '',
+        company: '',
+        location: '',
+        start_date: '',
+        end_date: '',
+        description: '',
+        skills: []
+      });
+      setIsAddingJob(false);
+      loadJobs();
+    } catch (error) {
+      console.error('Error adding job:', error);
+    }
+  };
+
+  const handleUpdateJob = async (jobId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('No user found');
+        return;
+      }
+
+      console.log('Updating job:', {
+        jobId,
+        newJob,
+        user: user.id
+      });
+
+      // First, verify the job exists
+      const { data: existingJob, error: fetchError } = await supabase
+        .from('jobs')
+        .select('*')
+        .eq('id', jobId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching existing job:', fetchError);
+        throw fetchError;
+      }
+
+      if (!existingJob) {
+        console.error('Job not found');
+        return;
+      }
+
+      // Prepare the update data
+      const updateData = {
+        title: newJob.title || existingJob.title,
+        company: newJob.company || existingJob.company,
+        location: newJob.location || existingJob.location,
+        start_date: newJob.start_date || existingJob.start_date,
+        end_date: newJob.end_date || existingJob.end_date,
+        description: newJob.description || existingJob.description,
+        skills: newJob.skills || (Array.isArray(existingJob.skills) ? existingJob.skills : []),
+        user_id: user.id
+      };
+
+      console.log('Update data:', updateData);
+
+      const { error: updateError } = await supabase
+        .from('jobs')
+        .update(updateData)
+        .eq('id', jobId)
+        .eq('user_id', user.id); // Add user_id check for security
+
+      if (updateError) {
+        console.error('Error updating job:', updateError);
+        throw updateError;
+      }
+
+      console.log('Job updated successfully');
+
+      // Reset form and reload jobs
+      setNewJob({
+        title: '',
+        company: '',
+        location: '',
+        start_date: '',
+        end_date: '',
+        description: '',
+        skills: []
+      });
+      setIsEditingJob(null);
+      await loadJobs(); // Wait for jobs to reload
+    } catch (error) {
+      console.error('Error in handleUpdateJob:', error);
+    }
+  };
+
+  const handleDeleteJob = async (jobId: string) => {
+    try {
+      const { error } = await supabase
+        .from('jobs')
+        .delete()
+        .eq('id', jobId);
+
+      if (error) throw error;
+      loadJobs();
+    } catch (error) {
+      console.error('Error deleting job:', error);
+    }
+  };
+
+  const handleEditClick = (job: Job) => {
+    console.log('Editing job:', job);
+    setNewJob({
+      ...job,
+      skills: job.skills || []
+    });
+    setIsEditingJob(job.id);
+  };
+
+  const handleSkillToggle = (skillId: string) => {
+    const currentSkills = newJob.skills || [];
+    const updatedSkills = currentSkills.includes(skillId)
+      ? currentSkills.filter(id => id !== skillId)
+      : [...currentSkills, skillId];
+    
+    setNewJob({ ...newJob, skills: updatedSkills });
+  };
+
+  const handleInputChange = (field: keyof Job, value: string) => {
+    setNewJob(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const SkillsPopup = () => {
+    if (!isSkillsPopupOpen) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Select Skills</h3>
+            <button
+              onClick={() => setIsSkillsPopupOpen(null)}
+              className="text-slate-400 hover:text-slate-600"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          
+          <div className="space-y-4">
+            {skillCategories.map((category) => (
+              <div key={category.name} className="border rounded-lg p-4">
+                <h4 className="font-medium mb-2">{category.name}</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {category.skills.map((skill) => (
+                    <label
+                      key={skill.id}
+                      className="flex items-center space-x-2 p-2 rounded hover:bg-slate-50 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={newJob.skills?.includes(skill.id) || false}
+                        onChange={() => handleSkillToggle(skill.id)}
+                        className="rounded text-teal-600 focus:ring-teal-500"
+                      />
+                      <span className="text-sm">{skill.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex justify-end mt-6">
+            <button
+              onClick={() => setIsSkillsPopupOpen(null)}
+              className="btn btn-primary"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="card animate-pulse">
+        <div className="p-6">
+          <div className="h-6 bg-slate-200 rounded w-1/4 mb-4"></div>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex gap-4">
+                <div className="w-24 h-24 bg-slate-200 rounded"></div>
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-slate-200 rounded w-1/3"></div>
+                  <div className="h-4 bg-slate-200 rounded w-1/4"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card">
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-lg font-semibold text-slate-900">Work Experience</h2>
+          <button
+            onClick={() => setIsAddingJob(true)}
+            className="btn btn-primary flex items-center gap-2"
+          >
+            <Plus size={16} />
+            Add Job
+          </button>
+        </div>
+
+        {isAddingJob && (
+          <JobForm
+            onSubmit={handleAddJob}
+            onCancel={() => {
+              setIsAddingJob(false);
+              setNewJob({
+                title: '',
+                company: '',
+                location: '',
+                start_date: '',
+                end_date: '',
+                description: '',
+                skills: []
+              });
+            }}
+            isEditing={false}
+            job={newJob}
+            onJobChange={handleInputChange}
+            onSkillsToggle={handleSkillToggle}
+            onSkillsPopupOpen={() => setIsSkillsPopupOpen('new')}
+            skillCategories={skillCategories}
+          />
+        )}
+
+        <div className="relative">
+          {/* Timeline line */}
+          <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-200"></div>
+
+          <div className="space-y-8">
+            {jobs.map((job, index) => (
+              <div key={job.id} className="relative pl-12">
+                {/* Timeline dot */}
+                <div className="absolute left-0 w-8 h-8 rounded-full bg-teal-100 border-4 border-white flex items-center justify-center">
+                  <Briefcase size={16} className="text-teal-600" />
+                </div>
+
+                {isEditingJob === job.id ? (
+                  <JobForm
+                    onSubmit={() => handleUpdateJob(job.id)}
+                    onCancel={() => {
+                      setIsEditingJob(null);
+                      setNewJob({
+                        title: '',
+                        company: '',
+                        location: '',
+                        start_date: '',
+                        end_date: '',
+                        description: '',
+                        skills: []
+                      });
+                    }}
+                    isEditing={true}
+                    job={newJob}
+                    onJobChange={handleInputChange}
+                    onSkillsToggle={handleSkillToggle}
+                    onSkillsPopupOpen={() => setIsSkillsPopupOpen(job.id)}
+                    skillCategories={skillCategories}
+                  />
+                ) : (
+                  <div className="bg-white rounded-lg border border-slate-200 p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h3 className="font-semibold text-slate-900">{job.title}</h3>
+                        <p className="text-slate-600">{job.company}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setNewJob({
+                              ...job,
+                              skills: job.skills || []
+                            });
+                            setIsSkillsPopupOpen(job.id);
+                          }}
+                          className="p-1 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+                          title="Edit Skills"
+                        >
+                          <Plus size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleEditClick(job)}
+                          className="p-1 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+                          title="Edit Job"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteJob(job.id)}
+                          className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete Job"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 text-sm text-slate-500 mb-3">
+                      <div className="flex items-center gap-1">
+                        <Calendar size={14} />
+                        <span>
+                          {new Date(job.start_date).toLocaleDateString()} - {job.end_date ? new Date(job.end_date).toLocaleDateString() : 'Present'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <MapPin size={14} />
+                        <span>{job.location}</span>
+                      </div>
+                    </div>
+
+                    {job.description && (
+                      <p className="text-slate-600 text-sm mb-3">{job.description}</p>
+                    )}
+
+                    <div className="mt-3">
+                      <div className="flex justify-between items-center mb-2">
+                        <h4 className="text-sm font-medium text-slate-700">Skills:</h4>
+                        <button
+                          onClick={() => {
+                            setNewJob({
+                              ...job,
+                              skills: job.skills || []
+                            });
+                            setIsSkillsPopupOpen(job.id);
+                          }}
+                          className="text-xs text-teal-600 hover:text-teal-700 font-medium"
+                        >
+                          Edit Skills
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {job.skills && job.skills.length > 0 ? (
+                          job.skills.map((skillId) => {
+                            const skill = skillCategories
+                              .flatMap(cat => cat.skills)
+                              .find(s => s.id === skillId);
+                            return skill ? (
+                              <span
+                                key={skillId}
+                                className="px-2 py-1 bg-slate-100 text-slate-700 rounded-full text-xs"
+                              >
+                                {skill.name}
+                              </span>
+                            ) : null;
+                          })
+                        ) : (
+                          <span className="text-sm text-slate-500">No skills added yet</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {jobs.length === 0 && !isAddingJob && (
+              <div className="text-center py-8 text-slate-500">
+                <Briefcase size={24} className="mx-auto mb-2 text-slate-400" />
+                <p>No work experience added yet</p>
+                <button
+                  onClick={() => setIsAddingJob(true)}
+                  className="text-teal-600 hover:text-teal-700 mt-2"
+                >
+                  Add your first job
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <SkillsPopup />
+    </div>
+  );
+};
+
+export default Timeline; 
