@@ -18,22 +18,18 @@ const UploadDocument: React.FC = () => {
   const [category, setCategory] = useState(categories[0]);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { addDocument, loading } = useDocumentsStore();
+  const { createDocument, loading } = useDocumentsStore();
 
   const testUpload = async () => {
     try {
       console.log('Testing document upload without file...');
-      await addDocument({
-        title: 'Test Document',
-        description: 'This is a test document',
-        category: 'Technical Report',
-        status: 'draft',
-        related_skill_id: null,
-        related_experience_id: null,
-        file_url: null,
-        file_type: null,
-        file_size: null,
-      });
+      await createDocument(
+        'Test Document',
+        'This is a test document',
+        'other',
+        undefined,
+        'Technical Report'
+      );
       console.log('Test upload successful');
     } catch (err) {
       console.error('Test upload failed:', err);
@@ -55,17 +51,13 @@ const UploadDocument: React.FC = () => {
     }
 
     try {
-      await addDocument({
-        title: title.trim(),
-        description: description.trim() || null,
-        category,
-        status: 'draft',
-        related_skill_id: null,
-        related_experience_id: null,
-        file_url: null,
-        file_type: null,
-        file_size: null,
-      }, file);
+      await createDocument(
+        title.trim(),
+        description.trim() || '',
+        'other',
+        file,
+        category
+      );
 
       // Reset form
       setTitle('');
@@ -202,7 +194,7 @@ const UploadDocument: React.FC = () => {
                           <p className="pl-1">or drag and drop</p>
                         </div>
                         <p className="text-xs text-slate-500">
-                          PDF, DOC, DOCX up to 10MB
+                          Up to 10MB
                         </p>
                       </>
                     )}

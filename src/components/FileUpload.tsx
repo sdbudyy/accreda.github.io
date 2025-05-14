@@ -13,10 +13,7 @@ export interface FileUploadRef {
 }
 
 const defaultAcceptedTypes = {
-  'image/*': [],
-  'application/pdf': ['.pdf'],
-  'application/msword': ['.doc'],
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx']
+  'image/*': []
 };
 
 const FileUpload = forwardRef<FileUploadRef, FileUploadProps>(({
@@ -75,9 +72,6 @@ const FileUpload = forwardRef<FileUploadRef, FileUploadProps>(({
     if (file.type.startsWith('image/')) {
       return <Image className="w-8 h-8 text-blue-500" />;
     }
-    if (file.type.includes('pdf')) {
-      return <FileText className="w-8 h-8 text-red-500" />;
-    }
     return <File className="w-8 h-8 text-gray-500" />;
   };
 
@@ -108,7 +102,7 @@ const FileUpload = forwardRef<FileUploadRef, FileUploadProps>(({
           <div>
             <p className="text-slate-600">Drag and drop files here, or click to select files</p>
             <p className="text-sm text-slate-500 mt-1">
-              Supported formats: Images, PDF, Word documents
+              Supported formats: Images
             </p>
           </div>
         )}

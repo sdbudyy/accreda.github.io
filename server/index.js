@@ -8,9 +8,9 @@ const port = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-app.post('/api/create-checkout-session', async (req, res) => {
-  // Stripe logic removed. Placeholder response:
-  res.json({ message: 'Stripe functionality removed.' });
+// Placeholder for root path or other routes
+app.get('/', (req, res) => {
+  res.send('Server is running.');
 });
 
 app.listen(port, () => {

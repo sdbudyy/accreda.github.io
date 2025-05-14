@@ -5,7 +5,6 @@ import { useSAOsStore, SAO } from '../../store/saos';
 import { useSkillsStore } from '../../store/skills';
 import { useNavigate } from 'react-router-dom';
 import { SAOModal } from '../../pages/SAOs';
-import DocumentPreview from '../documents/DocumentPreview';
 
 interface Activity {
   id: string;
@@ -21,7 +20,6 @@ const RecentActivities: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingSAO, setEditingSAO] = useState<SAO | null>(null);
   const [isSAOModalOpen, setIsSAOModalOpen] = useState(false);
-  const [previewDocument, setPreviewDocument] = useState<{ id: string; title: string } | null>(null);
   const { saos } = useSAOsStore();
   const { skillCategories } = useSkillsStore();
   const navigate = useNavigate();
@@ -403,9 +401,7 @@ const RecentActivities: React.FC = () => {
     } else if (activity.type === 'essay') {
       navigate(`/dashboard/saos?saoId=${activity.id}`);
     } else if (activity.type === 'document') {
-      const titleMatch = activity.title.match(/"([^"]+)"/);
-      const documentTitle = titleMatch ? titleMatch[1] : 'Document';
-      setPreviewDocument({ id: activity.id, title: documentTitle });
+      console.log('View document activity (preview removed):', activity);
     } else if (activity.type === 'job' || activity.type === 'reference' || activity.type === 'validator') {
       console.log('Navigating to references page for:', activity);
       navigate('/dashboard/references');
@@ -540,16 +536,6 @@ const RecentActivities: React.FC = () => {
           isOpen={isSAOModalOpen}
           onClose={() => { setIsSAOModalOpen(false); setEditingSAO(null); }}
           editSAO={editingSAO}
-        />
-      )}
-
-      {/* Document Preview Modal */}
-      {previewDocument && (
-        <DocumentPreview
-          isOpen={!!previewDocument}
-          onClose={() => setPreviewDocument(null)}
-          documentId={previewDocument.id}
-          documentTitle={previewDocument.title}
         />
       )}
     </>

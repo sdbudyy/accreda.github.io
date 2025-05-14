@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { FileText, Download, Trash2, AlertCircle, Upload, Search, Filter, X, Edit2 } from 'lucide-react';
 import { useDocumentsStore, Document } from '../store/documents';
 import { supabase } from '../lib/supabase';
-import DocumentPreview from '../components/documents/DocumentPreview';
 
 const Documents: React.FC = () => {
   const {
@@ -21,7 +20,6 @@ const Documents: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'date' | 'name'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [previewDocument, setPreviewDocument] = useState<{ id: string; title: string } | null>(null);
   const [editingDocument, setEditingDocument] = useState<{ id: string; title: string } | null>(null);
   const [newTitle, setNewTitle] = useState('');
 
@@ -50,21 +48,9 @@ const Documents: React.FC = () => {
       const fileType = file.type;
       
       if (fileType.startsWith('text/')) {
-        // For text files, read as text
         content = await file.text();
-      } else if (fileType === 'application/pdf') {
-        // For PDFs, read as ArrayBuffer and store as base64
-        const arrayBuffer = await file.arrayBuffer();
-        const uint8Array = new Uint8Array(arrayBuffer);
-        content = Array.from(uint8Array).join(',');
-      } else if (fileType === 'application/msword' || 
-                fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-        // For Word documents, read as ArrayBuffer
-        const arrayBuffer = await file.arrayBuffer();
-        content = new Uint8Array(arrayBuffer).toString();
       } else {
-        // For other file types, store a placeholder
-        content = `Content preview not available for ${fileType}`;
+        content = `File type (${fileType}) not directly viewable. Will be stored.`; // Simplified content for non-text
       }
       
       await createDocument(file.name, content, 'other', file);
@@ -291,12 +277,6 @@ const Documents: React.FC = () => {
               <div className="flex space-x-1">
                 <button 
                   className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700"
-                  onClick={() => setPreviewDocument({ id: doc.id, title: doc.title })}
-                >
-                  <FileText size={16} />
-                </button>
-                <button 
-                  className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700"
                   onClick={() => handleEditTitle(doc)}
                 >
                   <Edit2 size={16} />
@@ -316,11 +296,11 @@ const Documents: React.FC = () => {
               </div>
             </div>
             
-            {/* Only show content for text files */}
+            {/* Only show content for text files, or a placeholder for others */}
             {doc.file_type && doc.file_type.startsWith('text/') ? (
               <p className="text-sm text-slate-600 mt-2 line-clamp-2">{doc.content}</p>
             ) : (
-              <p className="text-sm text-slate-400 mt-2 italic">Preview not available</p>
+              <p className="text-sm text-slate-400 mt-2 italic">Content not viewable here. Download to see full content.</p>
             )}
             
             <div className="flex justify-between items-center mt-4 pt-3 border-t border-slate-100">
@@ -366,16 +346,6 @@ const Documents: React.FC = () => {
           <h3 className="mt-4 text-lg font-medium text-slate-900">Error loading documents</h3>
           <p className="mt-2 text-slate-500">{error}</p>
         </div>
-      )}
-
-      {/* Document Preview Modal */}
-      {previewDocument && (
-        <DocumentPreview
-          isOpen={!!previewDocument}
-          onClose={() => setPreviewDocument(null)}
-          documentId={previewDocument.id}
-          documentTitle={previewDocument.title}
-        />
       )}
     </div>
   );
