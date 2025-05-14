@@ -1,14 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { Clock, Calendar, Award, BarChart3, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import ProgressCard from '../components/dashboard/ProgressCard';
-import RecentActivities from '../components/dashboard/RecentActivities';
-import UpcomingDeadlines from '../components/dashboard/UpcomingDeadlines';
-import SkillsOverview from '../components/dashboard/SkillsOverview';
+// Lazy load heavy dashboard components
+const ProgressCard = React.lazy(() => import('../components/dashboard/ProgressCard'));
+const RecentActivities = React.lazy(() => import('../components/dashboard/RecentActivities'));
+const UpcomingDeadlines = React.lazy(() => import('../components/dashboard/UpcomingDeadlines'));
+const SkillsOverview = React.lazy(() => import('../components/dashboard/SkillsOverview'));
 import { useProgressStore } from '../store/progress';
 import { useEssayStore } from '../store/essays';
 import { useSkillsStore } from '../store/skills';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 
 type ProgressStat = {
   title: string;
@@ -139,11 +141,13 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Progress Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {progressStats.map((stat, index) => (
-          <ProgressCard key={index} {...stat} />
-        ))}
-      </div>
+      <Suspense fallback={<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">{[...Array(4)].map((_, i) => <div key={i} className="card animate-pulse h-32" />)}</div>}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {progressStats.map((stat, index) => (
+            <ProgressCard key={index} {...stat} />
+          ))}
+        </div>
+      </Suspense>
 
       {/* Main Dashboard Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -155,7 +159,9 @@ const Dashboard: React.FC = () => {
                 Recent Activities
               </h2>
             </div>
-            <RecentActivities />
+            <Suspense fallback={<div className="p-6 text-center text-slate-400">Loading activities...</div>}>
+              <RecentActivities />
+            </Suspense>
           </div>
 
           <div className="card">
@@ -168,27 +174,16 @@ const Dashboard: React.FC = () => {
                 View All <ArrowRight size={14} className="ml-1" />
               </button>
             </div>
-            <UpcomingDeadlines />
+            <Suspense fallback={<div className="p-6 text-center text-slate-400">Loading deadlines...</div>}>
+              <UpcomingDeadlines />
+            </Suspense>
           </div>
         </div>
 
         <div className="space-y-6">
-          <div className="card">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold flex items-center">
-                <BarChart3 size={18} className="mr-2 text-teal-600" />
-                Skills Overview
-              </h2>
-              <button 
-                className="text-sm text-teal-600 hover:text-teal-700 flex items-center"
-                onClick={() => navigate('/skills')}
-              >
-                Details <ArrowRight size={14} className="ml-1" />
-              </button>
-            </div>
+          <Suspense fallback={<div className="card animate-pulse h-32" />}> 
             <SkillsOverview />
-          </div>
-          
+          </Suspense>
           <div className="card border-2 border-teal-100 bg-teal-50/50">
             <h3 className="font-semibold text-teal-800 mb-2">AI Writing Assistant</h3>
             <p className="text-sm text-teal-700 mb-3">
@@ -208,4 +203,10 @@ const Dashboard: React.FC = () => {
   );
 };
 
-export default Dashboard;
+export default function DashboardWithBoundary() {
+  return (
+    <ErrorBoundary>
+      <Dashboard />
+    </ErrorBoundary>
+  );
+}

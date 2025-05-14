@@ -7,6 +7,7 @@ const UserMenu: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -16,6 +17,7 @@ const UserMenu: React.FC = () => {
       if (user) {
         setUserEmail(user.email || '');
         setUserName(user.user_metadata?.full_name || user.email?.split('@')[0] || 'User');
+        setAvatarUrl(user.user_metadata?.avatar_url || '');
       }
     };
 
@@ -60,9 +62,17 @@ const UserMenu: React.FC = () => {
         className="flex items-center space-x-2 focus:outline-none"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center text-white">
-          <span className="text-sm font-semibold">{getInitials(userName)}</span>
-        </div>
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt="Avatar"
+            className="w-8 h-8 rounded-full object-cover bg-teal-500 text-white"
+          />
+        ) : (
+          <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center text-white">
+            <span className="text-sm font-semibold">{getInitials(userName)}</span>
+          </div>
+        )}
         <span className="hidden md:block text-sm font-medium">{userName}</span>
         <ChevronDown size={16} className={`text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>

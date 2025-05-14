@@ -200,10 +200,46 @@ const Timeline: React.FC = () => {
   });
   const [pendingScroll, setPendingScroll] = useState<{ itemId: string; itemType: string } | null>(null);
 
+  const fetchAll = async () => {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      // Fetch jobs, references, validators in parallel
+      const [jobsRes, refsRes, valsRes] = await Promise.all([
+        supabase.from('jobs').select('id, title, company, location, start_date, end_date, description, skills').eq('user_id', user.id).order('start_date', { ascending: false }),
+        supabase.from('job_references').select('id, user_id, job_id, full_name, email, description, reference_number, created_at, updated_at').eq('user_id', user.id),
+        supabase.from('validators').select('id, user_id, skill_id, full_name, email, description, created_at, updated_at').eq('user_id', user.id)
+      ]);
+      // Jobs
+      setJobs(jobsRes.data || []);
+      // References
+      if (refsRes.data) {
+        const groupedReferences = refsRes.data.reduce((acc, reference) => {
+          if (!acc[reference.job_id]) acc[reference.job_id] = [];
+          acc[reference.job_id].push(reference);
+          return acc;
+        }, {} as Record<string, Reference[]>);
+        setReferences(groupedReferences);
+      }
+      // Validators
+      if (valsRes.data) {
+        const groupedValidators = valsRes.data.reduce((acc, validator) => {
+          if (!acc[validator.skill_id]) acc[validator.skill_id] = [];
+          acc[validator.skill_id].push(validator);
+          return acc;
+        }, {} as Record<string, Validator[]>);
+        setValidators(groupedValidators);
+      }
+    } catch (error) {
+      console.error('Error loading jobs, references, or validators:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    loadJobs();
-    loadReferences();
-    loadValidators();
+    fetchAll();
 
     // Check for pending scroll in sessionStorage (for cross-page navigation)
     const storedScroll = sessionStorage.getItem('pendingScroll');
@@ -340,80 +376,6 @@ const Timeline: React.FC = () => {
     }
   }, [pendingScroll, jobs, references, validators, loading]);
 
-  const loadJobs = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('jobs')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('start_date', { ascending: false });
-
-      if (error) throw error;
-      setJobs(data || []);
-    } catch (error) {
-      console.error('Error loading jobs:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadReferences = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('job_references')
-        .select('*')
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      // Group references by job_id
-      const groupedReferences = data.reduce((acc, reference) => {
-        if (!acc[reference.job_id]) {
-          acc[reference.job_id] = [];
-        }
-        acc[reference.job_id].push(reference);
-        return acc;
-      }, {} as Record<string, Reference[]>);
-
-      setReferences(groupedReferences);
-    } catch (error) {
-      console.error('Error loading references:', error);
-    }
-  };
-
-  const loadValidators = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('validators')
-        .select('*')
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      // Group validators by skill_id
-      const groupedValidators = data.reduce((acc, validator) => {
-        if (!acc[validator.skill_id]) {
-          acc[validator.skill_id] = [];
-        }
-        acc[validator.skill_id].push(validator);
-        return acc;
-      }, {} as Record<string, Validator[]>);
-
-      setValidators(groupedValidators);
-    } catch (error) {
-      console.error('Error loading validators:', error);
-    }
-  };
-
   const handleAddJob = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -440,7 +402,8 @@ const Timeline: React.FC = () => {
         skills: []
       });
       setIsAddingJob(false);
-      loadJobs();
+      await fetchAll();
+      window.dispatchEvent(new Event('jobs-updated'));
     } catch (error) {
       console.error('Error adding job:', error);
     }
@@ -512,7 +475,8 @@ const Timeline: React.FC = () => {
         skills: []
       });
       setIsEditingJob(null);
-      await loadJobs();
+      await fetchAll();
+      window.dispatchEvent(new Event('jobs-updated'));
     } catch (error) {
       console.error('Error in handleUpdateJob:', error);
     }
@@ -526,7 +490,8 @@ const Timeline: React.FC = () => {
         .eq('id', jobId);
 
       if (error) throw error;
-      loadJobs();
+      await fetchAll();
+      window.dispatchEvent(new Event('jobs-updated'));
     } catch (error) {
       console.error('Error deleting job:', error);
     }
@@ -570,10 +535,11 @@ const Timeline: React.FC = () => {
   const SkillsPopup = () => {
     if (!isSkillsPopupOpen) return null;
 
-    const handleDone = () => {
+    const handleDone = async () => {
       // If we're editing an existing job, update it immediately
       if (isSkillsPopupOpen !== 'new') {
-        handleUpdateJob(isSkillsPopupOpen);
+        await handleUpdateJob(isSkillsPopupOpen);
+        await fetchAll();
       }
       setIsSkillsPopupOpen(null);
     };

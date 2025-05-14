@@ -97,29 +97,15 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
       }
       console.log('User authenticated:', user.id);
 
-      // Fetch all skills from the skills table (with UUIDs)
-      console.log('Fetching skills from DB...');
-      const { data: dbSkills, error: dbSkillsError } = await supabase
-        .from('skills')
-        .select('id, name, category');
-      if (dbSkillsError) {
-        console.error('Error fetching skills from DB:', dbSkillsError);
-        throw dbSkillsError;
-      }
-      console.log('Skills fetched from DB:', dbSkills?.length);
-
-      // First, check if user has any skills
-      console.log('Checking existing user skills...');
-      let { data: existingSkills, error: fetchError } = await supabase
-        .from('user_skills')
-        .select('*')
-        .eq('user_id', user.id);
-
-      if (fetchError) {
-        console.error('Error fetching user skills:', fetchError);
-        throw fetchError;
-      }
-      console.log('Existing user skills:', existingSkills?.length);
+      // Fetch all skills and user_skills in parallel
+      const [skillsRes, userSkillsRes] = await Promise.all([
+        supabase.from('skills').select('id, name, category'),
+        supabase.from('user_skills').select('id, user_id, skill_id, category_name, skill_name, rank, status').eq('user_id', user.id)
+      ]);
+      const dbSkills = skillsRes.data || [];
+      let existingSkills = userSkillsRes.data || [];
+      console.log('Skills fetched from DB:', dbSkills.length);
+      console.log('Existing user skills:', existingSkills.length);
 
       // If no skills exist for the user, initialize them using UUIDs from dbSkills
       if (!existingSkills || existingSkills.length === 0) {
@@ -159,7 +145,7 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
         console.log('Fetching newly initialized skills...');
         const { data: newSkills, error: newFetchError } = await supabase
           .from('user_skills')
-          .select('*')
+          .select('id, user_id, skill_id, category_name, skill_name, rank, status')
           .eq('user_id', user.id);
 
         if (newFetchError) {

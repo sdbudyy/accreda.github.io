@@ -511,6 +511,15 @@ const References: React.FC = () => {
     return () => window.removeEventListener('scroll-to-item', handleScrollToItem);
   }, []);
 
+  useEffect(() => {
+    const handleJobsUpdated = () => {
+      loadJobs();
+      loadReferences();
+    };
+    window.addEventListener('jobs-updated', handleJobsUpdated);
+    return () => window.removeEventListener('jobs-updated', handleJobsUpdated);
+  }, []);
+
   const handleValidatorSave = () => {
     loadValidators();
   };
