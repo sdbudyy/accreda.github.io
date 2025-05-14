@@ -15,7 +15,9 @@ const SkillItem = memo(({
   getStatusClass, 
   getRankColor, 
   getRankLabel,
-  skillRef
+  skillRef,
+  linkedSkillIds,
+  fetchLinkedItems
 }: { 
   skill: Skill;
   categoryIndex: number;
@@ -26,59 +28,21 @@ const SkillItem = memo(({
   getRankColor: (rank: number | undefined) => string;
   getRankLabel: (rank: number | undefined) => string;
   skillRef?: (el: HTMLDivElement | null) => void;
+  linkedSkillIds: Set<string>;
+  fetchLinkedItems: (skillId: string) => Promise<{ saos: any[]; jobs: any[] }>;
 }) => {
   const [isLinksPopupOpen, setIsLinksPopupOpen] = useState(false);
-  const [linkedSAOs, setLinkedSAOs] = useState<SAO[]>([]);
+  const [linkedSAOs, setLinkedSAOs] = useState<any[]>([]);
   const [linkedJobs, setLinkedJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [hasLinkedItems, setHasLinkedItems] = useState(false);
-
-  const checkLinkedItems = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No authenticated user found');
-
-      // Fetch SAOs linked to this skill
-      const { data: saos, error: saosError } = await supabase
-        .from('saos')
-        .select(`
-          *,
-          sao_skills!inner (
-            skill_id
-          )
-        `)
-        .eq('user_id', user.id)
-        .eq('sao_skills.skill_id', skill.id)
-        .order('created_at', { ascending: false });
-
-      if (saosError) throw saosError;
-
-      // Fetch jobs linked to this skill
-      const { data: jobs, error: jobsError } = await supabase
-        .from('jobs')
-        .select('*')
-        .eq('user_id', user.id)
-        .contains('skills', [skill.id])
-        .order('start_date', { ascending: false });
-
-      if (jobsError) throw jobsError;
-
-      setLinkedSAOs(saos || []);
-      setLinkedJobs(jobs || []);
-      setHasLinkedItems((saos?.length || 0) > 0 || (jobs?.length || 0) > 0);
-    } catch (error) {
-      console.error('Error checking linked items:', error);
-    }
-  };
-
-  useEffect(() => {
-    checkLinkedItems();
-  }, [skill.id]);
+  const hasLinkedItems = linkedSkillIds.has(skill.id);
 
   const handleLinksClick = async () => {
     setLoading(true);
     try {
-      await checkLinkedItems();
+      const { saos, jobs } = await fetchLinkedItems(skill.id);
+      setLinkedSAOs(saos);
+      setLinkedJobs(jobs);
       setIsLinksPopupOpen(true);
     } catch (error) {
       console.error('Error fetching linked items:', error);
@@ -116,7 +80,6 @@ const SkillItem = memo(({
             <select
               value={skill.rank || ''}
               onChange={(e) => {
-                console.log('Skill ID in UI:', skill.id, typeof skill.id);
                 onRankChange(categoryIndex, skill.id, Number(e.target.value));
               }}
               className={`appearance-none px-3 py-1.5 rounded-full text-sm font-medium ${getRankColor(skill.rank)} border-0 focus:ring-2 focus:ring-teal-500 focus:outline-none cursor-pointer`}
@@ -130,9 +93,7 @@ const SkillItem = memo(({
             </select>
             <ChevronDown size={16} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-current" />
           </div>
-          <span className={`text-xs px-2.5 py-1 rounded-full ${getStatusClass(skill)}`}>
-            {getStatusLabel(skill)}
-          </span>
+          <span className={`text-xs px-2.5 py-1 rounded-full ${getStatusClass(skill)}`}>{getStatusLabel(skill)}</span>
         </div>
       </div>
 
@@ -162,7 +123,9 @@ const CategorySection = memo(({
   getMeanColor,
   showRequirementWarning,
   getRequirementMessage,
-  skillRefs
+  skillRefs,
+  linkedSkillIds,
+  fetchLinkedItems
 }: {
   category: Category;
   categoryIndex: number;
@@ -178,6 +141,8 @@ const CategorySection = memo(({
   showRequirementWarning: (categoryName: string, mean: number) => boolean;
   getRequirementMessage: (categoryName: string, mean: number) => string;
   skillRefs: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
+  linkedSkillIds: Set<string>;
+  fetchLinkedItems: (skillId: string) => Promise<{ saos: any[]; jobs: any[] }>;
 }) => {
   const categoryProgress = getCategoryProgress(category.skills);
   const { mean, isComplete } = calculateCategoryMean(category.skills);
@@ -243,6 +208,8 @@ const CategorySection = memo(({
             getRankColor={getRankColor}
             getRankLabel={getRankLabel}
             skillRef={el => (skillRefs.current[skill.id] = el)}
+            linkedSkillIds={linkedSkillIds}
+            fetchLinkedItems={fetchLinkedItems}
           />
         ))}
       </div>
@@ -253,10 +220,69 @@ const CategorySection = memo(({
 const Skills: React.FC = () => {
   const { skillCategories, updateSkillRank, loadUserSkills, loading, error } = useSkillsStore();
   const skillRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [linkedSkillIds, setLinkedSkillIds] = useState<Set<string>>(new Set());
+  const linkedItemsCache = useRef<Record<string, { saos: any[]; jobs: any[] }>>({});
 
   useEffect(() => {
     loadUserSkills();
   }, [loadUserSkills]);
+
+  useEffect(() => {
+    const fetchAllLinked = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        // Fetch all SAOs and jobs for the user
+        const [{ data: saosRaw }, { data: jobsRaw }] = await Promise.all([
+          supabase.from('saos').select('*, sao_skills(skill_id)').eq('user_id', user.id),
+          supabase.from('jobs').select('id, skills').eq('user_id', user.id)
+        ]);
+        const saos = saosRaw || [];
+        const jobs = jobsRaw || [];
+        // Build set of skill IDs that are linked
+        const skillIdSet = new Set<string>();
+        saos.forEach((sao: any) => {
+          if (sao.sao_skills) {
+            sao.sao_skills.forEach((ss: any) => skillIdSet.add(ss.skill_id));
+          }
+        });
+        jobs.forEach((job: any) => {
+          if (Array.isArray(job.skills)) {
+            job.skills.forEach((sid: string) => skillIdSet.add(sid));
+          }
+        });
+        setLinkedSkillIds(skillIdSet);
+      } catch (err) {
+        console.error('Error fetching all linked items:', err);
+      }
+    };
+    fetchAllLinked();
+  }, [loadUserSkills]);
+
+  // Function to fetch linked items for a skill (for popup)
+  const fetchLinkedItems = async (skillId: string) => {
+    if (linkedItemsCache.current[skillId]) {
+      return linkedItemsCache.current[skillId];
+    }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { saos: [], jobs: [] };
+    // Fetch SAOs linked to this skill
+    const { data: saosRaw } = await supabase
+      .from('saos')
+      .select('*, sao_skills!inner(skill_id)')
+      .eq('user_id', user.id)
+      .eq('sao_skills.skill_id', skillId);
+    const saos = saosRaw || [];
+    // Fetch jobs linked to this skill
+    const { data: jobsRaw } = await supabase
+      .from('jobs')
+      .select('*')
+      .eq('user_id', user.id)
+      .contains('skills', [skillId]);
+    const jobs = jobsRaw || [];
+    linkedItemsCache.current[skillId] = { saos, jobs };
+    return { saos, jobs };
+  };
 
   useEffect(() => {
     const handleScrollToSkill = (e: CustomEvent) => {
@@ -488,6 +514,8 @@ const Skills: React.FC = () => {
                 showRequirementWarning={showRequirementWarning}
                 getRequirementMessage={getRequirementMessage}
                 skillRefs={skillRefs}
+                linkedSkillIds={linkedSkillIds}
+                fetchLinkedItems={fetchLinkedItems}
               />
             ))}
           </div>
