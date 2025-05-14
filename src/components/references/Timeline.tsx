@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Calendar, MapPin, Briefcase, Edit2, Trash2, X } from 'lucide-react';
+import { Plus, Calendar, MapPin, Briefcase, Edit2, Trash2, X, Users, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useSkillsStore } from '../../store/skills';
 
@@ -12,6 +12,27 @@ interface Job {
   end_date: string | null;
   description: string;
   skills?: string[]; // Array of skill IDs
+}
+
+interface Reference {
+  id: string;
+  job_id: string;
+  full_name: string;
+  email: string;
+  description: string;
+  reference_number: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Validator {
+  id: string;
+  skill_id: string;
+  full_name: string;
+  email: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface JobFormProps {
@@ -161,6 +182,8 @@ const JobForm: React.FC<JobFormProps> = ({
 
 const Timeline: React.FC = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [references, setReferences] = useState<Record<string, Reference[]>>({});
+  const [validators, setValidators] = useState<Record<string, Validator[]>>({});
   const [isAddingJob, setIsAddingJob] = useState(false);
   const [isEditingJob, setIsEditingJob] = useState<string | null>(null);
   const [isSkillsPopupOpen, setIsSkillsPopupOpen] = useState<string | null>(null);
@@ -176,9 +199,11 @@ const Timeline: React.FC = () => {
     skills: []
   });
 
-  // Load jobs on component mount
+  // Load jobs, references, and validators on component mount
   React.useEffect(() => {
     loadJobs();
+    loadReferences();
+    loadValidators();
   }, []);
 
   const loadJobs = async () => {
@@ -198,6 +223,60 @@ const Timeline: React.FC = () => {
       console.error('Error loading jobs:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadReferences = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('job_references')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      // Group references by job_id
+      const groupedReferences = data.reduce((acc, reference) => {
+        if (!acc[reference.job_id]) {
+          acc[reference.job_id] = [];
+        }
+        acc[reference.job_id].push(reference);
+        return acc;
+      }, {} as Record<string, Reference[]>);
+
+      setReferences(groupedReferences);
+    } catch (error) {
+      console.error('Error loading references:', error);
+    }
+  };
+
+  const loadValidators = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('validators')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      // Group validators by skill_id
+      const groupedValidators = data.reduce((acc, validator) => {
+        if (!acc[validator.skill_id]) {
+          acc[validator.skill_id] = [];
+        }
+        acc[validator.skill_id].push(validator);
+        return acc;
+      }, {} as Record<string, Validator[]>);
+
+      setValidators(groupedValidators);
+    } catch (error) {
+      console.error('Error loading validators:', error);
     }
   };
 
@@ -241,12 +320,6 @@ const Timeline: React.FC = () => {
         return;
       }
 
-      console.log('Updating job:', {
-        jobId,
-        newJob,
-        user: user.id
-      });
-
       // First, verify the job exists
       const { data: existingJob, error: fetchError } = await supabase
         .from('jobs')
@@ -272,24 +345,27 @@ const Timeline: React.FC = () => {
         start_date: newJob.start_date || existingJob.start_date,
         end_date: newJob.end_date || existingJob.end_date,
         description: newJob.description || existingJob.description,
-        skills: newJob.skills || (Array.isArray(existingJob.skills) ? existingJob.skills : []),
+        skills: newJob.skills || [], // Always use the new skills array
         user_id: user.id
       };
 
-      console.log('Update data:', updateData);
+      // Log the update data for debugging
+      console.log('Updating job with data:', {
+        jobId,
+        updateData,
+        currentSkills: newJob.skills
+      });
 
       const { error: updateError } = await supabase
         .from('jobs')
         .update(updateData)
         .eq('id', jobId)
-        .eq('user_id', user.id); // Add user_id check for security
+        .eq('user_id', user.id);
 
       if (updateError) {
         console.error('Error updating job:', updateError);
         throw updateError;
       }
-
-      console.log('Job updated successfully');
 
       // Reset form and reload jobs
       setNewJob({
@@ -302,7 +378,7 @@ const Timeline: React.FC = () => {
         skills: []
       });
       setIsEditingJob(null);
-      await loadJobs(); // Wait for jobs to reload
+      await loadJobs();
     } catch (error) {
       console.error('Error in handleUpdateJob:', error);
     }
@@ -323,7 +399,6 @@ const Timeline: React.FC = () => {
   };
 
   const handleEditClick = (job: Job) => {
-    console.log('Editing job:', job);
     setNewJob({
       ...job,
       skills: job.skills || []
@@ -332,12 +407,23 @@ const Timeline: React.FC = () => {
   };
 
   const handleSkillToggle = (skillId: string) => {
-    const currentSkills = newJob.skills || [];
-    const updatedSkills = currentSkills.includes(skillId)
-      ? currentSkills.filter(id => id !== skillId)
-      : [...currentSkills, skillId];
-    
-    setNewJob({ ...newJob, skills: updatedSkills });
+    setNewJob(prev => {
+      const currentSkills = prev.skills || [];
+      const updatedSkills = currentSkills.includes(skillId)
+        ? currentSkills.filter(id => id !== skillId)
+        : [...currentSkills, skillId];
+      
+      console.log('Updating skills:', {
+        currentSkills,
+        updatedSkills,
+        skillId
+      });
+      
+      return {
+        ...prev,
+        skills: updatedSkills
+      };
+    });
   };
 
   const handleInputChange = (field: keyof Job, value: string) => {
@@ -349,6 +435,14 @@ const Timeline: React.FC = () => {
 
   const SkillsPopup = () => {
     if (!isSkillsPopupOpen) return null;
+
+    const handleDone = () => {
+      // If we're editing an existing job, update it immediately
+      if (isSkillsPopupOpen !== 'new') {
+        handleUpdateJob(isSkillsPopupOpen);
+      }
+      setIsSkillsPopupOpen(null);
+    };
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -389,7 +483,7 @@ const Timeline: React.FC = () => {
 
           <div className="flex justify-end mt-6">
             <button
-              onClick={() => setIsSkillsPopupOpen(null)}
+              onClick={handleDone}
               className="btn btn-primary"
             >
               Done
@@ -423,12 +517,12 @@ const Timeline: React.FC = () => {
 
   return (
     <div className="card">
-      <div className="p-6">
+      <div className="p-4">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-lg font-semibold text-slate-900">Work Experience</h2>
           <button
             onClick={() => setIsAddingJob(true)}
-            className="btn btn-primary flex items-center gap-2"
+            className="btn btn-primary flex items-center gap-2 shadow-sm hover:shadow-md transition-shadow"
           >
             <Plus size={16} />
             Add Job
@@ -436,39 +530,41 @@ const Timeline: React.FC = () => {
         </div>
 
         {isAddingJob && (
-          <JobForm
-            onSubmit={handleAddJob}
-            onCancel={() => {
-              setIsAddingJob(false);
-              setNewJob({
-                title: '',
-                company: '',
-                location: '',
-                start_date: '',
-                end_date: '',
-                description: '',
-                skills: []
-              });
-            }}
-            isEditing={false}
-            job={newJob}
-            onJobChange={handleInputChange}
-            onSkillsToggle={handleSkillToggle}
-            onSkillsPopupOpen={() => setIsSkillsPopupOpen('new')}
-            skillCategories={skillCategories}
-          />
+          <div className="mb-6">
+            <JobForm
+              onSubmit={handleAddJob}
+              onCancel={() => {
+                setIsAddingJob(false);
+                setNewJob({
+                  title: '',
+                  company: '',
+                  location: '',
+                  start_date: '',
+                  end_date: '',
+                  description: '',
+                  skills: []
+                });
+              }}
+              isEditing={false}
+              job={newJob}
+              onJobChange={handleInputChange}
+              onSkillsToggle={handleSkillToggle}
+              onSkillsPopupOpen={() => setIsSkillsPopupOpen('new')}
+              skillCategories={skillCategories}
+            />
+          </div>
         )}
 
         <div className="relative">
           {/* Timeline line */}
-          <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-200"></div>
+          <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-gradient-to-b from-teal-500 to-teal-200"></div>
 
-          <div className="space-y-8">
+          <div className="space-y-6">
             {jobs.map((job, index) => (
-              <div key={job.id} className="relative pl-12">
+              <div key={job.id} className="relative pl-10">
                 {/* Timeline dot */}
-                <div className="absolute left-0 w-8 h-8 rounded-full bg-teal-100 border-4 border-white flex items-center justify-center">
-                  <Briefcase size={16} className="text-teal-600" />
+                <div className="absolute left-0 w-6 h-6 rounded-full bg-white border-3 border-teal-500 flex items-center justify-center shadow-sm">
+                  <Briefcase size={14} className="text-teal-600" />
                 </div>
 
                 {isEditingJob === job.id ? (
@@ -494,13 +590,13 @@ const Timeline: React.FC = () => {
                     skillCategories={skillCategories}
                   />
                 ) : (
-                  <div className="bg-white rounded-lg border border-slate-200 p-4">
-                    <div className="flex justify-between items-start mb-2">
+                  <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-start mb-3">
                       <div>
                         <h3 className="font-semibold text-slate-900">{job.title}</h3>
-                        <p className="text-slate-600">{job.company}</p>
+                        <p className="text-sm text-slate-600">{job.company}</p>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-1">
                         <button
                           onClick={() => {
                             setNewJob({
@@ -509,81 +605,113 @@ const Timeline: React.FC = () => {
                             });
                             setIsSkillsPopupOpen(job.id);
                           }}
-                          className="p-1 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
                           title="Edit Skills"
                         >
-                          <Plus size={16} />
+                          <Plus size={14} />
                         </button>
                         <button
                           onClick={() => handleEditClick(job)}
-                          className="p-1 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
                           title="Edit Job"
                         >
-                          <Edit2 size={16} />
+                          <Edit2 size={14} />
                         </button>
                         <button
                           onClick={() => handleDeleteJob(job.id)}
-                          className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="Delete Job"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4 text-sm text-slate-500 mb-3">
-                      <div className="flex items-center gap-1">
-                        <Calendar size={14} />
+                    <div className="flex items-center gap-4 text-xs text-slate-500 mb-3">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar size={14} className="text-teal-500" />
                         <span>
                           {new Date(job.start_date).toLocaleDateString()} - {job.end_date ? new Date(job.end_date).toLocaleDateString() : 'Present'}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <MapPin size={14} />
+                      <div className="flex items-center gap-1.5">
+                        <MapPin size={14} className="text-teal-500" />
                         <span>{job.location}</span>
                       </div>
                     </div>
 
                     {job.description && (
-                      <p className="text-slate-600 text-sm mb-3">{job.description}</p>
+                      <p className="text-sm text-slate-600 mb-4 leading-relaxed">{job.description}</p>
                     )}
 
-                    <div className="mt-3">
-                      <div className="flex justify-between items-center mb-2">
-                        <h4 className="text-sm font-medium text-slate-700">Skills:</h4>
-                        <button
-                          onClick={() => {
-                            setNewJob({
-                              ...job,
-                              skills: job.skills || []
-                            });
-                            setIsSkillsPopupOpen(job.id);
-                          }}
-                          className="text-xs text-teal-600 hover:text-teal-700 font-medium"
-                        >
-                          Edit Skills
-                        </button>
+                    {/* References Section */}
+                    {references[job.id] && references[job.id].length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-slate-200">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Users size={14} className="text-teal-500" />
+                          <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide">References</h4>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {references[job.id].map((reference) => (
+                            <div key={reference.id} className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <p className="font-medium text-sm text-slate-900">{reference.full_name}</p>
+                                  <p className="text-xs text-slate-500">{reference.email}</p>
+                                </div>
+                                <span className="text-xs px-2 py-0.5 bg-teal-100 text-teal-700 rounded-full font-medium">
+                                  Reference {reference.reference_number}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-600 mt-2 leading-relaxed">{reference.description}</p>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <div className="flex flex-wrap gap-2">
-                        {job.skills && job.skills.length > 0 ? (
-                          job.skills.map((skillId) => {
+                    )}
+
+                    {/* Skills and Validators Section */}
+                    {job.skills && job.skills.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-slate-200">
+                        <div className="flex items-center gap-2 mb-3">
+                          <CheckCircle2 size={14} className="text-teal-500" />
+                          <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Skills & Validators</h4>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {job.skills.map((skillId) => {
                             const skill = skillCategories
                               .flatMap(cat => cat.skills)
                               .find(s => s.id === skillId);
+                            const skillValidators = validators[skillId] || [];
+                            
                             return skill ? (
-                              <span
-                                key={skillId}
-                                className="px-2 py-1 bg-slate-100 text-slate-700 rounded-full text-xs"
-                              >
-                                {skill.name}
-                              </span>
+                              <div key={skillId} className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <p className="font-medium text-sm text-slate-900">{skill.name}</p>
+                                    {skill.rank && (
+                                      <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-medium mt-1 inline-block">
+                                        Score {skill.rank}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                {skillValidators.length > 0 && (
+                                  <div className="mt-2 space-y-1.5">
+                                    {skillValidators.map((validator) => (
+                                      <div key={validator.id} className="text-xs bg-white rounded-lg p-2 border border-slate-200">
+                                        <p className="font-medium text-slate-900">{validator.full_name}</p>
+                                        <p className="text-slate-500">{validator.email}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                             ) : null;
-                          })
-                        ) : (
-                          <span className="text-sm text-slate-500">No skills added yet</span>
-                        )}
+                          })}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -592,10 +720,10 @@ const Timeline: React.FC = () => {
             {jobs.length === 0 && !isAddingJob && (
               <div className="text-center py-8 text-slate-500">
                 <Briefcase size={24} className="mx-auto mb-2 text-slate-400" />
-                <p>No work experience added yet</p>
+                <p className="text-sm mb-2">No work experience added yet</p>
                 <button
                   onClick={() => setIsAddingJob(true)}
-                  className="text-teal-600 hover:text-teal-700 mt-2"
+                  className="text-teal-600 hover:text-teal-700 font-medium"
                 >
                   Add your first job
                 </button>

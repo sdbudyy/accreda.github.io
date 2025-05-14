@@ -14,7 +14,7 @@ const navItems = [
   { name: 'Skills', path: '/dashboard/skills', icon: <BookOpen size={20} /> },
   { name: 'SAOs', path: '/dashboard/saos', icon: <FileEdit size={20} /> },
   { name: 'Documents', path: '/dashboard/documents', icon: <FileText size={20} /> },
-  { name: 'References', path: '/dashboard/references', icon: <Bookmark size={20} /> },
+  { name: 'Jobs', path: '/dashboard/references', icon: <Bookmark size={20} /> },
   { name: 'Settings', path: '/dashboard/settings', icon: <Settings size={20} /> },
 ];
 
