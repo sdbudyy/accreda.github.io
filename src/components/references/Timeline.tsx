@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Calendar, MapPin, Briefcase, Edit2, Trash2, X, Users, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useSkillsStore } from '../../store/skills';
@@ -199,11 +199,53 @@ const Timeline: React.FC = () => {
     skills: []
   });
 
-  // Load jobs, references, and validators on component mount
-  React.useEffect(() => {
+  useEffect(() => {
     loadJobs();
     loadReferences();
     loadValidators();
+
+    // Add event listener for scrolling to specific items
+    const handleScrollToItem = (event: CustomEvent) => {
+      console.log('Scroll event received:', event.detail);
+      const { itemId, itemType } = event.detail;
+      
+      // Find the element to scroll to
+      let elementToScroll: HTMLElement | null = null;
+      
+      if (itemType === 'job') {
+        const selector = `[data-job-id="${itemId}"]`;
+        console.log('Looking for job element with selector:', selector);
+        elementToScroll = document.querySelector(selector);
+      } else if (itemType === 'reference') {
+        const selector = `[data-reference-id="${itemId}"]`;
+        console.log('Looking for reference element with selector:', selector);
+        elementToScroll = document.querySelector(selector);
+      } else if (itemType === 'validator') {
+        const selector = `[data-validator-id="${itemId}"]`;
+        console.log('Looking for validator element with selector:', selector);
+        elementToScroll = document.querySelector(selector);
+      }
+
+      console.log('Found element:', elementToScroll);
+
+      if (elementToScroll) {
+        console.log('Scrolling to element');
+        elementToScroll.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Add highlight effect
+        elementToScroll.classList.add('highlight-item');
+        setTimeout(() => {
+          elementToScroll?.classList.remove('highlight-item');
+        }, 2000);
+      } else {
+        console.log('No element found to scroll to');
+      }
+    };
+
+    window.addEventListener('scroll-to-item', handleScrollToItem as EventListener);
+
+    return () => {
+      window.removeEventListener('scroll-to-item', handleScrollToItem as EventListener);
+    };
   }, []);
 
   const loadJobs = async () => {
@@ -561,7 +603,13 @@ const Timeline: React.FC = () => {
 
           <div className="space-y-6">
             {jobs.map((job, index) => (
-              <div key={job.id} className="relative pl-10">
+              <div 
+                key={job.id} 
+                className="relative pl-10" 
+                data-job-id={job.id}
+                data-reference-id={references[job.id]?.[0]?.id}
+                data-validator-id={job.skills?.[0] ? validators[job.skills[0]]?.[0]?.id : undefined}
+              >
                 {/* Timeline dot */}
                 <div className="absolute left-0 w-6 h-6 rounded-full bg-white border-3 border-teal-500 flex items-center justify-center shadow-sm">
                   <Briefcase size={14} className="text-teal-600" />
@@ -734,6 +782,23 @@ const Timeline: React.FC = () => {
       </div>
 
       <SkillsPopup />
+
+      <style>
+        {`
+          .highlight-item {
+            animation: highlight 2s ease-out;
+          }
+
+          @keyframes highlight {
+            0% {
+              background-color: rgba(99, 102, 241, 0.1);
+            }
+            100% {
+              background-color: transparent;
+            }
+          }
+        `}
+      </style>
     </div>
   );
 };

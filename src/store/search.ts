@@ -4,10 +4,17 @@ import debounce from 'lodash/debounce';
 
 interface SearchResult {
   id: string;
-  type: 'document' | 'sao' | 'skill';
+  type: 'document' | 'sao' | 'skill' | 'job' | 'reference' | 'validator';
   title: string;
   description?: string;
   category?: string;
+  metadata?: {
+    company?: string;
+    location?: string;
+    email?: string;
+    referenceNumber?: number;
+    skillName?: string;
+  };
 }
 
 interface SearchStore {
@@ -35,7 +42,7 @@ export const useSearchStore = create<SearchStore>((set) => ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
 
-      // Single query using UNION to search across all tables
+      // Search across all tables
       const { data, error } = await supabase.rpc('search_all', {
         search_query: query,
         user_id: user.id
@@ -43,8 +50,49 @@ export const useSearchStore = create<SearchStore>((set) => ({
 
       if (error) throw error;
 
+      // Transform the results to include metadata
+      const transformedResults = (data || []).map((result: any) => {
+        const baseResult = {
+          id: result.id,
+          type: result.type,
+          title: result.title,
+          description: result.description,
+          category: result.category
+        };
+
+        // Add metadata based on type
+        switch (result.type) {
+          case 'job':
+            return {
+              ...baseResult,
+              metadata: {
+                company: result.company,
+                location: result.location
+              }
+            };
+          case 'reference':
+            return {
+              ...baseResult,
+              metadata: {
+                email: result.email,
+                referenceNumber: result.reference_number
+              }
+            };
+          case 'validator':
+            return {
+              ...baseResult,
+              metadata: {
+                email: result.email,
+                skillName: result.skill_name
+              }
+            };
+          default:
+            return baseResult;
+        }
+      });
+
       set({ 
-        results: data || [], 
+        results: transformedResults, 
         loading: false 
       });
     } catch (error) {

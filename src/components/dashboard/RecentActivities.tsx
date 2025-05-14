@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle2, FileText, UserCheck, Edit3, X } from 'lucide-react';
+import { CheckCircle2, FileText, UserCheck, Edit3, X, Briefcase, Users } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useSAOsStore, SAO } from '../../store/saos';
 import { useSkillsStore } from '../../store/skills';
@@ -9,7 +9,7 @@ import DocumentPreview from '../documents/DocumentPreview';
 
 interface Activity {
   id: string;
-  type: 'completed' | 'document' | 'approval' | 'essay';
+  type: 'completed' | 'document' | 'approval' | 'essay' | 'job' | 'reference' | 'validator';
   title: string;
   timestamp: string;
   user?: string;
@@ -82,11 +82,59 @@ const RecentActivities: React.FC = () => {
       }
       console.log('🎯 Recent skills:', recentSkills?.length || 0, 'items');
 
+      // Fetch recent jobs
+      console.log('💼 Fetching jobs...');
+      const { data: recentJobs, error: jobsError } = await supabase
+        .from('jobs')
+        .select('*')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+        .limit(limit);
+
+      if (jobsError) {
+        console.error('❌ Error fetching jobs:', jobsError);
+        throw jobsError;
+      }
+      console.log('💼 Recent jobs:', recentJobs?.length || 0, 'items');
+
+      // Fetch recent references
+      console.log('👥 Fetching references...');
+      const { data: recentRefs, error: refsError } = await supabase
+        .from('job_references')
+        .select('*')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+        .limit(limit);
+
+      if (refsError) {
+        console.error('❌ Error fetching references:', refsError);
+        throw refsError;
+      }
+      console.log('👥 Recent references:', recentRefs?.length || 0, 'items');
+
+      // Fetch recent validators
+      console.log('✅ Fetching validators...');
+      const { data: recentValidators, error: validatorsError } = await supabase
+        .from('validators')
+        .select('*')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+        .limit(limit);
+
+      if (validatorsError) {
+        console.error('❌ Error fetching validators:', validatorsError);
+        throw validatorsError;
+      }
+      console.log('✅ Recent validators:', recentValidators?.length || 0, 'items');
+
       // Log raw data for debugging
       console.log('Raw data:', {
         saos: recentSAOs,
         docs: recentDocs,
-        skills: recentSkills
+        skills: recentSkills,
+        jobs: recentJobs,
+        references: recentRefs,
+        validators: recentValidators
       });
 
       // Combine and sort all activities
@@ -108,6 +156,24 @@ const RecentActivities: React.FC = () => {
           type: 'completed' as const,
           title: `Completed "${skill.skills?.name || 'Skill'}" skill`,
           timestamp: skill.updated_at
+        })),
+        ...(recentJobs || []).map(job => ({
+          id: job.id,
+          type: 'job' as const,
+          title: `Updated "${job.title}" at ${job.company}`,
+          timestamp: job.updated_at
+        })),
+        ...(recentRefs || []).map(ref => ({
+          id: ref.id,
+          type: 'reference' as const,
+          title: `Added reference from ${ref.full_name}`,
+          timestamp: ref.updated_at
+        })),
+        ...(recentValidators || []).map(validator => ({
+          id: validator.id,
+          type: 'validator' as const,
+          title: `Added validator ${validator.full_name}`,
+          timestamp: validator.updated_at
         }))
       ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
        .slice(0, limit);
@@ -204,7 +270,74 @@ const RecentActivities: React.FC = () => {
             console.log('🎯 Skills subscription status:', status);
           });
 
-        subscriptions = [saosSubscription, docsSubscription, skillsSubscription];
+        const jobsSubscription = supabase
+          .channel('jobs-changes')
+          .on('postgres_changes', 
+            { 
+              event: '*', 
+              schema: 'public', 
+              table: 'jobs',
+              filter: `user_id=eq.${user.id}`
+            }, 
+            (payload) => {
+              console.log('💼 Job change detected:', payload);
+              if (mounted) {
+                fetchActivities(user.id);
+              }
+            }
+          )
+          .subscribe((status) => {
+            console.log('💼 Jobs subscription status:', status);
+          });
+
+        const referencesSubscription = supabase
+          .channel('references-changes')
+          .on('postgres_changes', 
+            { 
+              event: '*', 
+              schema: 'public', 
+              table: 'job_references',
+              filter: `user_id=eq.${user.id}`
+            }, 
+            (payload) => {
+              console.log('👥 Reference change detected:', payload);
+              if (mounted) {
+                fetchActivities(user.id);
+              }
+            }
+          )
+          .subscribe((status) => {
+            console.log('👥 References subscription status:', status);
+          });
+
+        const validatorsSubscription = supabase
+          .channel('validators-changes')
+          .on('postgres_changes', 
+            { 
+              event: '*', 
+              schema: 'public', 
+              table: 'validators',
+              filter: `user_id=eq.${user.id}`
+            }, 
+            (payload) => {
+              console.log('✅ Validator change detected:', payload);
+              if (mounted) {
+                fetchActivities(user.id);
+              }
+            }
+          )
+          .subscribe((status) => {
+            console.log('✅ Validators subscription status:', status);
+          });
+
+        subscriptions = [
+          saosSubscription, 
+          docsSubscription, 
+          skillsSubscription,
+          jobsSubscription,
+          referencesSubscription,
+          validatorsSubscription
+        ];
         console.log('✅ All subscriptions set up');
       } catch (error) {
         console.error('❌ Error setting up subscriptions:', error);
@@ -225,13 +358,16 @@ const RecentActivities: React.FC = () => {
         }
       });
     };
-  }, []); // Empty dependency array since we only want to set up subscriptions once
+  }, []);
 
   const typeIcons = {
     completed: <CheckCircle2 size={16} className="text-green-500" />,
     document: <FileText size={16} className="text-blue-500" />,
     approval: <UserCheck size={16} className="text-purple-500" />,
-    essay: <Edit3 size={16} className="text-amber-500" />
+    essay: <Edit3 size={16} className="text-amber-500" />,
+    job: <Briefcase size={16} className="text-indigo-500" />,
+    reference: <Users size={16} className="text-pink-500" />,
+    validator: <CheckCircle2 size={16} className="text-teal-500" />
   };
 
   const formatTimestamp = (timestamp: string) => {
@@ -252,6 +388,8 @@ const RecentActivities: React.FC = () => {
   };
 
   const handleView = (activity: Activity) => {
+    console.log('Handling view for activity:', activity);
+    
     if (activity.type === 'completed') {
       navigate('/dashboard/skills');
       setTimeout(() => {
@@ -268,6 +406,21 @@ const RecentActivities: React.FC = () => {
       const titleMatch = activity.title.match(/"([^"]+)"/);
       const documentTitle = titleMatch ? titleMatch[1] : 'Document';
       setPreviewDocument({ id: activity.id, title: documentTitle });
+    } else if (activity.type === 'job' || activity.type === 'reference' || activity.type === 'validator') {
+      console.log('Navigating to references page for:', activity);
+      navigate('/dashboard/references');
+      setTimeout(() => {
+        console.log('Dispatching scroll event for:', activity);
+        const event = new CustomEvent('scroll-to-item', { 
+          detail: { 
+            itemId: activity.id,
+            itemType: activity.type,
+            timestamp: Date.now()
+          } 
+        });
+        console.log('Event details:', event.detail);
+        window.dispatchEvent(event);
+      }, 1000);
     }
   };
 

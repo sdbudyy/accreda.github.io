@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Bookmark, Users, CheckCircle2, Award, X, Edit2, Briefcase, Calendar, MapPin, Plus } from 'lucide-react';
 import Timeline from '../components/references/Timeline';
 import { useSkillsStore } from '../store/skills';
@@ -394,6 +394,9 @@ const References: React.FC = () => {
   const [references, setReferences] = useState<Record<string, Reference[]>>({});
   const [jobs, setJobs] = useState<Job[]>([]);
   const { skillCategories } = useSkillsStore();
+  const workExperienceRef = useRef<HTMLDivElement>(null);
+  const referencesSectionRef = useRef<HTMLDivElement>(null);
+  const validatorsSectionRef = useRef<HTMLDivElement>(null);
 
   // Get completed skills grouped by category
   const completedSkillsByCategory = skillCategories.map(category => ({
@@ -487,6 +490,27 @@ const References: React.FC = () => {
     loadReferences();
   }, []);
 
+  useEffect(() => {
+    const handleScrollToItem = (event: any) => {
+      const { itemId, itemType } = event.detail || {};
+      if (itemType === 'reference') {
+        setActiveTab('references');
+        setTimeout(() => {
+          referencesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+      } else if (itemType === 'validator') {
+        setActiveTab('validators');
+        setTimeout(() => {
+          validatorsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+      } else if (itemType === 'job') {
+        workExperienceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    };
+    window.addEventListener('scroll-to-item', handleScrollToItem);
+    return () => window.removeEventListener('scroll-to-item', handleScrollToItem);
+  }, []);
+
   const handleValidatorSave = () => {
     loadValidators();
   };
@@ -497,7 +521,7 @@ const References: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between" ref={workExperienceRef}>
         <h1 className="text-2xl font-semibold text-slate-900 flex items-center">
           <Bookmark size={24} className="mr-2 text-teal-600" />
           Jobs
@@ -508,7 +532,7 @@ const References: React.FC = () => {
       <Timeline />
 
       {/* References and Validators Toggle */}
-      <div className="card">
+      <div className="card" ref={referencesSectionRef}>
         <div className="flex border-b border-slate-200">
           <button
             onClick={() => setActiveTab('references')}
@@ -538,7 +562,7 @@ const References: React.FC = () => {
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="p-6" ref={validatorsSectionRef}>
           {activeTab === 'references' ? (
             <div className="space-y-6">
               {jobs.length > 0 ? (

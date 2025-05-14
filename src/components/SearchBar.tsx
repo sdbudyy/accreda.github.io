@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, FileText, FileEdit, BookOpen, Loader2 } from 'lucide-react';
+import { Search, FileText, FileEdit, BookOpen, Loader2, Briefcase, Users, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSearchStore } from '../store/search';
 
@@ -37,11 +37,10 @@ const SearchBar: React.FC = () => {
     setQuery('');
     clearResults();
 
-    // Navigate to the appropriate page
+    // Navigate to the appropriate page and scroll to the item
     switch (result.type) {
       case 'document':
         navigate('/dashboard/documents');
-        // Dispatch event to highlight the document
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('highlight-document', { 
             detail: { documentId: result.id }
@@ -50,7 +49,6 @@ const SearchBar: React.FC = () => {
         break;
       case 'sao':
         navigate('/dashboard/saos');
-        // Dispatch event to highlight the SAO
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('highlight-sao', { 
             detail: { saoId: result.id }
@@ -59,12 +57,44 @@ const SearchBar: React.FC = () => {
         break;
       case 'skill':
         navigate('/dashboard/skills');
-        // Dispatch event to highlight the skill
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('scroll-to-skill', { 
             detail: { 
               skillId: result.id,
               timestamp: Date.now()
+            }
+          }));
+        }, 500);
+        break;
+      case 'job':
+        navigate('/dashboard/references');
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('scroll-to-item', { 
+            detail: { 
+              itemId: result.id,
+              itemType: 'job'
+            }
+          }));
+        }, 500);
+        break;
+      case 'reference':
+        navigate('/dashboard/references');
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('scroll-to-item', { 
+            detail: { 
+              itemId: result.id,
+              itemType: 'reference'
+            }
+          }));
+        }, 500);
+        break;
+      case 'validator':
+        navigate('/dashboard/references');
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('scroll-to-item', { 
+            detail: { 
+              itemId: result.id,
+              itemType: 'validator'
             }
           }));
         }, 500);
@@ -80,6 +110,27 @@ const SearchBar: React.FC = () => {
         return <FileEdit size={16} className="text-amber-500" />;
       case 'skill':
         return <BookOpen size={16} className="text-green-500" />;
+      case 'job':
+        return <Briefcase size={16} className="text-purple-500" />;
+      case 'reference':
+        return <Users size={16} className="text-indigo-500" />;
+      case 'validator':
+        return <CheckCircle2 size={16} className="text-teal-500" />;
+    }
+  };
+
+  const getMetadataText = (result: typeof results[0]) => {
+    if (!result.metadata) return null;
+
+    switch (result.type) {
+      case 'job':
+        return `${result.metadata.company} • ${result.metadata.location}`;
+      case 'reference':
+        return `Reference ${result.metadata.referenceNumber} • ${result.metadata.email}`;
+      case 'validator':
+        return `${result.metadata.skillName} • ${result.metadata.email}`;
+      default:
+        return null;
     }
   };
 
@@ -88,7 +139,7 @@ const SearchBar: React.FC = () => {
       <div className="relative">
         <input
           type="text"
-          placeholder="Search documents, SAOs, skills..."
+          placeholder="Search documents, SAOs, skills, jobs, references..."
           value={query}
           onChange={(e) => handleSearch(e.target.value)}
           className="pl-9 pr-4 py-2 bg-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 w-64"
@@ -123,6 +174,11 @@ const SearchBar: React.FC = () => {
                     {result.category && (
                       <p className="text-xs text-slate-500">
                         {result.category}
+                      </p>
+                    )}
+                    {getMetadataText(result) && (
+                      <p className="text-xs text-slate-500">
+                        {getMetadataText(result)}
                       </p>
                     )}
                   </div>
