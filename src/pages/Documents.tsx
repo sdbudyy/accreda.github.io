@@ -44,13 +44,36 @@ const Documents: React.FC = () => {
     
     try {
       console.log('Starting document creation process...');
-      const content = await file.text();
-      await createDocument(file.name, content, 'other');
+      
+      // Read file content based on file type
+      let content = '';
+      const fileType = file.type;
+      
+      if (fileType.startsWith('text/')) {
+        // For text files, read as text
+        content = await file.text();
+      } else if (fileType === 'application/pdf') {
+        // For PDFs, read as ArrayBuffer and store as base64
+        const arrayBuffer = await file.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        content = Array.from(uint8Array).join(',');
+      } else if (fileType === 'application/msword' || 
+                fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        // For Word documents, read as ArrayBuffer
+        const arrayBuffer = await file.arrayBuffer();
+        content = new Uint8Array(arrayBuffer).toString();
+      } else {
+        // For other file types, store a placeholder
+        content = `Content preview not available for ${fileType}`;
+      }
+      
+      await createDocument(file.name, content, 'other', file);
       console.log('Document creation completed successfully');
       // Clear the file input
       e.target.value = '';
     } catch (err) {
       console.error('Document creation failed:', err);
+      alert('Failed to create document. Please try again.');
     }
   };
 
@@ -293,7 +316,12 @@ const Documents: React.FC = () => {
               </div>
             </div>
             
-            <p className="text-sm text-slate-600 mt-2 line-clamp-2">{doc.content}</p>
+            {/* Only show content for text files */}
+            {doc.file_type && doc.file_type.startsWith('text/') ? (
+              <p className="text-sm text-slate-600 mt-2 line-clamp-2">{doc.content}</p>
+            ) : (
+              <p className="text-sm text-slate-400 mt-2 italic">Preview not available</p>
+            )}
             
             <div className="flex justify-between items-center mt-4 pt-3 border-t border-slate-100">
               <div className="text-xs text-slate-500">

@@ -11,13 +11,15 @@ export interface Document {
   status: 'draft' | 'submitted' | 'approved' | 'rejected';
   feedback?: string;
   word_count: number;
+  file_type?: string;
+  file_size?: number;
 }
 
 interface DocumentsState {
   documents: Document[];
   loading: boolean;
   error: string | null;
-  createDocument: (title: string, content: string, type: Document['type']) => Promise<void>;
+  createDocument: (title: string, content: string, type: Document['type'], file?: File, category?: string) => Promise<void>;
   updateDocument: (id: string, title: string, content: string) => Promise<void>;
   deleteDocument: (id: string) => Promise<void>;
   loadUserDocuments: () => Promise<void>;
@@ -28,7 +30,7 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
   loading: false,
   error: null,
 
-  createDocument: async (title: string, content: string, type: Document['type']) => {
+  createDocument: async (title: string, content: string, type: Document['type'], file?: File, category?: string) => {
     set({ loading: true, error: null });
     try {
       console.log('Creating new document...');
@@ -39,7 +41,12 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
       }
       if (!user) throw new Error('No authenticated user found');
 
-      console.log('Creating document:', { title, type, userId: user.id });
+      // Get file type and size if file is provided
+      const file_type = file?.type || 'text/plain';
+      const file_size = file?.size || content.length;
+      const safeCategory = category || 'Uncategorized';
+
+      console.log('Creating document:', { title, type, userId: user.id, file_type, file_size, category: safeCategory });
 
       const { data: document, error: createError } = await supabase
         .from('documents')
@@ -50,7 +57,10 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
             content,
             type,
             status: 'draft',
-            word_count: content.split(/\s+/).length
+            word_count: content.split(/\s+/).length,
+            file_type,
+            file_size,
+            category: safeCategory
           }
         ])
         .select()
