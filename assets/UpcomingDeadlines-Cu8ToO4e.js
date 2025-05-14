@@ -1,6 +1,0 @@
-import{c as a,j as e,d as s}from"./index-BL7OF4KF.js";/**
- * @license lucide-react v0.323.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */const t=a("CalendarClock",[["path",{d:"M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5",key:"1osxxc"}],["path",{d:"M16 2v4",key:"4m81vk"}],["path",{d:"M8 2v4",key:"1cmpym"}],["path",{d:"M3 10h5",key:"r794hk"}],["path",{d:"M17.5 17.5 16 16.3V14",key:"akvzfd"}],["circle",{cx:"16",cy:"16",r:"6",key:"qoo3c4"}]]),c=()=>e.jsx("div",{className:"space-y-3",children:e.jsxs("div",{className:"text-center py-8 px-4 border-2 border-dashed border-slate-200 rounded-lg",children:[e.jsx(t,{size:24,className:"mx-auto text-slate-400 mb-3"}),e.jsx("h3",{className:"text-sm font-medium text-slate-600 mb-1",children:"No upcoming deadlines"}),e.jsx("p",{className:"text-sm text-slate-500 mb-4",children:"Connect your Google Calendar to see your upcoming deadlines"}),e.jsxs("button",{className:"inline-flex items-center px-3 py-1.5 text-sm font-medium text-teal-600 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors",children:[e.jsx(s,{size:16,className:"mr-1.5"}),"Connect Calendar"]})]})});export{c as default};
