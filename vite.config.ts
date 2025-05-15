@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => {
   
   return {
     plugins: [react()],
-    base: '/accreda.github.io/',
+    base: mode === 'production' ? '/accreda.github.io/' : '/',
     // Log the environment variables (without the actual values for security)
     define: {
       __SUPABASE_URL_EXISTS__: JSON.stringify(!!env.VITE_SUPABASE_URL),
