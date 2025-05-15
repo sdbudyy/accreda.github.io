@@ -74,19 +74,6 @@ const Dashboard: React.FC = () => {
     initializeData();
   }, [loadUserSkills, initialize, saos.length, saosLoading, loadUserSAOs]);
 
-  // Subscribe to skills store changes
-  useEffect(() => {
-    const unsubscribe = useSkillsStore.subscribe(
-      (state) => {
-        if (state.skillCategories.length > 0) {
-          updateProgress();
-        }
-      }
-    );
-
-    return () => unsubscribe();
-  }, [updateProgress]);
-
   // Fetch Google Calendar events when token changes
   useEffect(() => {
     if (googleToken) {
@@ -171,8 +158,7 @@ const Dashboard: React.FC = () => {
             className={`btn btn-primary ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
             onClick={() => {
               if (!loading) {
-                loadUserSkills();
-                updateProgress();
+                loadUserSkills().then(() => updateProgress());
               }
             }}
             disabled={loading}

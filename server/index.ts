@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
+import { createClient } from '@supabase/supabase-js';
 
 // Load environment variables
 dotenv.config();
@@ -12,10 +13,31 @@ const port = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+// Supabase client setup
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY;
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('Missing Supabase URL or Key in environment variables');
+}
+const supabase = createClient(supabaseUrl, supabaseKey);
+
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: express.NextFunction) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ error: 'Internal server error' });
+});
+
+// Waitlist endpoint
+app.post('/api/waitlist', async (req: Request, res: Response) => {
+  const { email, province } = req.body;
+  if (!email || !province) {
+    return res.status(400).json({ error: 'Email and province are required.' });
+  }
+  const { error } = await supabase.from('waitlist').insert([{ email, province }]);
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+  res.json({ success: true });
 });
 
 // Start server

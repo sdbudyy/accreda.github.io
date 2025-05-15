@@ -75,6 +75,33 @@ function App() {
     return () => subscription.unsubscribe()
   }, [initialize, setupRealtimeSubscriptions, loadUserSkills])
 
+  // Auto sign-out after 30 minutes of tab inactivity (tab closed)
+  useEffect(() => {
+    const LAST_CLOSE_KEY = 'accreda_last_tab_close';
+    const THIRTY_MINUTES = 30 * 60 * 1000;
+
+    // On load, check if last close was > 30 min ago
+    const lastClose = localStorage.getItem(LAST_CLOSE_KEY);
+    if (lastClose) {
+      const lastCloseTime = parseInt(lastClose, 10);
+      if (!isNaN(lastCloseTime) && Date.now() - lastCloseTime > THIRTY_MINUTES) {
+        // Sign out if session exists
+        supabase.auth.signOut().then(() => {
+          setSession(null);
+        });
+      }
+    }
+
+    // On unload, store timestamp
+    const handleUnload = () => {
+      localStorage.setItem(LAST_CLOSE_KEY, Date.now().toString());
+    };
+    window.addEventListener('beforeunload', handleUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload);
+    };
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">

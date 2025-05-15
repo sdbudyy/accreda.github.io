@@ -207,46 +207,28 @@ const Settings: React.FC = () => {
             {avatarPreview || avatarUrl ? (
               <img
                 src={avatarPreview || avatarUrl}
-                className="w-24 h-24 rounded-full border-4 border-slate-100 object-cover bg-slate-100"
+                className="w-24 h-24 rounded-full object-cover bg-slate-100"
                 alt="Profile"
               />
             ) : (
-              <div className="w-24 h-24 rounded-full border-4 border-slate-100 bg-teal-500 flex items-center justify-center text-white text-3xl font-bold">
+              <div className="w-24 h-24 rounded-full bg-teal-500 flex items-center justify-center text-white text-3xl font-bold">
                 {getInitials(fullName || email)}
               </div>
             )}
-            <div className="absolute bottom-0 right-0">
-              <label className="cursor-pointer bg-slate-100 rounded-full p-1 shadow hover:bg-slate-200 border-4 border-slate-100">
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={e => {
-                    if (e.target.files && e.target.files[0]) {
-                      handleAvatarSelect([e.target.files[0]]);
-                    }
-                  }}
-                />
-                <svg width="24" height="24" fill="none" stroke="currentColor" className="text-teal-600">
-                  <circle cx="12" cy="12" r="10" strokeWidth="2" />
-                  <path d="M15.5 11.5a2 2 0 11-4 0 2 2 0 014 0z" />
-                  <path d="M17.5 17.5L15 15" />
+            {/* Remove the upload label and its SVG icon */}
+            {(avatarPreview || avatarUrl) && (
+              <button
+                className="absolute -top-2 -right-2 bg-slate-100 rounded-full p-1 shadow hover:bg-slate-200"
+                onClick={handleRemoveAvatar}
+                disabled={loading}
+                title="Remove profile picture"
+                style={{ zIndex: 10 }}
+              >
+                <svg width="20" height="20" fill="none" stroke="currentColor" className="text-red-600">
+                  <path d="M6 6l8 8M6 14L14 6" strokeWidth="2" />
                 </svg>
-              </label>
-              {(avatarPreview || avatarUrl) && (
-                <button
-                  className="absolute -top-2 -right-2 bg-slate-100 rounded-full p-1 shadow hover:bg-slate-200 border-4 border-slate-100"
-                  onClick={handleRemoveAvatar}
-                  disabled={loading}
-                  title="Remove profile picture"
-                  style={{ zIndex: 10 }}
-                >
-                  <svg width="20" height="20" fill="none" stroke="currentColor" className="text-red-600">
-                    <path d="M6 6l8 8M6 14L14 6" strokeWidth="2" />
-                  </svg>
-                </button>
-              )}
-            </div>
+              </button>
+            )}
           </div>
           {avatarFile && (
             <button
