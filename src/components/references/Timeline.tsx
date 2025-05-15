@@ -532,12 +532,53 @@ const Timeline: React.FC = () => {
     }));
   };
 
+  // Always render SkillsPopup, but toggle visibility
   const SkillsPopup = () => {
-    if (!isSkillsPopupOpen) return null;
+    // Ref for scrollable container
+    const scrollRef = React.useRef<HTMLDivElement>(null);
+    // Local state for selected skills
+    const [selectedSkills, setSelectedSkills] = React.useState<string[]>([]);
+    // Track if popup was just opened
+    const prevOpenRef = React.useRef<string | null>(null);
+
+    // When popup is opened, copy newJob.skills to local state
+    React.useEffect(() => {
+      if (isSkillsPopupOpen && prevOpenRef.current !== isSkillsPopupOpen) {
+        setSelectedSkills(newJob.skills ? [...newJob.skills] : []);
+        prevOpenRef.current = isSkillsPopupOpen;
+      }
+      if (!isSkillsPopupOpen) {
+        prevOpenRef.current = null;
+      }
+    }, [isSkillsPopupOpen, newJob.skills]);
+
+    // Scroll position logic (unchanged)
+    const lastScroll = React.useRef<number>(0);
+    const handleSkillToggleWithScroll = (skillId: string) => {
+      if (scrollRef.current) {
+        lastScroll.current = scrollRef.current.scrollTop;
+      }
+      setSelectedSkills(prev =>
+        prev.includes(skillId)
+          ? prev.filter(id => id !== skillId)
+          : [...prev, skillId]
+      );
+    };
+    React.useLayoutEffect(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = lastScroll.current;
+      }
+    });
+    React.useEffect(() => {
+      if (scrollRef.current) {
+        lastScroll.current = scrollRef.current.scrollTop;
+      }
+    }, [selectedSkills]);
 
     const handleDone = async () => {
-      // If we're editing an existing job, update it immediately
-      if (isSkillsPopupOpen !== 'new') {
+      // Only update parent state when Done is clicked
+      setNewJob(prev => ({ ...prev, skills: selectedSkills }));
+      if (isSkillsPopupOpen !== 'new' && isSkillsPopupOpen) {
         await handleUpdateJob(isSkillsPopupOpen);
         await fetchAll();
       }
@@ -545,8 +586,8 @@ const Timeline: React.FC = () => {
     };
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+      <div className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-200 ${isSkillsPopupOpen ? '' : 'hidden'}`}>
+        <div ref={scrollRef} className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">Select Skills</h3>
             <button
@@ -556,7 +597,6 @@ const Timeline: React.FC = () => {
               <X size={20} />
             </button>
           </div>
-          
           <div className="space-y-4">
             {skillCategories.map((category) => (
               <div key={category.name} className="border rounded-lg p-4">
@@ -569,8 +609,8 @@ const Timeline: React.FC = () => {
                     >
                       <input
                         type="checkbox"
-                        checked={newJob.skills?.includes(skill.id) || false}
-                        onChange={() => handleSkillToggle(skill.id)}
+                        checked={selectedSkills.includes(skill.id)}
+                        onChange={() => handleSkillToggleWithScroll(skill.id)}
                         className="rounded text-teal-600 focus:ring-teal-500"
                       />
                       <span className="text-sm">{skill.name}</span>
@@ -580,7 +620,6 @@ const Timeline: React.FC = () => {
               </div>
             ))}
           </div>
-
           <div className="flex justify-end mt-6">
             <button
               onClick={handleDone}
@@ -669,8 +708,8 @@ const Timeline: React.FC = () => {
                 data-validator-id={job.skills?.[0] ? validators[job.skills[0]]?.[0]?.id : undefined}
               >
                 {/* Timeline dot */}
-                <div className="absolute left-0 w-6 h-6 rounded-full bg-white border-3 border-teal-500 flex items-center justify-center shadow-sm">
-                  <Briefcase size={14} className="text-teal-600" />
+                <div className="absolute left-0 w-7 h-7 rounded-full bg-gradient-to-br from-teal-400 to-blue-400 border-4 border-white flex items-center justify-center shadow-lg z-10">
+                  <Briefcase size={16} className="text-white" />
                 </div>
 
                 {isEditingJob === job.id ? (
@@ -696,11 +735,14 @@ const Timeline: React.FC = () => {
                     skillCategories={skillCategories}
                   />
                 ) : (
-                  <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="bg-gradient-to-br from-white via-sky-50 to-teal-50 rounded-xl border border-teal-100 p-6 shadow-md hover:shadow-lg transition-shadow">
                     <div className="flex justify-between items-start mb-3">
                       <div>
-                        <h3 className="font-semibold text-slate-900">{job.title}</h3>
-                        <p className="text-sm text-slate-600">{job.company}</p>
+                        <h3 className="font-bold text-lg text-teal-900 flex items-center gap-2">
+                          {job.title}
+                          <span className="ml-2 px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 text-xs font-semibold">{job.company}</span>
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-1">{job.location}</p>
                       </div>
                       <div className="flex gap-1">
                         <button
@@ -711,21 +753,21 @@ const Timeline: React.FC = () => {
                             });
                             setIsSkillsPopupOpen(job.id);
                           }}
-                          className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-100 rounded-lg transition-colors"
                           title="Edit Skills"
                         >
                           <Plus size={14} />
                         </button>
                         <button
                           onClick={() => handleEditClick(job)}
-                          className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
                           title="Edit Job"
                         >
                           <Edit2 size={14} />
                         </button>
                         <button
                           onClick={() => handleDeleteJob(job.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-100 rounded-lg transition-colors"
                           title="Delete Job"
                         >
                           <Trash2 size={14} />
@@ -733,7 +775,7 @@ const Timeline: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4 text-xs text-slate-500 mb-3">
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 mb-3">
                       <div className="flex items-center gap-1.5">
                         <Calendar size={14} className="text-teal-500" />
                         <span>
@@ -747,33 +789,27 @@ const Timeline: React.FC = () => {
                     </div>
 
                     {job.description && (
-                      <p className="text-sm text-slate-600 mb-4 leading-relaxed">{job.description}</p>
+                      <p className="text-sm text-slate-700 mb-4 leading-relaxed">{job.description}</p>
                     )}
 
                     {/* References Section */}
                     {references[job.id] && references[job.id].length > 0 && (
-                      <div className="mt-4 pt-4 border-t border-slate-200">
+                      <div className="mt-4 pt-4 border-t border-slate-100">
                         <div className="flex items-center gap-2 mb-3">
-                          <Users size={14} className="text-teal-500" />
-                          <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide">References</h4>
+                          <Users size={14} className="text-blue-500" />
+                          <h4 className="text-xs font-semibold text-blue-700 uppercase tracking-wide">References</h4>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="flex flex-wrap gap-2">
                           {references[job.id].map((reference) => (
                             <div 
                               key={reference.id} 
                               data-reference-id={reference.id}
-                              className="bg-slate-50 rounded-lg p-3 border border-slate-200"
+                              className="bg-blue-50 rounded-full px-3 py-1 border border-blue-100 text-xs text-blue-800 flex items-center gap-2 shadow-sm"
                             >
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <p className="font-medium text-sm text-slate-900">{reference.full_name}</p>
-                                  <p className="text-xs text-slate-500">{reference.email}</p>
-                                </div>
-                                <span className="text-xs px-2 py-0.5 bg-teal-100 text-teal-700 rounded-full font-medium">
-                                  Reference {reference.reference_number}
-                                </span>
-                              </div>
-                              <p className="text-xs text-slate-600 mt-2 leading-relaxed">{reference.description}</p>
+                              <span className="font-medium">{reference.full_name}</span>
+                              <span className="text-blue-400">|</span>
+                              <span>{reference.email}</span>
+                              <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-semibold">Ref {reference.reference_number}</span>
                             </div>
                           ))}
                         </div>
@@ -782,39 +818,31 @@ const Timeline: React.FC = () => {
 
                     {/* Skills and Validators Section */}
                     {job.skills && job.skills.length > 0 && (
-                      <div className="mt-4 pt-4 border-t border-slate-200">
+                      <div className="mt-4 pt-4 border-t border-slate-100">
                         <div className="flex items-center gap-2 mb-3">
-                          <CheckCircle2 size={14} className="text-teal-500" />
-                          <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Skills & Validators</h4>
+                          <CheckCircle2 size={14} className="text-green-500" />
+                          <h4 className="text-xs font-semibold text-green-700 uppercase tracking-wide">Skills & Validators</h4>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="flex flex-wrap gap-2">
                           {job.skills.map((skillId) => {
                             const skill = skillCategories
                               .flatMap(cat => cat.skills)
                               .find(s => s.id === skillId);
                             const skillValidators = validators[skillId] || [];
-                            
                             return skill ? (
-                              <div key={skillId} className="bg-slate-50 rounded-lg p-3 border border-slate-200">
-                                <div className="flex justify-between items-start">
-                                  <div>
-                                    <p className="font-medium text-sm text-slate-900">{skill.name}</p>
-                                    {skill.rank && (
-                                      <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-medium mt-1 inline-block">
-                                        Score {skill.rank}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
+                              <div key={skillId} className="bg-green-50 rounded-full px-3 py-1 border border-green-100 text-xs text-green-800 flex items-center gap-2 shadow-sm">
+                                <span className="font-medium">{skill.name}</span>
+                                {skill.rank && (
+                                  <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-semibold">Score {skill.rank}</span>
+                                )}
                                 {skillValidators.length > 0 && (
-                                  <div className="mt-2 space-y-1.5">
+                                  <span className="ml-2 flex items-center gap-1">
                                     {skillValidators.map((validator) => (
-                                      <div key={validator.id} className="text-xs bg-white rounded-lg p-2 border border-slate-200">
-                                        <p className="font-medium text-slate-900">{validator.full_name}</p>
-                                        <p className="text-slate-500">{validator.email}</p>
-                                      </div>
+                                      <span key={validator.id} className="bg-white border border-green-200 rounded-full px-2 py-0.5 text-green-700 font-medium ml-1">
+                                        {validator.full_name}
+                                      </span>
                                     ))}
-                                  </div>
+                                  </span>
                                 )}
                               </div>
                             ) : null;
