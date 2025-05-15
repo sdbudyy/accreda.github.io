@@ -94,7 +94,7 @@ const SkillsOverview: React.FC = () => {
               >
                 <span>{skill.name}</span>
                 <span className="bg-green-100 text-green-700 text-xs py-0.5 px-2 rounded-full">
-                  Rank {skill.rank}
+                  Score {skill.rank}
                 </span>
               </div>
             ))
