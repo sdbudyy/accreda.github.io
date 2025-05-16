@@ -12,7 +12,7 @@ export const useEssayStore = create<EssayState>((set) => ({
     set({ loading: true });
     try {
       const { data: skills } = await supabase
-        .from('skills')
+        .from('eit_skills')
         .select('*')
         .eq('status', 'completed');
 

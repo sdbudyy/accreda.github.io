@@ -42,7 +42,7 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
           event: '*', 
           schema: 'public', 
           table: 'experiences',
-          filter: `user_id=eq.${user.id}`
+          filter: `eit_id=eq.${user.id}`
         }, 
         () => {
           console.log('📝 Experience change detected, updating progress...');
@@ -59,7 +59,7 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
           event: '*', 
           schema: 'public', 
           table: 'skills',
-          filter: `user_id=eq.${user.id}`
+          filter: `eit_id=eq.${user.id}`
         }, 
         () => {
           console.log('🎯 Skill change detected, updating progress...');
@@ -104,7 +104,7 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
       const { data: experiences, error: experiencesError } = await supabase
         .from('experiences')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('eit_id', user.id)
         .eq('is_documented', true);
 
       if (experiencesError) throw experiencesError;
@@ -113,7 +113,7 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
       const { data: approvals, error: approvalsError } = await supabase
         .from('experiences')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('eit_id', user.id)
         .eq('supervisor_approved', true);
 
       if (approvalsError) throw approvalsError;
@@ -179,7 +179,7 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
       const { data: experiences, error: experiencesError } = await supabase
         .from('experiences')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('eit_id', user.id)
         .eq('is_documented', true);
 
       if (experiencesError) throw experiencesError;
@@ -188,7 +188,7 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
       const { data: approvals, error: approvalsError } = await supabase
         .from('experiences')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('eit_id', user.id)
         .eq('supervisor_approved', true);
 
       if (approvalsError) throw approvalsError;

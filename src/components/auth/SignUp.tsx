@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useNavigate, Link } from 'react-router-dom'
 import AccredaLogo from '../../assets/accreda-logo.png'
+import { AccountType } from '../../types/auth'
 
 export default function SignUp() {
   const [email, setEmail] = useState('')
@@ -10,6 +11,7 @@ export default function SignUp() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [accountType, setAccountType] = useState<AccountType>('eit')
   const navigate = useNavigate()
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -34,18 +36,37 @@ export default function SignUp() {
     setLoading(true)
 
     try {
-      const { error } = await supabase.auth.signUp({
+      // First, create the auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/login`,
           data: {
             full_name: fullName,
+            account_type: accountType,
           },
         },
       })
 
-      if (error) throw error
+      if (authError) throw authError
+
+      if (authData.user) {
+        // Then, create the profile in the appropriate table
+        const { error: profileError } = await supabase
+          .from(accountType === 'eit' ? 'eit_profiles' : 'supervisor_profiles')
+          .insert([
+            {
+              id: authData.user.id,
+              email,
+              full_name: fullName,
+              account_type: accountType,
+            },
+          ])
+
+        if (profileError) throw profileError
+      }
+
       navigate('/login', { 
         state: { 
           message: 'Please check your email to confirm your account. You can now sign in.' 
@@ -67,7 +88,7 @@ export default function SignUp() {
             Create your account
           </h2>
           <p className="mt-2 text-sm text-slate-600">
-            Join EIT Track to start your engineering journey
+            Join Accreda to start your journey
           </p>
         </div>
 
@@ -78,6 +99,32 @@ export default function SignUp() {
             </div>
           )}
           <div className="space-y-4">
+            {/* Account Type Toggle */}
+            <div className="flex items-center justify-center space-x-4">
+              <button
+                type="button"
+                onClick={() => setAccountType('eit')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  accountType === 'eit'
+                    ? 'bg-teal-600 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                EIT Account
+              </button>
+              <button
+                type="button"
+                onClick={() => setAccountType('supervisor')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  accountType === 'supervisor'
+                    ? 'bg-teal-600 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                Supervisor Account
+              </button>
+            </div>
+
             <div>
               <label htmlFor="full-name" className="block text-sm font-medium text-slate-700 mb-1">
                 Full Name

@@ -234,8 +234,8 @@ const Skills: React.FC = () => {
         if (!user) return;
         // Fetch all SAOs and jobs for the user
         const [{ data: saosRaw }, { data: jobsRaw }] = await Promise.all([
-          supabase.from('saos').select('*, sao_skills(skill_id)').eq('user_id', user.id),
-          supabase.from('jobs').select('id, skills').eq('user_id', user.id)
+          supabase.from('saos').select('*, sao_skills(skill_id)').eq('eit_id', user.id),
+          supabase.from('jobs').select('id, skills').eq('eit_id', user.id)
         ]);
         const saos = saosRaw || [];
         const jobs = jobsRaw || [];
@@ -270,14 +270,14 @@ const Skills: React.FC = () => {
     const { data: saosRaw } = await supabase
       .from('saos')
       .select('*, sao_skills!inner(skill_id)')
-      .eq('user_id', user.id)
+      .eq('eit_id', user.id)
       .eq('sao_skills.skill_id', skillId);
     const saos = saosRaw || [];
     // Fetch jobs linked to this skill
     const { data: jobsRaw } = await supabase
       .from('jobs')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('eit_id', user.id)
       .contains('skills', [skillId]);
     const jobs = jobsRaw || [];
     linkedItemsCache.current[skillId] = { saos, jobs };

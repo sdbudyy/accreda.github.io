@@ -97,10 +97,19 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
       }
       console.log('User authenticated:', user.id);
 
+      // Ensure EIT profile exists for this user
+      await supabase
+        .from('eit_profiles')
+        .upsert({
+          id: user.id,
+          full_name: user.user_metadata?.full_name || '',
+          email: user.email || ''
+        });
+
       // Fetch all skills and user_skills in parallel
       const [skillsRes, userSkillsRes] = await Promise.all([
         supabase.from('skills').select('id, name, category'),
-        supabase.from('user_skills').select('id, user_id, skill_id, category_name, skill_name, rank, status').eq('user_id', user.id)
+        supabase.from('eit_skills').select('id, eit_id, skill_id, category_name, skill_name, rank, status').eq('eit_id', user.id)
       ]);
       const dbSkills = skillsRes.data || [];
       let existingSkills = userSkillsRes.data || [];
@@ -121,7 +130,7 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
               return null;
             }
             return {
-              user_id: user.id,
+              eit_id: user.id,
               skill_id: dbSkill.id,
               category_name: category.name,
               skill_name: skill.name,
@@ -133,7 +142,7 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
 
         console.log('Initializing skills:', initialSkills.length);
         const { error: insertError } = await supabase
-          .from('user_skills')
+          .from('eit_skills')
           .insert(initialSkills);
 
         if (insertError) {
@@ -144,9 +153,9 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
         // Fetch the newly inserted skills
         console.log('Fetching newly initialized skills...');
         const { data: newSkills, error: newFetchError } = await supabase
-          .from('user_skills')
-          .select('id, user_id, skill_id, category_name, skill_name, rank, status')
-          .eq('user_id', user.id);
+          .from('eit_skills')
+          .select('id, eit_id, skill_id, category_name, skill_name, rank, status')
+          .eq('eit_id', user.id);
 
         if (newFetchError) {
           console.error('Error fetching newly initialized skills:', newFetchError);
@@ -167,8 +176,7 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
             s => s.name === skill.name && s.category === category.name
           );
           if (!dbSkill) {
-            console.warn(`No matching DB skill found for: ${skill.name} in ${category.name}`);
-            return skill;
+            throw new Error(`No matching DB skill found for: ${skill.name} in ${category.name}`);
           }
           const userSkill = existingSkills?.find(us => 
             us.skill_id === dbSkill.id
@@ -244,7 +252,7 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
 
       // Then sync with Supabase in the background
       const updateData = {
-        user_id: user.id,
+        eit_id: user.id,
         skill_id: skillId,
         category_name: skill.category_name || category.name,
         skill_name: skill.name,
@@ -255,9 +263,9 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
       console.log('Sending update to Supabase:', updateData);
 
       const { error } = await supabase
-        .from('user_skills')
+        .from('eit_skills')
         .upsert(updateData, {
-          onConflict: 'user_id,skill_id'
+          onConflict: 'eit_id,skill_id'
         });
 
       if (error) {

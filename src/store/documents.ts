@@ -33,7 +33,6 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
   createDocument: async (title: string, content: string, type: Document['type'], file?: File, category?: string) => {
     set({ loading: true, error: null });
     try {
-      console.log('Creating new document...');
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError) {
         console.error('Auth error:', authError);
@@ -41,18 +40,27 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
       }
       if (!user) throw new Error('No authenticated user found');
 
+      // Ensure EIT profile exists for this user
+      await supabase
+        .from('eit_profiles')
+        .upsert({
+          id: user.id,
+          full_name: user.user_metadata?.full_name || '',
+          email: user.email || ''
+        });
+
       // Get file type and size if file is provided
       const file_type = file?.type || 'text/plain';
       const file_size = file?.size || content.length;
       const safeCategory = category || 'Uncategorized';
 
-      console.log('Creating document:', { title, type, userId: user.id, file_type, file_size, category: safeCategory });
+      console.log('Creating document:', { title, type, eit_id: user.id, file_type, file_size, category: safeCategory });
 
       const { data: document, error: createError } = await supabase
         .from('documents')
         .insert([
           {
-            user_id: user.id,
+            eit_id: user.id,
             title,
             content,
             type,
@@ -116,7 +124,7 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
-        .eq('user_id', user.id);
+        .eq('eit_id', user.id);
 
       if (updateError) {
         console.error('Error updating document:', {
@@ -171,7 +179,7 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
         .from('documents')
         .delete()
         .eq('id', id)
-        .eq('user_id', user.id);
+        .eq('eit_id', user.id);
 
       if (deleteError) {
         console.error('Error deleting document:', {
@@ -216,7 +224,7 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
       const { data: documents, error: fetchError } = await supabase
         .from('documents')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('eit_id', user.id)
         .order('created_at', { ascending: false });
 
       if (fetchError) {

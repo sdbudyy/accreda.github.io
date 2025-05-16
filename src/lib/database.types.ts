@@ -12,7 +12,7 @@ export interface Database {
       documents: {
         Row: {
           id: string
-          user_id: string
+          eit_id: string
           title: string
           content: string
           type: string
@@ -22,7 +22,7 @@ export interface Database {
         }
         Insert: {
           id?: string
-          user_id: string
+          eit_id: string
           title: string
           content: string
           type: string
@@ -32,7 +32,7 @@ export interface Database {
         }
         Update: {
           id?: string
-          user_id?: string
+          eit_id?: string
           title?: string
           content?: string
           type?: string
@@ -44,7 +44,7 @@ export interface Database {
       saos: {
         Row: {
           id: string
-          user_id: string
+          eit_id: string
           title: string
           content: string
           created_at: string
@@ -52,7 +52,7 @@ export interface Database {
         }
         Insert: {
           id?: string
-          user_id: string
+          eit_id: string
           title: string
           content: string
           created_at?: string
@@ -60,7 +60,7 @@ export interface Database {
         }
         Update: {
           id?: string
-          user_id?: string
+          eit_id?: string
           title?: string
           content?: string
           created_at?: string
@@ -70,7 +70,7 @@ export interface Database {
       skills: {
         Row: {
           id: string
-          user_id: string
+          eit_id: string
           name: string
           category: string
           status: string
@@ -81,7 +81,7 @@ export interface Database {
         }
         Insert: {
           id?: string
-          user_id: string
+          eit_id: string
           name: string
           category: string
           status?: string
@@ -92,7 +92,7 @@ export interface Database {
         }
         Update: {
           id?: string
-          user_id?: string
+          eit_id?: string
           name?: string
           category?: string
           status?: string
@@ -105,7 +105,7 @@ export interface Database {
       jobs: {
         Row: {
           id: string
-          user_id: string
+          eit_id: string
           title: string
           company: string
           location: string
@@ -118,7 +118,7 @@ export interface Database {
         }
         Insert: {
           id?: string
-          user_id: string
+          eit_id: string
           title: string
           company: string
           location: string
@@ -131,7 +131,7 @@ export interface Database {
         }
         Update: {
           id?: string
-          user_id?: string
+          eit_id?: string
           title?: string
           company?: string
           location?: string
@@ -146,7 +146,7 @@ export interface Database {
       job_references: {
         Row: {
           id: string
-          user_id: string
+          eit_id: string
           job_id: string
           full_name: string
           email: string
@@ -157,7 +157,7 @@ export interface Database {
         }
         Insert: {
           id?: string
-          user_id: string
+          eit_id: string
           job_id: string
           full_name: string
           email: string
@@ -168,7 +168,7 @@ export interface Database {
         }
         Update: {
           id?: string
-          user_id?: string
+          eit_id?: string
           job_id?: string
           full_name?: string
           email?: string
@@ -181,7 +181,7 @@ export interface Database {
       validators: {
         Row: {
           id: string
-          user_id: string
+          eit_id: string
           skill_id: string
           full_name: string
           email: string
@@ -191,7 +191,7 @@ export interface Database {
         }
         Insert: {
           id?: string
-          user_id: string
+          eit_id: string
           skill_id: string
           full_name: string
           email: string
@@ -201,7 +201,7 @@ export interface Database {
         }
         Update: {
           id?: string
-          user_id?: string
+          eit_id?: string
           skill_id?: string
           full_name?: string
           email?: string
@@ -218,7 +218,7 @@ export interface Database {
       search_all: {
         Args: {
           search_query: string
-          user_id: string
+          eit_id: string
         }
         Returns: {
           id: string

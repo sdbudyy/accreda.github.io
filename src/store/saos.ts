@@ -37,14 +37,23 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
       }
       if (!user) throw new Error('No authenticated user found');
 
-      console.log('Creating SAO:', { title, content, skills, userId: user.id });
+      // Ensure EIT profile exists for this user
+      await supabase
+        .from('eit_profiles')
+        .upsert({
+          id: user.id,
+          full_name: user.user_metadata?.full_name || '',
+          email: user.email || ''
+        });
+
+      console.log('Creating SAO:', { title, content, skills, eit_id: user.id });
 
       // First, create the SAO
       const { data: sao, error: saoError } = await supabase
         .from('saos')
         .insert([
           {
-            user_id: user.id,
+            eit_id: user.id,
             title,
             content
           }
@@ -69,8 +78,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
       const saoSkills = skills.map(skill => ({
         sao_id: sao.id,
         skill_id: skill.id,
-        category_name: skill.category_name || '',
-        skill_name: skill.name
+        category_name: skill.category_name || ''
       }));
 
       console.log('Creating SAO skills relationships:', saoSkills);
@@ -124,7 +132,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
         .from('saos')
         .update({ title, content })
         .eq('id', id)
-        .eq('user_id', user.id);
+        .eq('eit_id', user.id);
 
       if (saoError) {
         console.error('Error updating SAO:', saoError);
@@ -146,8 +154,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
       const saoSkills = skills.map(skill => ({
         sao_id: id,
         skill_id: skill.id,
-        category_name: skill.category_name || '',
-        skill_name: skill.name
+        category_name: skill.category_name || ''
       }));
 
       const { error: skillsError } = await supabase
@@ -202,7 +209,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
         .from('saos')
         .delete()
         .eq('id', id)
-        .eq('user_id', user.id);
+        .eq('eit_id', user.id);
 
       if (saoError) {
         console.error('Error deleting SAO:', saoError);
@@ -245,11 +252,10 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
           *,
           sao_skills (
             skill_id,
-            category_name,
-            skill_name
+            category_name
           )
         `)
-        .eq('user_id', user.id)
+        .eq('eit_id', user.id)
         .order('created_at', { ascending: false });
 
       if (saosError) {
@@ -264,7 +270,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
         ...sao,
         skills: sao.sao_skills.map((skill: any) => ({
           id: skill.skill_id,
-          name: skill.skill_name,
+          name: '', // Name not available directly, can be looked up if needed
           category_name: skill.category_name,
           status: 'not-started'
         }))

@@ -21,7 +21,7 @@ interface SearchStore {
   results: SearchResult[];
   loading: boolean;
   error: string | null;
-  search: (query: string) => Promise<void>;
+  search: (query: string) => Promise<void> | undefined;
   clearResults: () => void;
 }
 
@@ -45,7 +45,7 @@ export const useSearchStore = create<SearchStore>((set) => ({
       // Search across all tables
       const { data, error } = await supabase.rpc('search_all', {
         search_query: query,
-        user_id: user.id
+        eit_id: user.id
       });
 
       if (error) throw error;

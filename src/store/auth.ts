@@ -75,7 +75,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (signUpError) throw signUpError;
 
     const { error: profileError } = await supabase
-      .from('users')
+      .from('eit_profiles')
       .insert([{ email, full_name: fullName }]);
     
     if (profileError) throw profileError;

@@ -34,7 +34,7 @@ const RecentActivities: React.FC = () => {
       const { data: recentSAOs, error: saosError } = await supabase
         .from('saos')
         .select('*')
-        .eq('user_id', userId)
+        .eq('eit_id', userId)
         .order('updated_at', { ascending: false })
         .limit(limit);
 
@@ -49,7 +49,7 @@ const RecentActivities: React.FC = () => {
       const { data: recentDocs, error: docsError } = await supabase
         .from('documents')
         .select('*')
-        .eq('user_id', userId)
+        .eq('eit_id', userId)
         .order('updated_at', { ascending: false })
         .limit(limit);
 
@@ -69,7 +69,7 @@ const RecentActivities: React.FC = () => {
             name
           )
         `)
-        .eq('user_id', userId)
+        .eq('eit_id', userId)
         .not('rank', 'is', null)
         .order('updated_at', { ascending: false })
         .limit(limit);
@@ -85,7 +85,7 @@ const RecentActivities: React.FC = () => {
       const { data: recentJobs, error: jobsError } = await supabase
         .from('jobs')
         .select('*')
-        .eq('user_id', userId)
+        .eq('eit_id', userId)
         .order('updated_at', { ascending: false })
         .limit(limit);
 
@@ -100,7 +100,7 @@ const RecentActivities: React.FC = () => {
       const { data: recentRefs, error: refsError } = await supabase
         .from('job_references')
         .select('*')
-        .eq('user_id', userId)
+        .eq('eit_id', userId)
         .order('updated_at', { ascending: false })
         .limit(limit);
 
@@ -115,7 +115,7 @@ const RecentActivities: React.FC = () => {
       const { data: recentValidators, error: validatorsError } = await supabase
         .from('validators')
         .select('*')
-        .eq('user_id', userId)
+        .eq('eit_id', userId)
         .order('updated_at', { ascending: false })
         .limit(limit);
 
@@ -215,7 +215,7 @@ const RecentActivities: React.FC = () => {
               event: '*', 
               schema: 'public', 
               table: 'saos',
-              filter: `user_id=eq.${user.id}`
+              filter: `eit_id=eq.${user.id}`
             }, 
             (payload) => {
               console.log('📝 SAO change detected:', payload);
@@ -235,7 +235,7 @@ const RecentActivities: React.FC = () => {
               event: '*', 
               schema: 'public', 
               table: 'documents',
-              filter: `user_id=eq.${user.id}`
+              filter: `eit_id=eq.${user.id}`
             }, 
             (payload) => {
               console.log('📄 Document change detected:', payload);
@@ -255,7 +255,7 @@ const RecentActivities: React.FC = () => {
               event: '*', 
               schema: 'public', 
               table: 'user_skills',
-              filter: `user_id=eq.${user.id}`
+              filter: `eit_id=eq.${user.id}`
             }, 
             (payload) => {
               console.log('🎯 Skill change detected:', payload);
@@ -275,7 +275,7 @@ const RecentActivities: React.FC = () => {
               event: '*', 
               schema: 'public', 
               table: 'jobs',
-              filter: `user_id=eq.${user.id}`
+              filter: `eit_id=eq.${user.id}`
             }, 
             (payload) => {
               console.log('💼 Job change detected:', payload);
@@ -295,7 +295,7 @@ const RecentActivities: React.FC = () => {
               event: '*', 
               schema: 'public', 
               table: 'job_references',
-              filter: `user_id=eq.${user.id}`
+              filter: `eit_id=eq.${user.id}`
             }, 
             (payload) => {
               console.log('👥 Reference change detected:', payload);
@@ -315,7 +315,7 @@ const RecentActivities: React.FC = () => {
               event: '*', 
               schema: 'public', 
               table: 'validators',
-              filter: `user_id=eq.${user.id}`
+              filter: `eit_id=eq.${user.id}`
             }, 
             (payload) => {
               console.log('✅ Validator change detected:', payload);

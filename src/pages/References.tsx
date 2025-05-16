@@ -105,7 +105,7 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
         const { error: insertError } = await supabase
           .from('validators')
           .insert([{
-            user_id: user.id,
+            eit_id: user.id,
             skill_id: skillId,
             full_name: formData.fullName,
             email: formData.email,
@@ -274,12 +274,10 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
         const { error: insertError } = await supabase
           .from('job_references')
           .insert([{
-            user_id: user.id,
             job_id: job.id,
             full_name: formData.fullName,
             email: formData.email,
-            description: formData.description,
-            reference_number: referenceNumber
+            description: formData.description
           }]);
 
         if (insertError) throw insertError;
@@ -420,7 +418,7 @@ const References: React.FC = () => {
       const { data, error } = await supabase
         .from('validators')
         .select('*')
-        .eq('user_id', user.id);
+        .eq('eit_id', user.id);
 
       if (error) throw error;
 
@@ -447,7 +445,7 @@ const References: React.FC = () => {
       const { data, error } = await supabase
         .from('jobs')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('eit_id', user.id)
         .order('start_date', { ascending: false });
 
       if (error) throw error;
@@ -465,7 +463,7 @@ const References: React.FC = () => {
       const { data, error } = await supabase
         .from('job_references')
         .select('*')
-        .eq('user_id', user.id);
+        .eq('eit_id', user.id);
 
       if (error) throw error;
 

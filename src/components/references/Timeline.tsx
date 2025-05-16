@@ -207,9 +207,9 @@ const Timeline: React.FC = () => {
       if (!user) return;
       // Fetch jobs, references, validators in parallel
       const [jobsRes, refsRes, valsRes] = await Promise.all([
-        supabase.from('jobs').select('id, title, company, location, start_date, end_date, description, skills').eq('user_id', user.id).order('start_date', { ascending: false }),
-        supabase.from('job_references').select('id, user_id, job_id, full_name, email, description, reference_number, created_at, updated_at').eq('user_id', user.id),
-        supabase.from('validators').select('id, user_id, skill_id, full_name, email, description, created_at, updated_at').eq('user_id', user.id)
+        supabase.from('jobs').select('id, title, company, location, start_date, end_date, description, skills').eq('eit_id', user.id).order('start_date', { ascending: false }),
+        supabase.from('job_references').select('id, eit_id, job_id, full_name, email, description, reference_number, created_at, updated_at').eq('eit_id', user.id),
+        supabase.from('validators').select('id, eit_id, skill_id, full_name, email, description, created_at, updated_at').eq('eit_id', user.id)
       ]);
       // Jobs
       setJobs(jobsRes.data || []);
@@ -385,7 +385,7 @@ const Timeline: React.FC = () => {
         .from('jobs')
         .insert([{
           ...newJob,
-          user_id: user.id,
+          eit_id: user.id,
           skills: newJob.skills || [] // Ensure skills array is included
         }]);
 
@@ -409,7 +409,7 @@ const Timeline: React.FC = () => {
     }
   };
 
-  const handleUpdateJob = async (jobId: string) => {
+  const handleUpdateJob = async (jobId: string, updatedSkills?: string[]) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -437,13 +437,9 @@ const Timeline: React.FC = () => {
       // Prepare the update data
       const updateData = {
         title: newJob.title || existingJob.title,
-        company: newJob.company || existingJob.company,
-        location: newJob.location || existingJob.location,
-        start_date: newJob.start_date || existingJob.start_date,
-        end_date: newJob.end_date || existingJob.end_date,
         description: newJob.description || existingJob.description,
-        skills: newJob.skills || [], // Always use the new skills array
-        user_id: user.id
+        skills: updatedSkills || newJob.skills || [],
+        eit_id: user.id
       };
 
       // Log the update data for debugging
@@ -457,7 +453,7 @@ const Timeline: React.FC = () => {
         .from('jobs')
         .update(updateData)
         .eq('id', jobId)
-        .eq('user_id', user.id);
+        .eq('eit_id', user.id);
 
       if (updateError) {
         console.error('Error updating job:', updateError);
@@ -576,10 +572,8 @@ const Timeline: React.FC = () => {
     }, [selectedSkills]);
 
     const handleDone = async () => {
-      // Only update parent state when Done is clicked
-      setNewJob(prev => ({ ...prev, skills: selectedSkills }));
       if (isSkillsPopupOpen !== 'new' && isSkillsPopupOpen) {
-        await handleUpdateJob(isSkillsPopupOpen);
+        await handleUpdateJob(isSkillsPopupOpen, selectedSkills);
         await fetchAll();
       }
       setIsSkillsPopupOpen(null);
