@@ -6,6 +6,7 @@ import { useSAOsStore } from './saos';
 import { useDocumentsStore } from './documents';
 import { useProgressStore } from './progress';
 import { useSearchStore } from './search';
+import { clearAllStates } from '../utils/stateCleanup';
 
 interface AuthState {
   user: User | null;
@@ -13,49 +14,7 @@ interface AuthState {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signOut: () => Promise<void>;
-  clearAllStores: () => void;
 }
-
-const clearAllStores = () => {
-  // Clear skills store
-  useSkillsStore.setState({
-    skillCategories: [],
-    loading: false,
-    error: null
-  });
-
-  // Clear SAOs store
-  useSAOsStore.setState({
-    saos: [],
-    loading: false,
-    error: null
-  });
-
-  // Clear documents store
-  useDocumentsStore.setState({
-    documents: [],
-    loading: false,
-    error: null
-  });
-
-  // Clear progress store
-  useProgressStore.setState({
-    overallProgress: 0,
-    completedSkills: 0,
-    documentedExperiences: 0,
-    supervisorApprovals: 0,
-    lastUpdated: new Date().toISOString(),
-    loading: false,
-    initialized: false
-  });
-
-  // Clear search store
-  useSearchStore.setState({
-    results: [],
-    loading: false,
-    error: null
-  });
-};
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
@@ -83,19 +42,27 @@ export const useAuthStore = create<AuthState>((set) => ({
   signOut: async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
-    clearAllStores(); // Clear all stores before setting user to null
+    clearAllStates();
     set({ user: null });
-  },
-  clearAllStores
+  }
 }));
 
-// Initialize auth state
+// Initialize auth state with debouncing
+let authChangeTimeout: NodeJS.Timeout;
 supabase.auth.onAuthStateChange((event, session) => {
-  if (event === 'SIGNED_OUT') {
-    clearAllStores(); // Clear all stores on sign out
+  // Clear any pending timeouts
+  if (authChangeTimeout) {
+    clearTimeout(authChangeTimeout);
   }
-  useAuthStore.setState({ 
-    user: session?.user ?? null,
-    loading: false,
-  });
+
+  // Debounce the state update
+  authChangeTimeout = setTimeout(() => {
+    if (event === 'SIGNED_OUT') {
+      clearAllStates();
+    }
+    useAuthStore.setState({ 
+      user: session?.user ?? null,
+      loading: false,
+    });
+  }, 100); // 100ms debounce
 });

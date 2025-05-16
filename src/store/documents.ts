@@ -23,12 +23,19 @@ interface DocumentsState {
   updateDocument: (id: string, title: string, content: string) => Promise<void>;
   deleteDocument: (id: string) => Promise<void>;
   loadUserDocuments: () => Promise<void>;
+  clearState: () => void;
 }
 
 export const useDocumentsStore = create<DocumentsState>((set, get) => ({
   documents: [],
   loading: false,
   error: null,
+
+  clearState: () => set({
+    documents: [],
+    loading: false,
+    error: null
+  }),
 
   createDocument: async (title: string, content: string, type: Document['type'], file?: File, category?: string) => {
     set({ loading: true, error: null });

@@ -3,16 +3,19 @@ import { Clock, Calendar, Award, BarChart3, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
-// Lazy load heavy dashboard components
-const ProgressCard = React.lazy(() => import('../components/dashboard/ProgressCard'));
-const RecentActivities = React.lazy(() => import('../components/dashboard/RecentActivities'));
-const UpcomingDeadlines = React.lazy(() => import('../components/dashboard/UpcomingDeadlines'));
-const SkillsOverview = React.lazy(() => import('../components/dashboard/SkillsOverview'));
 import { useProgressStore } from '../store/progress';
 import { useEssayStore } from '../store/essays';
 import { useSkillsStore } from '../store/skills';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useSAOsStore } from '../store/saos';
+import SupervisorDashboard from '../components/dashboard/SupervisorDashboard';
+import EITDashboard from '../components/eitdashboard/EITDashboard';
+
+// Lazy load heavy dashboard components
+const ProgressCard = React.lazy(() => import('../components/eitdashboard/ProgressCard'));
+const RecentActivities = React.lazy(() => import('../components/eitdashboard/RecentActivities'));
+const UpcomingDeadlines = React.lazy(() => import('../components/eitdashboard/UpcomingDeadlines'));
+const SkillsOverview = React.lazy(() => import('../components/eitdashboard/SkillsOverview'));
 
 type ProgressStat = {
   title: string;
@@ -25,6 +28,7 @@ type ProgressStat = {
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [userName, setUserName] = useState<string>('');
+  const [userRole, setUserRole] = useState<'eit' | 'supervisor' | null>(null);
   const {
     overallProgress,
     completedSkills,
@@ -47,13 +51,36 @@ const Dashboard: React.FC = () => {
   const [calendarLoading, setCalendarLoading] = useState(false);
   const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
   console.log('Google Client ID (from import.meta.env):', GOOGLE_CLIENT_ID);
+  const [roleLoading, setRoleLoading] = useState(true);
 
   useEffect(() => {
     const getUserProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user?.user_metadata?.full_name) {
+      if (!user) return;
+
+      if (user.user_metadata?.full_name) {
         setUserName(user.user_metadata.full_name);
       }
+
+      // Check user role
+      const { data: eitProfile } = await supabase
+        .from('eit_profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+
+      const { data: supervisorProfile } = await supabase
+        .from('supervisor_profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+
+      if (supervisorProfile) {
+        setUserRole('supervisor');
+      } else if (eitProfile) {
+        setUserRole('eit');
+      }
+      setRoleLoading(false);
     };
 
     const initializeData = async () => {
@@ -140,134 +167,23 @@ const Dashboard: React.FC = () => {
     flow: 'implicit',
   });
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-800">
-            Welcome back, {userName || 'Engineer'}!
-          </h1>
-          <p className="text-slate-500 mt-1">Here's an overview of your EIT progress</p>
-        </div>
-        <div className="flex items-center space-x-2 mt-4 md:mt-0">
-          <span className="text-sm text-slate-500 flex items-center">
-            <Clock size={14} className="mr-1" /> 
-            Last updated: {formatLastUpdated(lastUpdated)}
-          </span>
-          <button 
-            className={`btn btn-primary ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
-            onClick={() => {
-              if (!loading) {
-                loadUserSkills().then(() => updateProgress());
-              }
-            }}
-            disabled={loading}
-          >
-            {loading ? 'Refreshing...' : 'Refresh'}
-          </button>
-        </div>
-      </div>
+  if (roleLoading) {
+    return <div className="flex justify-center items-center h-64">Loading...</div>;
+  }
 
-      {/* Warn if client ID is missing */}
-      {!GOOGLE_CLIENT_ID && (
-        <div className="bg-red-100 text-red-700 p-2 rounded mb-4">
-          Google Client ID is not set. Please configure VITE_GOOGLE_CLIENT_ID in your .env file.<br />
-          <span className="text-xs">Current value: {String(GOOGLE_CLIENT_ID)}</span>
-        </div>
-      )}
+  if (userRole === 'supervisor') {
+    return <SupervisorDashboard />;
+  }
 
-      {/* Progress Cards */}
-      <Suspense fallback={<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">{[...Array(4)].map((_, i) => <div key={i} className="card animate-pulse h-32" />)}</div>}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {progressStats.map((stat, index) => (
-            <ProgressCard key={index} {...stat} />
-          ))}
-        </div>
-      </Suspense>
-
-      {/* Main Dashboard Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="card">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold flex items-center">
-                <Calendar size={18} className="mr-2 text-teal-600" />
-                Recent Activities
-              </h2>
-            </div>
-            <Suspense fallback={<div className="p-6 text-center text-slate-400">Loading activities...</div>}>
-              <RecentActivities />
-            </Suspense>
-          </div>
-
-          <div className="card">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold flex items-center">
-                <Award size={18} className="mr-2 text-teal-600" />
-                Upcoming Deadlines
-              </h2>
-              <div className="flex items-center space-x-2">
-                <button className="text-sm text-teal-600 hover:text-teal-700 flex items-center">
-                  View All <ArrowRight size={14} className="ml-1" />
-                </button>
-                {/* One-click Connect Calendar Button */}
-                {!googleToken && (
-                  <button
-                    className="text-sm text-blue-600 hover:text-blue-700 flex items-center border border-blue-200 rounded px-2 py-1 ml-2"
-                    onClick={() => login()}
-                    type="button"
-                  >
-                    Connect Calendar
-                  </button>
-                )}
-              </div>
-            </div>
-            {/* Show Google Calendar iframe if connected, else show UpcomingDeadlines */}
-            {googleToken ? (
-              <div className="flex justify-center py-4">
-                <iframe
-                  src="https://calendar.google.com/calendar/embed?mode=AGENDA"
-                  style={{ border: 0, width: '100%', height: '400px', minHeight: '300px' }}
-                  frameBorder="0"
-                  scrolling="no"
-                  title="Google Calendar"
-                ></iframe>
-              </div>
-            ) : (
-              <Suspense fallback={<div className="p-6 text-center text-slate-400">Loading deadlines...</div>}>
-                <UpcomingDeadlines />
-              </Suspense>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <Suspense fallback={<div className="card animate-pulse h-32" />}> 
-            <SkillsOverview />
-          </Suspense>
-          <div className="card border-2 border-teal-100 bg-teal-50/50">
-            <h3 className="font-semibold text-teal-800 mb-2">AI Writing Assistant</h3>
-            <p className="text-sm text-teal-700 mb-3">
-              Let our AI help you draft your next Self-Assessment Outcome (SAO) essay based on your documented experiences.
-            </p>
-            <button 
-              className={`btn btn-primary w-full ${essayLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
-              onClick={() => startWriting()}
-              disabled={essayLoading}
-            >
-              {essayLoading ? 'Generating...' : 'Start Writing'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  return <EITDashboard />;
 };
 
 export default function DashboardWithBoundary() {
   return (
     <ErrorBoundary>
-      <Dashboard />
+      <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}>
+        <Dashboard />
+      </GoogleOAuthProvider>
     </ErrorBoundary>
   );
 }

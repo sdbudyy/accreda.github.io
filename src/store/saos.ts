@@ -19,12 +19,19 @@ interface SAOsState {
   updateSAO: (id: string, title: string, content: string, skills: Skill[]) => Promise<void>;
   deleteSAO: (id: string) => Promise<void>;
   loadUserSAOs: () => Promise<void>;
+  clearState: () => void;
 }
 
 export const useSAOsStore = create<SAOsState>((set, get) => ({
   saos: [],
   loading: false,
   error: null,
+
+  clearState: () => set({
+    saos: [],
+    loading: false,
+    error: null
+  }),
 
   createSAO: async (title: string, content: string, skills: Skill[]) => {
     set({ loading: true, error: null });

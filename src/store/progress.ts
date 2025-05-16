@@ -16,6 +16,7 @@ interface ProgressState {
   updateProgress: () => Promise<void>;
   initialize: () => Promise<void>;
   setupRealtimeSubscriptions: () => Promise<void>;
+  clearState: () => void;
 }
 
 export const useProgressStore = create<ProgressState>((set, get) => ({
@@ -29,6 +30,16 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
   lastUpdated: new Date().toISOString(),
   loading: false,
   initialized: false,
+
+  clearState: () => set({
+    overallProgress: 0,
+    completedSkills: 0,
+    documentedExperiences: 0,
+    supervisorApprovals: 0,
+    lastUpdated: new Date().toISOString(),
+    loading: false,
+    initialized: false
+  }),
 
   setupRealtimeSubscriptions: async () => {
     const { data: { user } } = await supabase.auth.getUser();

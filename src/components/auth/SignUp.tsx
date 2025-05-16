@@ -109,7 +109,15 @@ export default function SignUp() {
       })
     } catch (error) {
       console.error('Signup error:', error)
-      setError(error instanceof Error ? error.message : 'An error occurred during signup')
+      let message = error instanceof Error ? error.message : 'An error occurred during signup';
+      if (
+        message.includes('duplicate key value') ||
+        message.includes('unique constraint') ||
+        message.toLowerCase().includes('already exists')
+      ) {
+        message = 'An account with this email already exists. Please log in or use a different email address.';
+      }
+      setError(message)
     } finally {
       setLoading(false)
     }
@@ -149,6 +157,31 @@ export default function SignUp() {
             </div>
           )}
           <div className="space-y-4">
+            <div className="flex justify-center mb-4 gap-3">
+              <button
+                type="button"
+                className={`px-4 py-2 rounded-lg border font-semibold transition-all duration-200 transform focus:outline-none focus:ring-2 focus:ring-teal-400
+                  ${formData.accountType === 'eit'
+                    ? 'bg-teal-600 text-white scale-105 shadow-lg'
+                    : 'bg-white text-teal-600 border-teal-600 hover:scale-105 hover:brightness-95'}
+                `}
+                onClick={() => setFormData({ ...formData, accountType: 'eit' })}
+              >
+                EIT
+              </button>
+              <button
+                type="button"
+                className={`px-4 py-2 rounded-lg border font-semibold transition-all duration-200 transform focus:outline-none focus:ring-2 focus:ring-teal-400
+                  ${formData.accountType === 'supervisor'
+                    ? 'bg-teal-600 text-white scale-105 shadow-lg'
+                    : 'bg-white text-teal-600 border-teal-600 hover:scale-105 hover:brightness-95'}
+                `}
+                onClick={() => setFormData({ ...formData, accountType: 'supervisor' })}
+              >
+                Supervisor
+              </button>
+            </div>
+
             <div>
               <label htmlFor="full-name" className="block text-sm font-medium text-slate-700 mb-1">
                 Full Name
@@ -229,27 +262,6 @@ export default function SignUp() {
                 value={formData.confirmPassword}
                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
               />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input
-                id="account-type"
-                name="account-type"
-                type="checkbox"
-                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                checked={formData.accountType === 'supervisor'}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    accountType: e.target.checked ? 'supervisor' : 'eit'
-                  })
-                }
-              />
-              <label htmlFor="account-type" className="ml-2 block text-sm text-gray-900">
-                I am a supervisor
-              </label>
             </div>
           </div>
 

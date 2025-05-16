@@ -21,6 +21,7 @@ interface SkillsState {
   loadUserSkills: () => Promise<void>;
   loading: boolean;
   error: string | null;
+  clearState: () => void;
 }
 
 // Initial skill categories data
@@ -83,6 +84,12 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
   skillCategories: initialSkillCategories,
   loading: false,
   error: null,
+
+  clearState: () => set({
+    skillCategories: initialSkillCategories,
+    loading: false,
+    error: null
+  }),
 
   setSkillCategories: (categories) => set({ skillCategories: categories }),
 
