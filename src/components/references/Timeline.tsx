@@ -22,7 +22,7 @@ interface Reference {
   description: string;
   reference_number: number;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
 }
 
 interface Validator {
@@ -205,26 +205,31 @@ const Timeline: React.FC = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      // Fetch jobs, references, validators in parallel
-      const [jobsRes, refsRes, valsRes] = await Promise.all([
-        supabase.from('jobs').select('id, title, company, location, start_date, end_date, description, skills').eq('eit_id', user.id).order('start_date', { ascending: false }),
-        supabase.from('job_references').select('id, eit_id, job_id, full_name, email, description, reference_number, created_at, updated_at').eq('eit_id', user.id),
-        supabase.from('validators').select('id, eit_id, skill_id, full_name, email, description, created_at, updated_at').eq('eit_id', user.id)
-      ]);
-      // Jobs
+      // Fetch jobs first
+      const jobsRes = await supabase.from('jobs').select('id, title, company, location, start_date, end_date, description, skills').eq('eit_id', user.id).order('start_date', { ascending: false });
       setJobs(jobsRes.data || []);
-      // References
-      if (refsRes.data) {
-        const groupedReferences = refsRes.data.reduce((acc, reference) => {
-          if (!acc[reference.job_id]) acc[reference.job_id] = [];
-          acc[reference.job_id].push(reference);
-          return acc;
-        }, {} as Record<string, Reference[]>);
-        setReferences(groupedReferences);
+      // Fetch references for these jobs
+      const jobIds = (jobsRes.data || []).map((j: any) => j.id);
+      let refsRes: any = { data: [] };
+      if (jobIds.length > 0) {
+        refsRes = await supabase.from('job_references').select('id, job_id, full_name, email, description, reference_number, created_at, updated_at').in('job_id', jobIds);
       }
+      // Fetch validators
+      const valsRes = await supabase.from('validators').select('id, eit_id, skill_id, full_name, email, description, created_at, updated_at').eq('eit_id', user.id);
+      // References
+      let referencesData: Reference[] = [];
+      if (!refsRes.error && Array.isArray(refsRes.data)) {
+        referencesData = refsRes.data;
+      }
+      const groupedReferences = referencesData.reduce((acc: Record<string, Reference[]>, reference: Reference) => {
+        if (!acc[reference.job_id]) acc[reference.job_id] = [];
+        acc[reference.job_id].push(reference);
+        return acc;
+      }, {} as Record<string, Reference[]>);
+      setReferences(groupedReferences);
       // Validators
       if (valsRes.data) {
-        const groupedValidators = valsRes.data.reduce((acc, validator) => {
+        const groupedValidators = valsRes.data.reduce((acc: Record<string, Validator[]>, validator: Validator) => {
           if (!acc[validator.skill_id]) acc[validator.skill_id] = [];
           acc[validator.skill_id].push(validator);
           return acc;
@@ -626,6 +631,20 @@ const Timeline: React.FC = () => {
       </div>
     );
   };
+
+  useEffect(() => {
+    if (isAddingJob && !isEditingJob) {
+      setNewJob({
+        title: '',
+        company: '',
+        location: '',
+        start_date: '',
+        end_date: '',
+        description: '',
+        skills: []
+      });
+    }
+  }, [isAddingJob, isEditingJob]);
 
   if (loading) {
     return (

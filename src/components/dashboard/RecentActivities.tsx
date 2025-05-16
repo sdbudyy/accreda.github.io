@@ -62,7 +62,7 @@ const RecentActivities: React.FC = () => {
       // Fetch recent skill updates
       console.log('🎯 Fetching skills...');
       const { data: recentSkills, error: skillsError } = await supabase
-        .from('user_skills')
+        .from('eit_skills')
         .select(`
           *,
           skills (
@@ -254,7 +254,7 @@ const RecentActivities: React.FC = () => {
             { 
               event: '*', 
               schema: 'public', 
-              table: 'user_skills',
+              table: 'eit_skills',
               filter: `eit_id=eq.${user.id}`
             }, 
             (payload) => {

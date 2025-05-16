@@ -106,7 +106,7 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
           email: user.email || ''
         });
 
-      // Fetch all skills and user_skills in parallel
+      // Fetch all skills and eit_skills in parallel
       const [skillsRes, userSkillsRes] = await Promise.all([
         supabase.from('skills').select('id, name, category'),
         supabase.from('eit_skills').select('id, eit_id, skill_id, category_name, skill_name, rank, status').eq('eit_id', user.id)

@@ -104,8 +104,7 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
       const { data: experiences, error: experiencesError } = await supabase
         .from('experiences')
         .select('*')
-        .eq('eit_id', user.id)
-        .eq('is_documented', true);
+        .eq('eit_id', user.id);
 
       if (experiencesError) throw experiencesError;
 
@@ -179,8 +178,7 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
       const { data: experiences, error: experiencesError } = await supabase
         .from('experiences')
         .select('*')
-        .eq('eit_id', user.id)
-        .eq('is_documented', true);
+        .eq('eit_id', user.id);
 
       if (experiencesError) throw experiencesError;
 

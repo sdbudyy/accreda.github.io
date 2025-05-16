@@ -70,14 +70,22 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (existingValidator) {
-      setFormData({
-        fullName: existingValidator.full_name,
-        email: existingValidator.email,
-        description: existingValidator.description
-      });
+    if (isOpen) {
+      if (existingValidator) {
+        setFormData({
+          fullName: existingValidator.full_name,
+          email: existingValidator.email,
+          description: existingValidator.description
+        });
+      } else {
+        setFormData({
+          fullName: '',
+          email: '',
+          description: ''
+        });
+      }
     }
-  }, [existingValidator]);
+  }, [isOpen, existingValidator, skillId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -224,7 +232,7 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
-    description: ''
+    referenceText: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -236,13 +244,13 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
         setFormData({
           fullName: existingReference.full_name,
           email: existingReference.email,
-          description: existingReference.description
+          referenceText: existingReference.description
         });
       } else {
         setFormData({
           fullName: '',
           email: '',
-          description: ''
+          referenceText: ''
         });
       }
     }
@@ -257,35 +265,43 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No authenticated user');
 
+      const referenceData = {
+        job_id: job.id,
+        full_name: formData.fullName,
+        email: formData.email,
+        description: formData.referenceText,
+        reference_number: referenceNumber,
+        eit_id: user.id
+      };
+      console.log('Reference data to insert/update:', referenceData);
+
       if (existingReference) {
         // Update existing reference
         const { error: updateError } = await supabase
           .from('job_references')
-          .update({
-            full_name: formData.fullName,
-            email: formData.email,
-            description: formData.description
-          })
+          .update(referenceData)
           .eq('id', existingReference.id);
 
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error('Update error:', updateError);
+          throw updateError;
+        }
       } else {
         // Create new reference
         const { error: insertError } = await supabase
           .from('job_references')
-          .insert([{
-            job_id: job.id,
-            full_name: formData.fullName,
-            email: formData.email,
-            description: formData.description
-          }]);
+          .insert([referenceData]);
 
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error('Insert error:', insertError);
+          throw insertError;
+        }
       }
 
       onSave();
       onClose();
     } catch (err) {
+      console.error('ReferencePopup error:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
@@ -346,13 +362,13 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Description
+              Reference Text
             </label>
             <textarea
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              value={formData.referenceText}
+              onChange={(e) => setFormData(prev => ({ ...prev, referenceText: e.target.value }))}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-              placeholder="Enter description of reference"
+              placeholder="Enter reference text"
               rows={4}
               required
             />
