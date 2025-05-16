@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useSkillsStore, Category, Skill } from '../../store/skills';
+import { Award } from 'lucide-react';
 
 interface SkillCategoryProps {
   name: string;
@@ -56,51 +57,70 @@ const SkillsOverview: React.FC = () => {
     .sort((a: Skill, b: Skill) => (b.rank || 0) - (a.rank || 0))
     .slice(0, 3);
 
-  return (
-    <div className="space-y-4">
-      {categoryProgress.map((category) => {
-        const percentage = Math.round((category.completed / category.total) * 100);
-        
-        return (
-          <div key={category.name} className="space-y-1">
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-slate-700">{category.name}</span>
-              <span className="text-sm text-slate-500">
-                {category.completed}/{category.total}
-              </span>
-            </div>
-            <div className="progress-bar">
-              <div 
-                className={`progress-bar-fill ${category.color}`} 
-                style={{ width: `${percentage}%` }}
-              ></div>
-            </div>
-          </div>
-        );
-      })}
+  // Calculate overall progress
+  const totalCompleted = categoryProgress.reduce((acc, cat) => acc + cat.completed, 0);
+  const totalSkills = categoryProgress.reduce((acc, cat) => acc + cat.total, 0);
+  const overallPercentage = Math.round((totalCompleted / totalSkills) * 100);
 
-      <hr className="my-4 border-slate-200" />
-      
-      <div>
-        <h4 className="font-medium text-sm mb-3">Recently Completed Skills</h4>
-        <div className="space-y-2">
-          {recentlyCompleted.length > 0 ? (
-            recentlyCompleted.map((skill: Skill) => (
-              <div
-                key={skill.id}
-                id={`skill-${skill.id}`}
-                ref={el => (skillRefs.current[skill.id] = el)}
-                className="text-sm flex items-center justify-between py-1.5 px-2.5 rounded-lg hover:bg-slate-50"
-              >
-                <span>{skill.name}</span>
-                <span className="bg-green-100 text-green-700 text-xs py-0.5 px-2 rounded-full">
-                  Score {skill.rank}
+  return (
+    <div className="card">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold flex items-center">
+          <Award size={18} className="mr-2 text-teal-600" />
+          Skills Overview
+        </h2>
+        <div className="flex items-center">
+          <div className="w-8 h-8 rounded-full flex items-center justify-center bg-teal-100 text-teal-700 mr-2">
+            <span className="text-sm font-bold">{overallPercentage}%</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {categoryProgress.map((category) => {
+          const percentage = Math.round((category.completed / category.total) * 100);
+          
+          return (
+            <div key={category.name} className="space-y-1">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-slate-700">{category.name}</span>
+                <span className="text-sm text-slate-500">
+                  {category.completed}/{category.total}
                 </span>
               </div>
-            ))
-          ) : (
-            <p className="text-sm text-slate-500 italic">No skills completed yet</p>
-          )}
+              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full ${category.color} rounded-full transition-all duration-300`} 
+                  style={{ width: `${percentage}%` }}
+                ></div>
+              </div>
+            </div>
+          );
+        })}
+
+        <hr className="my-4 border-slate-200" />
+        
+        <div>
+          <h4 className="font-medium text-sm mb-3">Recently Completed Skills</h4>
+          <div className="space-y-2">
+            {recentlyCompleted.length > 0 ? (
+              recentlyCompleted.map((skill: Skill) => (
+                <div
+                  key={skill.id}
+                  id={`skill-${skill.id}`}
+                  ref={el => (skillRefs.current[skill.id] = el)}
+                  className="text-sm flex items-center justify-between py-1.5 px-2.5 rounded-lg hover:bg-slate-50 transition-colors"
+                >
+                  <span className="truncate mr-2">{skill.name}</span>
+                  <span className="bg-green-100 text-green-700 text-xs py-0.5 px-2 rounded-full whitespace-nowrap">
+                    Score {skill.rank}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-slate-500 italic">No skills completed yet</p>
+            )}
+          </div>
         </div>
       </div>
     </div>

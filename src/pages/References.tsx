@@ -507,23 +507,58 @@ const References: React.FC = () => {
   useEffect(() => {
     const handleScrollToItem = (event: any) => {
       const { itemId, itemType } = event.detail || {};
-      if (itemType === 'reference') {
-        setActiveTab('references');
-        setTimeout(() => {
-          referencesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
-      } else if (itemType === 'validator') {
-        setActiveTab('validators');
-        setTimeout(() => {
-          validatorsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
-      } else if (itemType === 'job') {
-        workExperienceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+      
+      // Function to perform the scroll
+      const performScroll = () => {
+        const selector = itemType === 'reference' ? `[data-reference-id="${itemId}"]` :
+                        itemType === 'validator' ? `[data-validator-id="${itemId}"]` :
+                        itemType === 'job' ? `[data-job-id="${itemId}"]` : '';
+        
+        if (!selector) return;
+
+        const element = document.querySelector(selector);
+
+        if (element) {
+          // First scroll the section into view
+          if (itemType === 'reference') {
+            setActiveTab('references');
+            referencesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } else if (itemType === 'validator') {
+            setActiveTab('validators');
+            validatorsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+
+          // Then scroll to the specific element after a short delay
+          setTimeout(() => {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            element.classList.add('highlight-item');
+            
+            // Add a subtle bounce animation
+            element.classList.add('animate-bounce-subtle');
+            
+            // Remove animations after they complete
+            setTimeout(() => {
+              element.classList.remove('highlight-item', 'animate-bounce-subtle');
+            }, 2000);
+          }, 300);
+        }
+      };
+
+      // Wait for the next render cycle to ensure DOM is updated
+      requestAnimationFrame(() => {
+        // If we're switching tabs, wait for the tab switch to complete
+        if ((itemType === 'reference' && activeTab !== 'references') ||
+            (itemType === 'validator' && activeTab !== 'validators')) {
+          setTimeout(performScroll, 100);
+        } else {
+          performScroll();
+        }
+      });
     };
+
     window.addEventListener('scroll-to-item', handleScrollToItem);
     return () => window.removeEventListener('scroll-to-item', handleScrollToItem);
-  }, []);
+  }, [activeTab]);
 
   useEffect(() => {
     const handleJobsUpdated = () => {
@@ -590,7 +625,7 @@ const References: React.FC = () => {
             <div className="space-y-6">
               {jobs.length > 0 ? (
                 jobs.map((job) => (
-                  <div key={job.id} className="bg-white rounded-lg border border-slate-200 p-4">
+                  <div key={job.id} className="bg-white rounded-lg border border-slate-200 p-4" data-job-id={job.id}>
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <h3 className="font-semibold text-slate-900">{job.title}</h3>
@@ -606,8 +641,13 @@ const References: React.FC = () => {
                                 setSelectedJob(job);
                                 setSelectedReference(reference);
                                 setSelectedReferenceNumber(refNum);
+                                // Dispatch event to scroll to reference
+                                window.dispatchEvent(new CustomEvent('scroll-to-item', {
+                                  detail: { itemId: reference.id, itemType: 'reference' }
+                                }));
                               }}
                               className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-colors flex items-center gap-2"
+                              data-reference-id={reference.id}
                             >
                               <Edit2 size={14} />
                               Reference {refNum}: {reference.full_name}
@@ -680,43 +720,14 @@ const References: React.FC = () => {
           ) : (
             <div className="space-y-6">
               {completedSkillsByCategory.length > 0 ? (
-                completedSkillsByCategory.map((category) => {
-                  const completed = category.skills.length;
-                  const mean = category.skills.reduce((acc, skill) => acc + (skill.rank || 0), 0) / completed;
-                  
-                  return (
-                    <div key={category.name} className="card">
-                      <div className="flex justify-between items-center mb-4">
-                        <div className="flex items-center gap-4">
-                          <h2 className="text-lg font-semibold">{category.name}</h2>
-                          <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${getMeanColor(mean)}`}>
-                            <Award size={16} />
-                            <span className="text-sm font-medium">Mean Score: {mean.toFixed(1)}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center">
-                          <div className="w-8 h-8 rounded-full flex items-center justify-center bg-green-100 text-green-700 mr-2">
-                            <span className="text-sm font-bold">{completed}</span>
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium">Completed</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-3">
-                        {category.skills.map((skill) => (
-                          <div 
-                            key={skill.id}
-                            className="flex items-center justify-between p-3 rounded-lg border hover:border-slate-300 hover:bg-slate-50 transition-colors"
-                          >
-                            <div className="flex items-center gap-4">
-                              <span className={`text-xs px-2.5 py-1 rounded-full bg-green-100 text-green-800`}>
-                                Score {skill.rank}
-                              </span>
-                              <CheckCircle2 size={18} className="text-green-500" />
-                              <span className="font-medium">{skill.name}</span>
-                            </div>
+                completedSkillsByCategory.map((category) => (
+                  <div key={category.name} className="bg-white rounded-lg border border-slate-200 p-4">
+                    <h3 className="font-semibold text-slate-900 mb-4">{category.name}</h3>
+                    <div className="space-y-4">
+                      {category.skills.map((skill) => (
+                        <div key={skill.id} className="flex items-center justify-between" data-skill-id={skill.id}>
+                          <div className="flex-1">
+                            <h4 className="font-medium text-slate-800">{skill.name}</h4>
                             <div className="flex items-center gap-2">
                               {validators[skill.id]?.map((validator) => (
                                 <button
@@ -724,8 +735,13 @@ const References: React.FC = () => {
                                   onClick={() => {
                                     setSelectedSkill(skill.id);
                                     setSelectedValidator(validator);
+                                    // Dispatch event to scroll to validator
+                                    window.dispatchEvent(new CustomEvent('scroll-to-item', {
+                                      detail: { itemId: validator.id, itemType: 'validator' }
+                                    }));
                                   }}
                                   className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-colors flex items-center gap-2"
+                                  data-validator-id={validator.id}
                                 >
                                   <Edit2 size={14} />
                                   {validator.full_name}
@@ -744,11 +760,11 @@ const References: React.FC = () => {
                               )}
                             </div>
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      ))}
                     </div>
-                  );
-                })
+                  </div>
+                ))
               ) : (
                 <div className="text-center py-8 text-slate-500">
                   <CheckCircle2 size={24} className="mx-auto mb-2 text-slate-400" />

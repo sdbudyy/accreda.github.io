@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS supervisor_profiles (
     email TEXT NOT NULL,
     full_name TEXT NOT NULL,
     account_type TEXT NOT NULL CHECK (account_type = 'supervisor'),
+    organization TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
@@ -31,6 +32,10 @@ CREATE POLICY "Users can update their own EIT profile"
     ON eit_profiles FOR UPDATE
     USING (auth.uid() = id);
 
+CREATE POLICY "Users can insert their own EIT profile"
+    ON eit_profiles FOR INSERT
+    WITH CHECK (auth.uid() = id);
+
 -- Supervisor profiles policies
 CREATE POLICY "Users can view their own supervisor profile"
     ON supervisor_profiles FOR SELECT
@@ -39,6 +44,10 @@ CREATE POLICY "Users can view their own supervisor profile"
 CREATE POLICY "Users can update their own supervisor profile"
     ON supervisor_profiles FOR UPDATE
     USING (auth.uid() = id);
+
+CREATE POLICY "Users can insert their own supervisor profile"
+    ON supervisor_profiles FOR INSERT
+    WITH CHECK (auth.uid() = id);
 
 -- Create function to handle profile updates
 CREATE OR REPLACE FUNCTION handle_updated_at()

@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import MobileNav from './MobileNav';
+import ScrollToTop from './ScrollToTop';
 
 const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -38,6 +39,9 @@ const Layout: React.FC = () => {
         <div className="md:hidden">
           <MobileNav />
         </div>
+
+        {/* Scroll to top button */}
+        <ScrollToTop />
       </div>
     </div>
   );

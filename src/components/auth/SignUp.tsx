@@ -1,83 +1,128 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useNavigate, Link } from 'react-router-dom'
 import AccredaLogo from '../../assets/accreda-logo.png'
 import { AccountType } from '../../types/auth'
 
 export default function SignUp() {
-  const [email, setEmail] = useState('')
-  const [fullName, setFullName] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    confirmPassword: '',
+    fullName: '',
+    organization: '',
+    accountType: 'eit' as 'eit' | 'supervisor'
+  })
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [accountType, setAccountType] = useState<AccountType>('eit')
+  const [success, setSuccess] = useState<string | null>(null)
   const navigate = useNavigate()
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match')
-      return
-    }
-
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long')
-      return
-    }
-
-    if (!fullName.trim()) {
-      setError('Please enter your full name')
-      return
-    }
-
     setLoading(true)
 
     try {
-      // First, create the auth user
+      // Validate password match
+      if (formData.password !== formData.confirmPassword) {
+        throw new Error('Passwords do not match')
+      }
+
+      // Validate password length
+      if (formData.password.length < 6) {
+        throw new Error('Password must be at least 6 characters long')
+      }
+
+      // Validate full name
+      if (!formData.fullName.trim()) {
+        throw new Error('Full name is required')
+      }
+
+      // Validate organization for supervisors
+      if (formData.accountType === 'supervisor' && !formData.organization.trim()) {
+        throw new Error('Organization is required for supervisors')
+      }
+
+      console.log('Creating auth user with:', { email: formData.email, accountType: formData.accountType })
+
+      // Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
+        email: formData.email,
+        password: formData.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/login`,
-          data: {
-            full_name: fullName,
-            account_type: accountType,
-          },
-        },
+          emailRedirectTo: `${window.location.origin}/login`
+        }
       })
 
-      if (authError) throw authError
-
-      if (authData.user) {
-        // Then, create the profile in the appropriate table
-        const { error: profileError } = await supabase
-          .from(accountType === 'eit' ? 'eit_profiles' : 'supervisor_profiles')
-          .insert([
-            {
-              id: authData.user.id,
-              email,
-              full_name: fullName,
-              account_type: accountType,
-            },
-          ])
-
-        if (profileError) throw profileError
+      if (authError) {
+        console.error('Auth error:', authError)
+        throw new Error(`Authentication error: ${authError.message}`)
       }
+      
+      if (!authData.user) {
+        console.error('No user data returned from auth signup')
+        throw new Error('Failed to create user account')
+      }
+
+      console.log('Auth user created:', authData.user.id)
+
+      // Create profile in appropriate table
+      const profileData = {
+        id: authData.user.id,
+        email: formData.email,
+        full_name: formData.fullName,
+        account_type: formData.accountType,
+        ...(formData.accountType === 'supervisor' && {
+          organization: formData.organization
+        })
+      }
+
+      console.log('Creating profile with data:', profileData)
+
+      const { error: profileError } = await supabase
+        .from(formData.accountType === 'eit' ? 'eit_profiles' : 'supervisor_profiles')
+        .insert([profileData])
+
+      if (profileError) {
+        console.error('Profile creation error:', profileError)
+        throw new Error(`Failed to create profile: ${profileError.message}`)
+      }
+
+      console.log('Profile created successfully')
+
+      // Show success message
+      setSuccess('Account created successfully! Please check your email for verification.')
+      setFormData({
+        email: '',
+        password: '',
+        confirmPassword: '',
+        fullName: '',
+        organization: '',
+        accountType: 'eit'
+      })
 
       navigate('/login', { 
         state: { 
           message: 'Please check your email to confirm your account. You can now sign in.' 
         } 
       })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred during sign up')
+    } catch (error) {
+      console.error('Signup error:', error)
+      setError(error instanceof Error ? error.message : 'An error occurred during signup')
     } finally {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        // User is logged in and verified
+        // Redirect to dashboard or show success
+      }
+    });
+  }, []);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 py-12 px-4 sm:px-6 lg:px-8">
@@ -98,33 +143,12 @@ export default function SignUp() {
               <div className="text-sm text-red-700">{error}</div>
             </div>
           )}
-          <div className="space-y-4">
-            {/* Account Type Toggle */}
-            <div className="flex items-center justify-center space-x-4">
-              <button
-                type="button"
-                onClick={() => setAccountType('eit')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  accountType === 'eit'
-                    ? 'bg-teal-600 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                EIT Account
-              </button>
-              <button
-                type="button"
-                onClick={() => setAccountType('supervisor')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  accountType === 'supervisor'
-                    ? 'bg-teal-600 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                Supervisor Account
-              </button>
+          {success && (
+            <div className="rounded-lg bg-green-50 p-4 border border-green-100">
+              <div className="text-sm text-green-700">{success}</div>
             </div>
-
+          )}
+          <div className="space-y-4">
             <div>
               <label htmlFor="full-name" className="block text-sm font-medium text-slate-700 mb-1">
                 Full Name
@@ -137,10 +161,27 @@ export default function SignUp() {
                 required
                 className="appearance-none relative block w-full px-3 py-2 border border-slate-300 placeholder-slate-400 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent sm:text-sm transition-colors"
                 placeholder="Enter your full name"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
+                value={formData.fullName}
+                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
               />
             </div>
+
+            <div>
+              <label htmlFor="organization" className="block text-sm font-medium text-slate-700 mb-1">
+                Organization
+              </label>
+              <input
+                id="organization"
+                name="organization"
+                type="text"
+                required
+                className="appearance-none relative block w-full px-3 py-2 border border-slate-300 placeholder-slate-400 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent sm:text-sm transition-colors"
+                placeholder="Enter your organization"
+                value={formData.organization}
+                onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
+              />
+            </div>
+
             <div>
               <label htmlFor="email-address" className="block text-sm font-medium text-slate-700 mb-1">
                 Email address
@@ -153,8 +194,8 @@ export default function SignUp() {
                 required
                 className="appearance-none relative block w-full px-3 py-2 border border-slate-300 placeholder-slate-400 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent sm:text-sm transition-colors"
                 placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
             </div>
             <div>
@@ -169,8 +210,8 @@ export default function SignUp() {
                 required
                 className="appearance-none relative block w-full px-3 py-2 border border-slate-300 placeholder-slate-400 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent sm:text-sm transition-colors"
                 placeholder="Create a password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               />
             </div>
             <div>
@@ -185,9 +226,30 @@ export default function SignUp() {
                 required
                 className="appearance-none relative block w-full px-3 py-2 border border-slate-300 placeholder-slate-400 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent sm:text-sm transition-colors"
                 placeholder="Confirm your password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                value={formData.confirmPassword}
+                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
               />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <input
+                id="account-type"
+                name="account-type"
+                type="checkbox"
+                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                checked={formData.accountType === 'supervisor'}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    accountType: e.target.checked ? 'supervisor' : 'eit'
+                  })
+                }
+              />
+              <label htmlFor="account-type" className="ml-2 block text-sm text-gray-900">
+                I am a supervisor
+              </label>
             </div>
           </div>
 

@@ -58,7 +58,10 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                       : 'text-slate-300 hover:text-white hover:bg-slate-800'
                   }`
                 }
-                onClick={onClose}
+                onClick={() => {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  onClose?.();
+                }}
               >
                 <span className="mr-3">{item.icon}</span>
                 <span>{item.name}</span>
@@ -83,7 +86,10 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                         : 'text-slate-400 hover:text-white hover:bg-slate-800'
                     }`
                   }
-                  onClick={onClose}
+                  onClick={() => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    onClose?.();
+                  }}
                 >
                   <span className="mr-3">{item.icon}</span>
                   <span>{item.name}</span>

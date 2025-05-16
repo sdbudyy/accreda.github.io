@@ -61,3 +61,41 @@
     @apply block text-sm font-medium text-slate-700 mb-1;
   }
 }
+
+/* Highlight animation for scrolled-to items */
+@keyframes highlight-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(20, 184, 166, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(20, 184, 166, 0);
+  }
+}
+
+@keyframes bounce-subtle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.highlight-item {
+  animation: highlight-pulse 2s ease-out;
+  border-color: rgb(20, 184, 166) !important;
+  background-color: rgb(240, 253, 250) !important;
+  transition: all 0.3s ease-in-out;
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 0.5s ease-in-out;
+}
+
+/* Ensure smooth scrolling for the entire page */
+html {
+  scroll-behavior: smooth;
+}
