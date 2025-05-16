@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import LoadingSpinner from '../common/LoadingSpinner';
 import { useProgressStore } from '../../store/progress';
-import SupervisorProgressCard from './SupervisorProgressCard';
 
 interface EIT {
   id: string;
@@ -20,7 +19,12 @@ const SupervisorDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [eits, setEITs] = useState<EIT[]>([]);
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
-  const { overallProgress, completedSkills, documentedExperiences, supervisorApprovals } = useProgressStore();
+  const [metrics, setMetrics] = useState({
+    totalEITs: 0,
+    pendingReviews: 0,
+    completedReviews: 0,
+    averageTeamProgress: 0
+  });
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -48,6 +52,34 @@ const SupervisorDashboard: React.FC = () => {
           const eitData = relationships.map(rel => rel.eit_profiles as unknown as EIT);
           setEITs(eitData);
         }
+
+        // Fetch pending reviews
+        const { data: pendingReviews, error: reviewsError } = await supabase
+          .from('experiences')
+          .select('*')
+          .in('eit_id', eits.map(eit => eit.id))
+          .eq('status', 'pending')
+          .eq('needs_supervisor_review', true);
+
+        if (reviewsError) throw reviewsError;
+
+        // Fetch completed reviews
+        const { data: completedReviews, error: completedError } = await supabase
+          .from('experiences')
+          .select('*')
+          .in('eit_id', eits.map(eit => eit.id))
+          .eq('status', 'approved')
+          .eq('needs_supervisor_review', false);
+
+        if (completedError) throw completedError;
+
+        // Calculate metrics
+        setMetrics({
+          totalEITs: eits.length,
+          pendingReviews: pendingReviews?.length || 0,
+          completedReviews: completedReviews?.length || 0,
+          averageTeamProgress: 0 // TODO: Calculate based on EIT progress
+        });
 
         // Fetch recent activities
         const { data: activities, error: activitiesError } = await supabase
@@ -80,40 +112,29 @@ const SupervisorDashboard: React.FC = () => {
 
       {/* Progress Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <SupervisorProgressCard
-          title="Overall Progress"
-          value={overallProgress}
-          description="Just getting started!"
-          color="teal"
-        />
-        <SupervisorProgressCard
-          title="Completed Skills"
-          value={completedSkills}
-          total={22}
-          description={`${22 - completedSkills} skills remaining to complete`}
-          color="blue"
-        />
-        <SupervisorProgressCard
-          title="SAOs Completed"
-          value={documentedExperiences}
-          total={24}
-          description={`${24 - documentedExperiences} SAOs remaining to complete`}
-          color="indigo"
-        />
-        <SupervisorProgressCard
-          title="Pending Applications"
-          value={supervisorApprovals}
-          total={24}
-          description={`${supervisorApprovals} items pending application`}
-          color="purple"
-        />
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-lg font-semibold mb-2">Total EITs</h3>
+          <p className="text-3xl font-bold text-teal-600">{metrics.totalEITs}</p>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-lg font-semibold mb-2">Pending Reviews</h3>
+          <p className="text-3xl font-bold text-teal-600">{metrics.pendingReviews}</p>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-lg font-semibold mb-2">Completed Reviews</h3>
+          <p className="text-3xl font-bold text-teal-600">{metrics.completedReviews}</p>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-lg font-semibold mb-2">Team Progress</h3>
+          <p className="text-3xl font-bold text-teal-600">{metrics.averageTeamProgress}%</p>
+        </div>
       </div>
 
-      {/* EIT Information */}
+      {/* Team Members */}
       {eits.length > 0 && (
         <div className="bg-white rounded-lg shadow mb-8">
           <div className="p-6">
-            <h2 className="text-xl font-semibold mb-4">EIT Information</h2>
+            <h2 className="text-xl font-semibold mb-4">Team Members</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {eits.map((eit) => (
                 <div key={eit.id} className="border-b border-gray-200 pb-4 last:border-0">

@@ -19,10 +19,11 @@ interface DocumentsState {
   documents: Document[];
   loading: boolean;
   error: string | null;
+  lastFetched: number | null;
   createDocument: (title: string, content: string, type: Document['type'], file?: File, category?: string) => Promise<void>;
   updateDocument: (id: string, title: string, content: string) => Promise<void>;
   deleteDocument: (id: string) => Promise<void>;
-  loadUserDocuments: () => Promise<void>;
+  loadUserDocuments: (force?: boolean) => Promise<void>;
   clearState: () => void;
 }
 
@@ -30,11 +31,13 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
   documents: [],
   loading: false,
   error: null,
+  lastFetched: null,
 
   clearState: () => set({
     documents: [],
     loading: false,
-    error: null
+    error: null,
+    lastFetched: null
   }),
 
   createDocument: async (title: string, content: string, type: Document['type'], file?: File, category?: string) => {
@@ -216,7 +219,12 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
     }
   },
 
-  loadUserDocuments: async () => {
+  loadUserDocuments: async (force = false) => {
+    const now = Date.now();
+    const lastFetched = get().lastFetched;
+    if (!force && lastFetched && now - lastFetched < 5 * 60 * 1000) {
+      return;
+    }
     set({ loading: true, error: null });
     try {
       console.log('Loading user documents...');
@@ -245,7 +253,7 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
       }
 
       console.log('Documents fetched:', documents?.length);
-      set({ documents: documents || [] });
+      set({ documents: documents || [], lastFetched: now });
     } catch (error: any) {
       console.error('Error in loadUserDocuments:', {
         error,

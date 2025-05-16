@@ -1,6 +1,6 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { Clock, Calendar, Award, BarChart3, ArrowRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 import { useProgressStore } from '../store/progress';
@@ -8,6 +8,7 @@ import { useEssayStore } from '../store/essays';
 import { useSkillsStore } from '../store/skills';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useSAOsStore } from '../store/saos';
+import LoadingSpinner from '../components/common/LoadingSpinner';
 
 // Lazy load heavy dashboard components
 const ProgressCard = React.lazy(() => import('../components/eitdashboard/ProgressCard'));
@@ -25,6 +26,7 @@ type ProgressStat = {
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { appLoaded } = useOutletContext<{ appLoaded: boolean }>();
   const [userName, setUserName] = useState<string>('');
   const [userRole, setUserRole] = useState<'eit' | 'supervisor' | null>(null);
   const {
@@ -50,6 +52,7 @@ const Dashboard: React.FC = () => {
   const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
   console.log('Google Client ID (from import.meta.env):', GOOGLE_CLIENT_ID);
   const [roleLoading, setRoleLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     const getUserProfile = async () => {
@@ -83,14 +86,12 @@ const Dashboard: React.FC = () => {
 
     const initializeData = async () => {
       try {
-        // First load skills, then initialize progress
-        await loadUserSkills();
-        await initialize();
-        await getUserProfile();
-        // Load SAOs on mount if not already loaded
-        if (saos.length === 0 && !saosLoading) {
-          loadUserSAOs();
-        }
+        await Promise.all([
+          loadUserSkills(),
+          initialize(),
+          getUserProfile(),
+          (saos.length === 0 && !saosLoading) ? loadUserSAOs() : Promise.resolve()
+        ]);
       } catch (error) {
         console.error('Error initializing dashboard data:', error);
       }
@@ -165,8 +166,8 @@ const Dashboard: React.FC = () => {
     flow: 'implicit',
   });
 
-  if (roleLoading) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>;
+  if (roleLoading && appLoaded) {
+    return <LoadingSpinner />;
   }
 
   return (
@@ -194,15 +195,18 @@ const Dashboard: React.FC = () => {
             Last updated: {formatLastUpdated(lastUpdated)}
           </span>
           <button 
-            className={`btn btn-primary ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
-            onClick={() => {
-              if (!loading) {
-                loadUserSkills().then(() => updateProgress());
+            className={`btn btn-primary ${refreshing ? 'opacity-75 cursor-not-allowed' : ''}`}
+            onClick={async () => {
+              if (!refreshing) {
+                setRefreshing(true);
+                await loadUserSkills();
+                await updateProgress();
+                setRefreshing(false);
               }
             }}
-            disabled={loading}
+            disabled={refreshing}
           >
-            {loading ? 'Refreshing...' : 'Refresh'}
+            {refreshing ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
       </div>

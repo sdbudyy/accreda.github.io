@@ -23,6 +23,15 @@ import { useProgressStore } from './store/progress'
 import { useSkillsStore } from './store/skills'
 import { useEssayStore } from './store/essays'
 import { GoogleOAuthProvider } from '@react-oauth/google'
+import SupervisorLayout from './components/supervisor/SupervisorLayout'
+import SupervisorTeam from './pages/SupervisorTeam'
+import SupervisorReviews from './pages/SupervisorReviews'
+import SupervisorDocuments from './pages/SupervisorDocuments'
+import SupervisorSettings from './pages/SupervisorSettings'
+import SupervisorSupport from './pages/SupervisorSupport'
+import SupervisorDashboardContent from './pages/SupervisorDashboard'
+import RoleBasedDashboard from './components/dashboard/RoleBasedDashboard'
+import EitDashboardGate from './components/dashboard/EitDashboardGate'
 
 function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -114,7 +123,7 @@ function App() {
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <Routes>
         {/* Public routes */}
-        <Route path="/" element={!session ? <Landing /> : <Navigate to="/dashboard" />} />
+        <Route path="/" element={!session ? <Landing /> : <RoleBasedDashboard />} />
         <Route
           path="/login"
           element={!session ? <Login /> : <Navigate to="/dashboard" />}
@@ -135,9 +144,9 @@ function App() {
         {/* Protected routes */}
         <Route
           path="/dashboard"
-          element={session ? <Layout /> : <Navigate to="/" />}
+          element={session ? <Layout appLoaded={!loading} /> : <Navigate to="/" />}
         >
-          <Route index element={<Dashboard />} />
+          <Route index element={<EitDashboardGate />} />
           <Route path="skills" element={<Skills />} />
           <Route path="saos" element={<SAOs />} />
           <Route path="documents" element={<Documents />} />
@@ -147,6 +156,18 @@ function App() {
           <Route path="settings" element={<Settings />} />
           <Route path="help" element={<Support />} />
           <Route path="references" element={<References />} />
+        </Route>
+        {/* Supervisor dashboard route */}
+        <Route
+          path="/dashboard/supervisor"
+          element={session ? <SupervisorLayout appLoaded={!loading} /> : <Navigate to="/" />}
+        >
+          <Route index element={<SupervisorDashboardContent />} />
+          <Route path="team" element={<SupervisorTeam />} />
+          <Route path="reviews" element={<SupervisorReviews />} />
+          <Route path="documents" element={<SupervisorDocuments />} />
+          <Route path="settings" element={<SupervisorSettings />} />
+          <Route path="support" element={<SupervisorSupport />} />
         </Route>
 
         {/* Catch all route */}

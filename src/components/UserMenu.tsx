@@ -8,6 +8,7 @@ const UserMenu: React.FC = () => {
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [userRole, setUserRole] = useState<'eit' | 'supervisor' | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -18,6 +19,25 @@ const UserMenu: React.FC = () => {
         setUserEmail(user.email || '');
         setUserName(user.user_metadata?.full_name || user.email?.split('@')[0] || 'User');
         setAvatarUrl(user.user_metadata?.avatar_url || '');
+
+        // Check user role
+        const { data: eitProfile } = await supabase
+          .from('eit_profiles')
+          .select('id')
+          .eq('id', user.id)
+          .single();
+
+        const { data: supervisorProfile } = await supabase
+          .from('supervisor_profiles')
+          .select('id')
+          .eq('id', user.id)
+          .single();
+
+        if (supervisorProfile) {
+          setUserRole('supervisor');
+        } else if (eitProfile) {
+          setUserRole('eit');
+        }
       }
     };
 
@@ -56,6 +76,12 @@ const UserMenu: React.FC = () => {
       .slice(0, 2);
   };
 
+  const handleSettingsClick = () => {
+    const settingsPath = userRole === 'supervisor' ? '/dashboard/supervisor/settings' : '/dashboard/settings';
+    navigate(settingsPath);
+    setIsOpen(false);
+  };
+
   return (
     <div className="relative" ref={menuRef}>
       <button
@@ -87,10 +113,7 @@ const UserMenu: React.FC = () => {
           <ul>
             <li>
               <button 
-                onClick={() => {
-                  navigate('/dashboard/settings');
-                  setIsOpen(false);
-                }}
+                onClick={handleSettingsClick}
                 className="w-full flex items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
               >
                 <Settings size={16} className="mr-2" />

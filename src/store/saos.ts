@@ -15,10 +15,11 @@ interface SAOsState {
   saos: SAO[];
   loading: boolean;
   error: string | null;
+  lastFetched: number | null;
   createSAO: (title: string, content: string, skills: Skill[]) => Promise<void>;
   updateSAO: (id: string, title: string, content: string, skills: Skill[]) => Promise<void>;
   deleteSAO: (id: string) => Promise<void>;
-  loadUserSAOs: () => Promise<void>;
+  loadUserSAOs: (force?: boolean) => Promise<void>;
   clearState: () => void;
 }
 
@@ -26,11 +27,13 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
   saos: [],
   loading: false,
   error: null,
+  lastFetched: null,
 
   clearState: () => set({
     saos: [],
     loading: false,
-    error: null
+    error: null,
+    lastFetched: null
   }),
 
   createSAO: async (title: string, content: string, skills: Skill[]) => {
@@ -241,7 +244,12 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
     }
   },
 
-  loadUserSAOs: async () => {
+  loadUserSAOs: async (force = false) => {
+    const now = Date.now();
+    const lastFetched = get().lastFetched;
+    if (!force && lastFetched && now - lastFetched < 5 * 60 * 1000) {
+      return;
+    }
     set({ loading: true, error: null });
     try {
       console.log('Loading user SAOs...');
@@ -284,7 +292,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
       })) || [];
 
       console.log('Transformed SAOs:', transformedSAOs.length);
-      set({ saos: transformedSAOs });
+      set({ saos: transformedSAOs, lastFetched: now });
     } catch (error: any) {
       console.error('Error in loadUserSAOs:', {
         error,

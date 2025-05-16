@@ -1,8 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import EITDashboard from './EITDashboard';
-import SupervisorDashboard from '../supervisor/SupervisorDashboard';
 import LoadingSpinner from '../common/LoadingSpinner';
 import { clearAllStates } from '../../utils/stateCleanup';
 
@@ -39,10 +37,12 @@ const RoleBasedDashboard = () => {
         throw new Error('Failed to fetch user profiles');
       }
 
-      if (eitProfile.data) {
-        setAccountType('eit');
-      } else if (supervisorProfile.data) {
+      if (supervisorProfile.data) {
         setAccountType('supervisor');
+        navigate('/dashboard/supervisor', { replace: true });
+      } else if (eitProfile.data) {
+        setAccountType('eit');
+        navigate('/dashboard', { replace: true });
       } else {
         throw new Error('No profile found for user');
       }
@@ -94,11 +94,8 @@ const RoleBasedDashboard = () => {
     );
   }
 
-  if (!accountType) {
-    return null;
-  }
-
-  return accountType === 'supervisor' ? <SupervisorDashboard /> : <EITDashboard />;
+  // No need to render anything, as we redirect
+  return null;
 };
 
 export default RoleBasedDashboard; 

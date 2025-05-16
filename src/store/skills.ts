@@ -18,10 +18,12 @@ interface SkillsState {
   skillCategories: Category[];
   setSkillCategories: (categories: Category[]) => void;
   updateSkillRank: (categoryIndex: number, skillId: string, rank: number) => Promise<void>;
-  loadUserSkills: () => Promise<void>;
+  loadUserSkills: (force?: boolean) => Promise<void>;
   loading: boolean;
   error: string | null;
   clearState: () => void;
+  skills: Skill[];
+  lastFetched: number | null;
 }
 
 // Initial skill categories data
@@ -84,16 +86,26 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
   skillCategories: initialSkillCategories,
   loading: false,
   error: null,
+  skills: [],
+  lastFetched: null,
 
   clearState: () => set({
     skillCategories: initialSkillCategories,
     loading: false,
-    error: null
+    error: null,
+    skills: [],
+    lastFetched: null
   }),
 
   setSkillCategories: (categories) => set({ skillCategories: categories }),
 
-  loadUserSkills: async () => {
+  loadUserSkills: async (force = false) => {
+    const now = Date.now();
+    const lastFetched = get().lastFetched;
+    // If not forced and data is fresh (e.g., < 5 min old), use cache
+    if (!force && lastFetched && now - lastFetched < 5 * 60 * 1000) {
+      return;
+    }
     set({ loading: true, error: null });
     try {
       console.log('Starting loadUserSkills...');
@@ -199,7 +211,7 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
       }));
 
       console.log('Setting updated categories in store:', updatedCategories.length);
-      set({ skillCategories: updatedCategories });
+      set({ skillCategories: updatedCategories, skills: updatedCategories.flatMap(c => c.skills), lastFetched: now });
     } catch (error: any) {
       console.error('Error in loadUserSkills:', {
         error,

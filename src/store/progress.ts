@@ -13,8 +13,9 @@ interface ProgressState {
   lastUpdated: string;
   loading: boolean;
   initialized: boolean;
-  updateProgress: () => Promise<void>;
-  initialize: () => Promise<void>;
+  lastFetched: number | null;
+  updateProgress: (force?: boolean) => Promise<void>;
+  initialize: (force?: boolean) => Promise<void>;
   setupRealtimeSubscriptions: () => Promise<void>;
   clearState: () => void;
 }
@@ -30,6 +31,7 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
   lastUpdated: new Date().toISOString(),
   loading: false,
   initialized: false,
+  lastFetched: null,
 
   clearState: () => set({
     overallProgress: 0,
@@ -38,7 +40,8 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
     supervisorApprovals: 0,
     lastUpdated: new Date().toISOString(),
     loading: false,
-    initialized: false
+    initialized: false,
+    lastFetched: null
   }),
 
   setupRealtimeSubscriptions: async () => {
@@ -89,8 +92,13 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
     window.addEventListener('unload', cleanup);
   },
 
-  initialize: async () => {
-    if (get().loading) return; // Prevent multiple simultaneous initializations
+  initialize: async (force = false) => {
+    if (get().loading) return;
+    const now = Date.now();
+    const lastFetched = get().lastFetched;
+    if (!force && lastFetched && now - lastFetched < 5 * 60 * 1000) {
+      return;
+    }
     set({ loading: true });
     
     try {
@@ -149,7 +157,8 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
         supervisorApprovals: approvals?.length || 0,
         lastUpdated: new Date().toISOString(),
         loading: false,
-        initialized: true
+        initialized: true,
+        lastFetched: now
       });
 
       // Setup real-time subscriptions
@@ -163,8 +172,13 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
     }
   },
 
-  updateProgress: async () => {
-    if (get().loading) return; // Prevent multiple simultaneous updates
+  updateProgress: async (force = false) => {
+    if (get().loading) return;
+    const now = Date.now();
+    const lastFetched = get().lastFetched;
+    if (!force && lastFetched && now - lastFetched < 5 * 60 * 1000) {
+      return;
+    }
     set({ loading: true });
     
     try {
@@ -222,7 +236,8 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
         documentedExperiences: experiences?.length || 0,
         supervisorApprovals: approvals?.length || 0,
         lastUpdated: new Date().toISOString(),
-        loading: false
+        loading: false,
+        lastFetched: now
       });
     } catch (error) {
       console.error('Error updating progress:', error);

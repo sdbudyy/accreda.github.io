@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
 import { Check, Lock, Bell, Sun, Trash2, User as UserIcon } from 'lucide-react';
-import FileUpload from '../components/FileUpload';
 
 const subscriptionTiers = [
   {
@@ -20,15 +19,11 @@ const subscriptionTiers = [
   }
 ];
 
-const defaultAvatar =
-  'https://ui-avatars.com/api/?name=User&background=E0F2FE&color=0891B2&size=128';
-
-const Settings: React.FC = () => {
+const SupervisorSettings: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [newEmail, setNewEmail] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [isEditingName, setIsEditingName] = useState(false);
@@ -39,9 +34,6 @@ const Settings: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [currentPlan, setCurrentPlan] = useState('Free');
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState('');
-  const [userRole, setUserRole] = useState<'eit' | 'supervisor' | null>(null);
 
   useEffect(() => {
     const getUserProfile = async () => {
@@ -51,125 +43,42 @@ const Settings: React.FC = () => {
         setFullName(user.user_metadata?.full_name || '');
         setEmail(user.email || '');
         setNewEmail(user.email || '');
-        setAvatarUrl(user.user_metadata?.avatar_url || '');
-
-        // Check user role
-        const { data: eitProfile } = await supabase
-          .from('eit_profiles')
-          .select('id')
-          .eq('id', user.id)
-          .single();
-
-        const { data: supervisorProfile } = await supabase
-          .from('supervisor_profiles')
-          .select('id')
-          .eq('id', user.id)
-          .single();
-
-        if (supervisorProfile) {
-          setUserRole('supervisor');
-        } else if (eitProfile) {
-          setUserRole('eit');
-        }
       }
     };
-
     getUserProfile();
   }, []);
-
-  const handleAvatarSelect = (files: File[]) => {
-    if (files.length > 0) {
-      setAvatarFile(files[0]);
-      setAvatarPreview(URL.createObjectURL(files[0]));
-    }
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase();
-  };
-
-  const handleAvatarUpload = async () => {
-    if (!avatarFile || !user) return;
-    setLoading(true);
-    try {
-      // Upload to Supabase Storage
-      const fileExt = avatarFile.name.split('.').pop();
-      const filePath = `${user.id}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, avatarFile, { upsert: true });
-      if (uploadError) throw uploadError;
-      // Get public URL
-      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
-      const publicUrl = data.publicUrl;
-      // Update user_metadata
-      const { error: updateError } = await supabase.auth.updateUser({
-        data: { ...user.user_metadata, avatar_url: publicUrl }
-      });
-      if (updateError) throw updateError;
-      setAvatarUrl(publicUrl);
-      setMessage({ type: 'success', text: 'Profile picture updated!' });
-      setAvatarFile(null);
-      setAvatarPreview('');
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to update avatar.' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRemoveAvatar = async () => {
-    if (!user) return;
-    setLoading(true);
-    try {
-      // Remove avatar_url from user_metadata
-      const { error } = await supabase.auth.updateUser({
-        data: { ...user.user_metadata, avatar_url: '' }
-      });
-      if (error) throw error;
-      setAvatarUrl('');
-      setMessage({ type: 'success', text: 'Profile picture removed.' });
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to remove avatar.' });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMessage({ type: '', text: '' });
-
     try {
       const updates: { data?: { full_name: string }, email?: string } = {};
-      
       if (isEditingName) {
         updates.data = { full_name: fullName };
       }
-      
       if (isEditingEmail && newEmail !== email) {
         updates.email = newEmail;
       }
-
       const { error } = await supabase.auth.updateUser(updates);
-
       if (error) throw error;
-
+      // If name was updated, also update the supervisor_profiles table
+      if (isEditingName && user) {
+        const { error: profileError } = await supabase
+          .from('supervisor_profiles')
+          .update({ full_name: fullName })
+          .eq('id', user.id);
+        if (profileError) throw profileError;
+      }
       setMessage({ type: 'success', text: 'Profile updated successfully!' });
       setIsEditingName(false);
       setIsEditingEmail(false);
-      
       // Refresh user data
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUser(user);
-        setEmail(user.email || '');
-        setNewEmail(user.email || '');
+      const { data: { user: updatedUser } } = await supabase.auth.getUser();
+      if (updatedUser) {
+        setUser(updatedUser);
+        setEmail(updatedUser.email || '');
+        setNewEmail(updatedUser.email || '');
       }
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to update profile. Please try again.' });
@@ -184,27 +93,21 @@ const Settings: React.FC = () => {
     setLoading(true);
     setMessage({ type: '', text: '' });
     setPasswordError('');
-
-    // Validate passwords
     if (newPassword !== confirmPassword) {
       setPasswordError('New passwords do not match');
       setLoading(false);
       return;
     }
-
     if (newPassword.length < 6) {
       setPasswordError('Password must be at least 6 characters long');
       setLoading(false);
       return;
     }
-
     try {
       const { error } = await supabase.auth.updateUser({
         password: newPassword
       });
-
       if (error) throw error;
-
       setMessage({ type: 'success', text: 'Password updated successfully!' });
       setIsEditingPassword(false);
       setCurrentPassword('');
@@ -218,15 +121,23 @@ const Settings: React.FC = () => {
     }
   };
 
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase();
+  };
+
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-8">
       {/* Profile Card */}
       <section className="card p-6 flex flex-col md:flex-row gap-6 items-center">
         <div className="flex flex-col items-center">
           <div className="relative">
-            {avatarPreview || avatarUrl ? (
+            {user?.user_metadata?.avatar_url ? (
               <img
-                src={avatarPreview || avatarUrl}
+                src={user.user_metadata.avatar_url}
                 className="w-24 h-24 rounded-full object-cover bg-slate-100"
                 alt="Profile"
               />
@@ -235,43 +146,14 @@ const Settings: React.FC = () => {
                 {getInitials(fullName || email)}
               </div>
             )}
-            {/* Remove the upload label and its SVG icon */}
-            {(avatarPreview || avatarUrl) && (
-              <button
-                className="absolute -top-2 -right-2 bg-slate-100 rounded-full p-1 shadow hover:bg-slate-200"
-                onClick={handleRemoveAvatar}
-                disabled={loading}
-                title="Remove profile picture"
-                style={{ zIndex: 10 }}
-              >
-                <svg width="20" height="20" fill="none" stroke="currentColor" className="text-red-600">
-                  <path d="M6 6l8 8M6 14L14 6" strokeWidth="2" />
-                </svg>
-              </button>
-            )}
           </div>
-          {avatarFile && (
-            <button
-              className="btn btn-primary mt-2"
-              onClick={handleAvatarUpload}
-              disabled={loading}
-            >
-              {loading ? 'Uploading...' : 'Save Photo'}
-            </button>
-          )}
         </div>
-        <form className="flex-1 space-y-4" onSubmit={handleUpdateProfile}>
+        <form className="flex-1 space-y-4 w-full" onSubmit={handleUpdateProfile}>
           <h2 className="text-lg font-semibold flex items-center gap-2 mb-2">
             <UserIcon /> Profile Information
-            {userRole && (
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                userRole === 'eit' 
-                  ? 'bg-blue-100 text-blue-800' 
-                  : 'bg-purple-100 text-purple-800'
-              }`}>
-                {userRole.toUpperCase()}
-              </span>
-            )}
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+              SUPERVISOR
+            </span>
           </h2>
           {/* Full Name */}
           <div>
@@ -462,4 +344,4 @@ const Settings: React.FC = () => {
   );
 };
 
-export default Settings; 
+export default SupervisorSettings; 
