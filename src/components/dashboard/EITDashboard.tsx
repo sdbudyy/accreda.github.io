@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import LoadingSpinner from '../common/LoadingSpinner';
 import { useProgressStore } from '../../store/progress';
+import { Clock } from 'lucide-react';
 
 interface Supervisor {
   id: string;
@@ -17,58 +18,79 @@ interface Relationship {
 
 const EITDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [supervisor, setSupervisor] = useState<Supervisor | null>(null);
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
-  const { overallProgress, completedSkills, documentedExperiences, supervisorApprovals } = useProgressStore();
+  const [lastUpdated, setLastUpdated] = useState<string>(new Date().toISOString());
+  const { 
+    overallProgress, 
+    completedSkills, 
+    documentedExperiences, 
+    supervisorApprovals,
+    updateProgress,
+    loading: progressLoading 
+  } = useProgressStore();
+
+  const fetchDashboardData = async () => {
+    if (refreshing) return; // Prevent multiple refreshes
+    
+    try {
+      setRefreshing(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Fetch supervisor information
+      const { data: relationship, error: relError } = await supabase
+        .from('supervisor_eit_relationships')
+        .select(`
+          supervisor_id,
+          supervisor_profiles (
+            id,
+            full_name,
+            email,
+            organization
+          )
+        `)
+        .eq('eit_id', user.id)
+        .eq('status', 'active')
+        .single();
+
+      if (relError) throw relError;
+      if (relationship?.supervisor_profiles) {
+        const supervisorData = relationship.supervisor_profiles as unknown as Supervisor;
+        setSupervisor(supervisorData);
+      }
+
+      // Fetch recent activities
+      const { data: activities, error: activitiesError } = await supabase
+        .from('experiences')
+        .select('*')
+        .eq('eit_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (activitiesError) throw activitiesError;
+      setRecentActivities(activities || []);
+
+      // Update progress with force=true to bypass cache
+      await updateProgress(true);
+      setLastUpdated(new Date().toISOString());
+
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        // Fetch supervisor information
-        const { data: relationship, error: relError } = await supabase
-          .from('supervisor_eit_relationships')
-          .select(`
-            supervisor_id,
-            supervisor_profiles (
-              id,
-              full_name,
-              email,
-              organization
-            )
-          `)
-          .eq('eit_id', user.id)
-          .eq('status', 'active')
-          .single();
-
-        if (relError) throw relError;
-        if (relationship?.supervisor_profiles) {
-          const supervisorData = relationship.supervisor_profiles as unknown as Supervisor;
-          setSupervisor(supervisorData);
-        }
-
-        // Fetch recent activities
-        const { data: activities, error: activitiesError } = await supabase
-          .from('experiences')
-          .select('*')
-          .eq('eit_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(5);
-
-        if (activitiesError) throw activitiesError;
-        setRecentActivities(activities || []);
-
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchDashboardData();
   }, []);
+
+  const formatLastUpdated = (date: string) => {
+    return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
 
   if (loading) {
     return <LoadingSpinner />;
@@ -76,7 +98,22 @@ const EITDashboard: React.FC = () => {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">EIT Dashboard</h1>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+        <h1 className="text-2xl font-bold">EIT Dashboard</h1>
+        <div className="flex items-center space-x-2 mt-4 md:mt-0">
+          <span className="text-sm text-slate-500 flex items-center">
+            <Clock size={14} className="mr-1" /> 
+            Last updated: {formatLastUpdated(lastUpdated)}
+          </span>
+          <button 
+            className={`btn btn-primary ${(refreshing || progressLoading) ? 'opacity-75 cursor-not-allowed' : ''}`}
+            onClick={fetchDashboardData}
+            disabled={refreshing || progressLoading}
+          >
+            {(refreshing || progressLoading) ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
+      </div>
 
       {/* Progress Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">

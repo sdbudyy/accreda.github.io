@@ -199,9 +199,17 @@ const Dashboard: React.FC = () => {
             onClick={async () => {
               if (!refreshing) {
                 setRefreshing(true);
-                await loadUserSkills();
-                await updateProgress();
-                setRefreshing(false);
+                try {
+                  await Promise.all([
+                    loadUserSkills(),
+                    updateProgress(true),
+                    loadUserSAOs()
+                  ]);
+                } catch (error) {
+                  console.error('Error refreshing dashboard:', error);
+                } finally {
+                  setRefreshing(false);
+                }
               }
             }}
             disabled={refreshing}

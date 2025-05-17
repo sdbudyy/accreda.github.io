@@ -136,7 +136,12 @@ export default function SignUp() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
         <div className="flex flex-col items-center">
-          <img src={AccredaLogo} alt="Accreda Logo" className="h-24 w-auto mb-6" />
+          <img
+            src={AccredaLogo}
+            alt="Accreda Logo"
+            className="h-24 w-auto mb-6 cursor-pointer"
+            onClick={() => navigate('/')}
+          />
           <h2 className="text-2xl font-bold text-slate-800">
             Create your account
           </h2>
