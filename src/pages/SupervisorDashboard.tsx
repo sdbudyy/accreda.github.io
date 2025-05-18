@@ -50,8 +50,7 @@ const SupervisorDashboard: React.FC = () => {
           eit_profiles (
             id,
             full_name,
-            email,
-            organization
+            email
           )
         `)
         .eq('supervisor_id', user.id)
