@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
-import { Check, Lock, Bell, Sun, Trash2, User as UserIcon } from 'lucide-react';
+import { Check, Lock, Bell, Sun, Trash2, User as UserIcon, Mail } from 'lucide-react';
 import FileUpload from '../components/FileUpload';
 
 const subscriptionTiers = [
@@ -42,6 +42,9 @@ const Settings: React.FC = () => {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState('');
   const [userRole, setUserRole] = useState<'eit' | 'supervisor' | null>(null);
+  const [supervisorEmail, setSupervisorEmail] = useState('');
+  const [supervisorRequestStatus, setSupervisorRequestStatus] = useState<'idle' | 'success' | 'error' | 'notfound' | 'already' | 'pending'>('idle');
+  const [supervisorRequestMessage, setSupervisorRequestMessage] = useState('');
 
   useEffect(() => {
     const getUserProfile = async () => {
@@ -457,6 +460,95 @@ const Settings: React.FC = () => {
         >
           {message.text}
         </div>
+      )}
+
+      {userRole === 'eit' && (
+        <section className="card p-6">
+          <h2 className="text-lg font-semibold flex items-center gap-2 mb-2">
+            <Mail /> Connect with Supervisor
+          </h2>
+          <form
+            className="flex flex-col md:flex-row gap-4 items-start md:items-end"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setSupervisorRequestStatus('idle');
+              setSupervisorRequestMessage('');
+              if (!supervisorEmail) return;
+              setLoading(true);
+              try {
+                // Look up supervisor by email
+                const { data: supervisor } = await supabase
+                  .from('supervisor_profiles')
+                  .select('id, email, full_name')
+                  .eq('email', supervisorEmail)
+                  .single();
+                if (!supervisor) {
+                  setSupervisorRequestStatus('notfound');
+                  setSupervisorRequestMessage('No supervisor found with that email.');
+                  setLoading(false);
+                  return;
+                }
+                // Check for existing relationship
+                const { data: existing } = await supabase
+                  .from('supervisor_eit_relationships')
+                  .select('id, status')
+                  .eq('supervisor_id', supervisor.id)
+                  .eq('eit_id', user?.id)
+                  .maybeSingle();
+                if (existing && existing.status === 'pending') {
+                  setSupervisorRequestStatus('pending');
+                  setSupervisorRequestMessage('A request is already pending for this supervisor.');
+                  setLoading(false);
+                  return;
+                }
+                if (existing && existing.status === 'active') {
+                  setSupervisorRequestStatus('already');
+                  setSupervisorRequestMessage('This supervisor is already connected.');
+                  setLoading(false);
+                  return;
+                }
+                // Create relationship
+                const { error } = await supabase
+                  .from('supervisor_eit_relationships')
+                  .upsert({
+                    supervisor_id: supervisor.id,
+                    eit_id: user?.id,
+                    status: 'pending',
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                  });
+                if (error) throw error;
+                setSupervisorRequestStatus('success');
+                setSupervisorRequestMessage('Request sent! Your supervisor will see it in their dashboard.');
+              } catch (err) {
+                console.error(err);
+                setSupervisorRequestStatus('error');
+                setSupervisorRequestMessage('Failed to send request. Please try again.');
+              } finally {
+                setLoading(false);
+              }
+            }}
+          >
+            <div className="flex-1">
+              <label htmlFor="supervisorEmail" className="label">Supervisor Email</label>
+              <input
+                type="email"
+                id="supervisorEmail"
+                value={supervisorEmail}
+                onChange={e => setSupervisorEmail(e.target.value)}
+                className="input"
+                placeholder="Enter supervisor's email"
+                required
+              />
+            </div>
+            <button type="submit" className="btn btn-primary" disabled={loading}>
+              {loading ? 'Sending...' : 'Send Request'}
+            </button>
+          </form>
+          {supervisorRequestMessage && (
+            <div className={`mt-3 text-sm ${supervisorRequestStatus === 'success' ? 'text-green-700' : 'text-red-700'}`}>{supervisorRequestMessage}</div>
+          )}
+        </section>
       )}
     </div>
   );
