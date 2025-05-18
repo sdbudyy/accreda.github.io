@@ -45,10 +45,13 @@ export const useSearchStore = create<SearchStore>((set) => ({
       // Search across all tables
       const { data, error } = await supabase.rpc('search_all', {
         search_query: query,
-        eit_id: user.id
+        user_id: user.id
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Search error:', error);
+        throw new Error(error.message);
+      }
 
       // Transform the results to include metadata
       const transformedResults = (data || []).map((result: any) => {

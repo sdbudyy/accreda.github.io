@@ -6,7 +6,8 @@ import { useSearchStore } from '../store/search';
 const SearchBar: React.FC = () => {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
-  const { results, loading, search, clearResults } = useSearchStore();
+  const [userRole, setUserRole] = useState<'eit' | 'supervisor' | null>(null);
+  const { results, loading, error, search, clearResults } = useSearchStore();
   const navigate = useNavigate();
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -21,11 +22,38 @@ const SearchBar: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    // Fetch user role on mount
+    const getUserProfile = async () => {
+      const { data: { user } } = await import('../lib/supabase').then(m => m.supabase.auth.getUser());
+      if (!user) return;
+      const { data: eitProfile } = await import('../lib/supabase').then(m => m.supabase
+        .from('eit_profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single());
+      const { data: supervisorProfile } = await import('../lib/supabase').then(m => m.supabase
+        .from('supervisor_profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single());
+      if (supervisorProfile) setUserRole('supervisor');
+      else if (eitProfile) setUserRole('eit');
+    };
+    getUserProfile();
+  }, []);
+
   const handleSearch = async (value: string) => {
     setQuery(value);
     if (value.trim()) {
       setIsOpen(true);
-      await search(value);
+      try {
+        await search(value);
+      } catch (err) {
+        console.error('Search error:', err);
+        // Keep the dropdown open to show the error
+        setIsOpen(true);
+      }
     } else {
       setIsOpen(false);
       clearResults();
@@ -37,7 +65,6 @@ const SearchBar: React.FC = () => {
     setQuery('');
     clearResults();
 
-    // Navigate to the appropriate page and scroll to the item
     switch (result.type) {
       case 'document':
         navigate('/dashboard/documents');
@@ -56,15 +83,27 @@ const SearchBar: React.FC = () => {
         }, 500);
         break;
       case 'skill':
-        navigate('/dashboard/skills');
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent('scroll-to-skill', { 
-            detail: { 
-              skillId: result.id,
-              timestamp: Date.now()
-            }
-          }));
-        }, 500);
+        if (userRole === 'eit') {
+          navigate('/dashboard/skills');
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('scroll-to-skill', { 
+              detail: { 
+                skillId: result.id,
+                timestamp: Date.now()
+              }
+            }));
+          }, 500);
+        } else if (userRole === 'supervisor') {
+          navigate('/dashboard/supervisor/skills');
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('scroll-to-skill', { 
+              detail: { 
+                skillId: result.id,
+                timestamp: Date.now()
+              }
+            }));
+          }, 500);
+        }
         break;
       case 'job':
         navigate('/dashboard/references');
@@ -153,7 +192,11 @@ const SearchBar: React.FC = () => {
       {/* Results dropdown */}
       {isOpen && (query.trim() || results.length > 0) && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-slate-200 max-h-96 overflow-y-auto z-50">
-          {results.length > 0 ? (
+          {error ? (
+            <div className="px-4 py-3 text-sm text-red-500">
+              {error}
+            </div>
+          ) : results.length > 0 ? (
             <div className="py-2">
               {results.map((result) => (
                 <button
