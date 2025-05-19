@@ -27,7 +27,7 @@ const RoleBasedDashboard = () => {
         throw new Error('No authenticated user found');
       }
 
-      // Check both profile tables
+      // Check both profile tables in parallel
       const [eitProfile, supervisorProfile] = await Promise.all([
         supabase.from('eit_profiles').select('account_type').eq('id', user.id).single(),
         supabase.from('supervisor_profiles').select('account_type').eq('id', user.id).single()
@@ -37,6 +37,7 @@ const RoleBasedDashboard = () => {
         throw new Error('Failed to fetch user profiles');
       }
 
+      // Set account type and navigate
       if (supervisorProfile.data) {
         setAccountType('supervisor');
         navigate('/dashboard/supervisor', { replace: true });
@@ -57,6 +58,7 @@ const RoleBasedDashboard = () => {
   }, [navigate]);
 
   useEffect(() => {
+    // Check role immediately
     checkUserRole();
 
     // Set up auth state change listener

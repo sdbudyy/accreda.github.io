@@ -14,7 +14,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        // Get session and check profiles in parallel
+        const [sessionResult, eitProfile, supervisorProfile] = await Promise.all([
+          supabase.auth.getSession(),
+          supabase.from('eit_profiles').select('id').limit(1),
+          supabase.from('supervisor_profiles').select('id').limit(1)
+        ]);
+        
+        const { data: { session }, error } = sessionResult;
         
         if (error) throw error;
         
@@ -23,21 +30,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
           return;
         }
 
-        // Check if user has a profile
-        const { data: eitProfile } = await supabase
-          .from('eit_profiles')
-          .select('id')
-          .eq('id', session.user.id)
-          .single();
-
-        const { data: supervisorProfile } = await supabase
-          .from('supervisor_profiles')
-          .select('id')
-          .eq('id', session.user.id)
-          .single();
-
-        if (!eitProfile && !supervisorProfile) {
-          // User has no profile, redirect to signup
+        // Check if user has any profile
+        if (!eitProfile.data?.length && !supervisorProfile.data?.length) {
           navigate('/signup');
           return;
         }
@@ -51,6 +45,17 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     };
 
     checkAuth();
+
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        navigate('/login');
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   if (loading) {

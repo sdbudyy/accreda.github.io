@@ -54,46 +54,52 @@ const Dashboard: React.FC = () => {
   const [roleLoading, setRoleLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Cache for user profile data
+  const [userProfileCache, setUserProfileCache] = useState<any>(null);
+
   useEffect(() => {
-    const getUserProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      if (user.user_metadata?.full_name) {
-        setUserName(user.user_metadata.full_name);
-      }
-
-      // Check user role
-      const { data: eitProfile } = await supabase
-        .from('eit_profiles')
-        .select('id')
-        .eq('id', user.id)
-        .single();
-
-      const { data: supervisorProfile } = await supabase
-        .from('supervisor_profiles')
-        .select('id')
-        .eq('id', user.id)
-        .single();
-
-      if (supervisorProfile) {
-        setUserRole('supervisor');
-      } else if (eitProfile) {
-        setUserRole('eit');
-      }
-      setRoleLoading(false);
-    };
-
     const initializeData = async () => {
       try {
-        await Promise.all([
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // Set user name from metadata immediately
+        if (user.user_metadata?.full_name) {
+          setUserName(user.user_metadata.full_name);
+        }
+
+        // Parallel data fetching
+        const [
+          eitProfile,
+          supervisorProfile,
+          skillsData,
+          progressData,
+          saosData
+        ] = await Promise.all([
+          supabase.from('eit_profiles').select('id').eq('id', user.id).single(),
+          supabase.from('supervisor_profiles').select('id').eq('id', user.id).single(),
           loadUserSkills(),
           initialize(),
-          getUserProfile(),
-          (saos.length === 0 && !saosLoading) ? loadUserSAOs() : Promise.resolve()
+          saos.length === 0 && !saosLoading ? loadUserSAOs() : Promise.resolve()
         ]);
+
+        // Set role based on profile data
+        if (supervisorProfile.data) {
+          setUserRole('supervisor');
+        } else if (eitProfile.data) {
+          setUserRole('eit');
+        }
+
+        // Cache user profile data
+        setUserProfileCache({
+          eitProfile: eitProfile.data,
+          supervisorProfile: supervisorProfile.data
+        });
+
       } catch (error) {
         console.error('Error initializing dashboard data:', error);
+      } finally {
+        setRoleLoading(false);
       }
     };
 

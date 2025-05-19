@@ -17,6 +17,22 @@ interface Validator {
 interface EITProfile { id: string; full_name: string; email: string; }
 interface Skill { id: string; name: string; }
 
+// Add this function at the top-level (outside the component)
+async function markSkillAsSupervisor(eitId: string, skillId: string, supervisorScore: number) {
+  const { error } = await supabase
+    .from('eit_skills')
+    .update({
+      supervisor_score: supervisorScore,
+      status: 'completed'
+    })
+    .eq('eit_id', eitId)
+    .eq('skill_id', skillId);
+  if (error) {
+    console.error('Error updating supervisor score:', error);
+    throw error;
+  }
+}
+
 const SupervisorValidationRequests: React.FC = () => {
   const [validators, setValidators] = useState<Validator[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,12 +82,8 @@ const SupervisorValidationRequests: React.FC = () => {
       .from('validators')
       .update({ status: 'scored', score })
       .eq('id', validator.id);
-    // Update eit_skills table
-    await supabase
-      .from('eit_skills')
-      .update({ supervisor_score: score, status: 'scored' })
-      .eq('eit_id', validator.eit_id)
-      .eq('skill_id', validator.skill_id);
+    // Update eit_skills table using the new function
+    await markSkillAsSupervisor(validator.eit_id, validator.skill_id, score);
     setValidators((prev) => prev.filter((v) => v.id !== validator.id));
   };
 

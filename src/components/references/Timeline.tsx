@@ -669,20 +669,23 @@ const Timeline: React.FC = () => {
 
   return (
     <div className="card">
-      <div className="p-4">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-lg font-semibold text-slate-900">Work Experience</h2>
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Work Experience</h2>
+            <p className="text-slate-500 mt-1">Track your professional journey and achievements</p>
+          </div>
           <button
             onClick={() => setIsAddingJob(true)}
-            className="btn btn-primary flex items-center gap-2 shadow-sm hover:shadow-md transition-shadow"
+            className="btn btn-primary flex items-center gap-2 shadow-sm hover:shadow-md transition-all duration-200"
           >
             <Plus size={16} />
-            Add Job
+            Add Experience
           </button>
         </div>
 
         {isAddingJob && (
-          <div className="mb-6">
+          <div className="mb-8">
             <JobForm
               onSubmit={handleAddJob}
               onCancel={() => {
@@ -709,19 +712,19 @@ const Timeline: React.FC = () => {
 
         <div className="relative">
           {/* Timeline line */}
-          <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-gradient-to-b from-teal-500 to-teal-200"></div>
+          <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gradient-to-b from-teal-500 via-blue-400 to-indigo-500"></div>
 
-          <div className="space-y-6">
+          <div className="space-y-8">
             {jobs.map((job, index) => (
               <div 
                 key={job.id} 
-                className="relative pl-10" 
+                className="relative pl-12" 
                 data-job-id={job.id}
                 data-reference-id={references[job.id]?.[0]?.id}
                 data-validator-id={job.skills?.[0] ? validators[job.skills[0]]?.[0]?.id : undefined}
               >
                 {/* Timeline dot */}
-                <div className="absolute left-0 w-7 h-7 rounded-full bg-gradient-to-br from-teal-400 to-blue-400 border-4 border-white flex items-center justify-center shadow-lg z-10">
+                <div className="absolute left-0 w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-blue-500 border-4 border-white flex items-center justify-center shadow-lg z-10">
                   <Briefcase size={16} className="text-white" />
                 </div>
 
@@ -748,16 +751,17 @@ const Timeline: React.FC = () => {
                     skillCategories={skillCategories}
                   />
                 ) : (
-                  <div className="bg-gradient-to-br from-white via-sky-50 to-teal-50 rounded-xl border border-teal-100 p-6 shadow-md hover:shadow-lg transition-shadow">
-                    <div className="flex justify-between items-start mb-3">
+                  <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-all duration-200">
+                    <div className="flex justify-between items-start mb-4">
                       <div>
-                        <h3 className="font-bold text-lg text-teal-900 flex items-center gap-2">
-                          {job.title}
-                          <span className="ml-2 px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 text-xs font-semibold">{job.company}</span>
-                        </h3>
-                        <p className="text-xs text-slate-500 mt-1">{job.location}</p>
+                        <h3 className="text-xl font-bold text-slate-900 mb-1">{job.title}</h3>
+                        <div className="flex items-center gap-2">
+                          <span className="text-slate-600 font-medium">{job.company}</span>
+                          <span className="text-slate-400">•</span>
+                          <span className="text-slate-500">{job.location}</span>
+                        </div>
                       </div>
-                      <div className="flex gap-1">
+                      <div className="flex gap-2">
                         <button
                           onClick={() => {
                             setNewJob({
@@ -766,75 +770,50 @@ const Timeline: React.FC = () => {
                             });
                             setIsSkillsPopupOpen(job.id);
                           }}
-                          className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-100 rounded-lg transition-colors"
+                          className="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-all duration-200"
                           title="Edit Skills"
                         >
-                          <Plus size={14} />
+                          <Plus size={16} />
                         </button>
                         <button
                           onClick={() => handleEditClick(job)}
-                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
                           title="Edit Job"
                         >
-                          <Edit2 size={14} />
+                          <Edit2 size={16} />
                         </button>
                         <button
                           onClick={() => handleDeleteJob(job.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
                           title="Delete Job"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 mb-3">
+                    <div className="flex items-center gap-4 text-sm text-slate-500 mb-4">
                       <div className="flex items-center gap-1.5">
-                        <Calendar size={14} className="text-teal-500" />
+                        <Calendar size={16} className="text-teal-500" />
                         <span>
-                          {new Date(job.start_date).toLocaleDateString()} - {job.end_date ? new Date(job.end_date).toLocaleDateString() : 'Present'}
+                          {new Date(job.start_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })} - {job.end_date ? new Date(job.end_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : 'Present'}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <MapPin size={14} className="text-teal-500" />
+                        <MapPin size={16} className="text-teal-500" />
                         <span>{job.location}</span>
                       </div>
                     </div>
 
                     {job.description && (
-                      <p className="text-sm text-slate-700 mb-4 leading-relaxed">{job.description}</p>
+                      <p className="text-slate-600 mb-4 leading-relaxed">{job.description}</p>
                     )}
 
-                    {/* References Section */}
-                    {references[job.id] && references[job.id].length > 0 && (
-                      <div className="mt-4 pt-4 border-t border-slate-100">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Users size={14} className="text-blue-500" />
-                          <h4 className="text-xs font-semibold text-blue-700 uppercase tracking-wide">References</h4>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {references[job.id].map((reference) => (
-                            <div 
-                              key={reference.id} 
-                              data-reference-id={reference.id}
-                              className="bg-blue-50 rounded-full px-3 py-1 border border-blue-100 text-xs text-blue-800 flex items-center gap-2 shadow-sm"
-                            >
-                              <span className="font-medium">{reference.full_name}</span>
-                              <span className="text-blue-400">|</span>
-                              <span>{reference.email}</span>
-                              <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-semibold">Ref {reference.reference_number}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Skills and Validators Section */}
                     {job.skills && job.skills.length > 0 && (
                       <div className="mt-4 pt-4 border-t border-slate-100">
                         <div className="flex items-center gap-2 mb-3">
-                          <CheckCircle2 size={14} className="text-green-500" />
-                          <h4 className="text-xs font-semibold text-green-700 uppercase tracking-wide">Skills & Validators</h4>
+                          <CheckCircle2 size={16} className="text-green-500" />
+                          <h4 className="text-sm font-semibold text-green-700 uppercase tracking-wide">Skills & Validators</h4>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {job.skills.map((skillId) => {
@@ -843,15 +822,15 @@ const Timeline: React.FC = () => {
                               .find(s => s.id === skillId);
                             const skillValidators = validators[skillId] || [];
                             return skill ? (
-                              <div key={skillId} className="bg-green-50 rounded-full px-3 py-1 border border-green-100 text-xs text-green-800 flex items-center gap-2 shadow-sm">
+                              <div key={skillId} className="bg-gradient-to-r from-green-50 to-teal-50 rounded-full px-3 py-1.5 border border-green-100 text-sm text-green-800 flex items-center gap-2 shadow-sm">
                                 <span className="font-medium">{skill.name}</span>
                                 {skill.rank && (
-                                  <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-semibold">Score {skill.rank}</span>
+                                  <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-semibold">Score {skill.rank}</span>
                                 )}
                                 {skillValidators.length > 0 && (
                                   <span className="ml-2 flex items-center gap-1">
                                     {skillValidators.map((validator) => (
-                                      <span key={validator.id} className="bg-white border border-green-200 rounded-full px-2 py-0.5 text-green-700 font-medium ml-1">
+                                      <span key={validator.id} className="bg-white border border-green-200 rounded-full px-2 py-0.5 text-green-700 text-xs font-medium ml-1">
                                         {validator.full_name}
                                       </span>
                                     ))}
@@ -869,12 +848,13 @@ const Timeline: React.FC = () => {
             ))}
 
             {jobs.length === 0 && !isAddingJob && (
-              <div className="text-center py-8 text-slate-500">
-                <Briefcase size={24} className="mx-auto mb-2 text-slate-400" />
-                <p className="text-sm mb-2">No work experience added yet</p>
+              <div className="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
+                <Briefcase size={32} className="mx-auto mb-3 text-slate-400" />
+                <h3 className="text-lg font-medium text-slate-900 mb-2">No work experience added yet</h3>
+                <p className="text-slate-500 mb-4">Start building your professional profile by adding your work experience</p>
                 <button
                   onClick={() => setIsAddingJob(true)}
-                  className="text-teal-600 hover:text-teal-700 font-medium"
+                  className="btn btn-primary"
                 >
                   Add your first job
                 </button>

@@ -25,38 +25,45 @@ interface EITProgress {
 }
 
 const fetchEITProgress = async (eitId: string): Promise<EITProgress> => {
-  // Fetch progress for a given EIT using correct tables
-  // 1. Completed skills (eit_skills.rank is not null)
-  // 2. Documented experiences (experiences rows)
-  // 3. Supervisor approvals (experiences.supervisor_approved = true)
-  const [skillsRes, expRes, apprRes] = await Promise.all([
-    supabase
-      .from('eit_skills')
-      .select('id', { count: 'exact', head: true })
-      .eq('eit_id', eitId)
-      .not('rank', 'is', null),
-    supabase
-      .from('experiences')
-      .select('id', { count: 'exact', head: true })
-      .eq('eit_id', eitId),
-    supabase
-      .from('experiences')
-      .select('id', { count: 'exact', head: true })
-      .eq('eit_id', eitId)
-      .eq('supervisor_approved', true),
-  ]);
-  const completedSkills = skillsRes.count || 0;
-  const documentedExperiences = expRes.count || 0;
-  const supervisorApprovals = apprRes.count || 0;
-  const skillsProgress = completedSkills / 22;
-  const experiencesProgress = documentedExperiences / 24;
-  const approvalsProgress = supervisorApprovals / 24;
-  const overallProgress = Math.round(((skillsProgress + experiencesProgress + approvalsProgress) / 3) * 100);
-  return { overallProgress, completedSkills, documentedExperiences, supervisorApprovals };
+  try {
+    const [skillsRes, expRes, apprRes] = await Promise.all([
+      supabase
+        .from('eit_skills')
+        .select('id', { count: 'exact', head: true })
+        .eq('eit_id', eitId)
+        .not('rank', 'is', null),
+      supabase
+        .from('experiences')
+        .select('id', { count: 'exact', head: true })
+        .eq('eit_id', eitId),
+      supabase
+        .from('experiences')
+        .select('id', { count: 'exact', head: true })
+        .eq('eit_id', eitId)
+        .eq('supervisor_approved', true),
+    ]);
+
+    if (skillsRes.error || expRes.error || apprRes.error) {
+      throw new Error('Failed to fetch EIT progress');
+    }
+
+    const completedSkills = skillsRes.count || 0;
+    const documentedExperiences = expRes.count || 0;
+    const supervisorApprovals = apprRes.count || 0;
+    const skillsProgress = completedSkills / 22;
+    const experiencesProgress = documentedExperiences / 24;
+    const approvalsProgress = supervisorApprovals / 24;
+    const overallProgress = Math.round(((skillsProgress + experiencesProgress + approvalsProgress) / 3) * 100);
+    return { overallProgress, completedSkills, documentedExperiences, supervisorApprovals };
+  } catch (error) {
+    console.error('Error fetching EIT progress:', error);
+    return { overallProgress: 0, completedSkills: 0, documentedExperiences: 0, supervisorApprovals: 0 };
+  }
 };
 
 const SupervisorTeam: React.FC = () => {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingRequest[]>([]);
   const [eits, setEITs] = useState<EIT[]>([]);
   const [progressMap, setProgressMap] = useState<Record<string, EITProgress>>({});
@@ -68,54 +75,82 @@ const SupervisorTeam: React.FC = () => {
   useEffect(() => {
     const fetchTeam = async () => {
       setLoading(true);
+      setError(null);
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        // Fetch pending requests
-        const { data: pendingReqsRaw } = await supabase
-          .from('supervisor_eit_relationships')
-          .select('id, eit_id, status, created_at, eit_profiles (id, full_name, email)')
-          .eq('supervisor_id', user.id)
-          .eq('status', 'pending');
-        // Fix: eit_profiles should be a single object, not array
-        const pendingReqs: PendingRequest[] = (pendingReqsRaw || []).map((req: any) => ({
+        if (!user) {
+          setError('No user found');
+          return;
+        }
+
+        // Fetch all data in parallel
+        const [pendingReqsRes, relationshipsRes] = await Promise.all([
+          supabase
+            .from('supervisor_eit_relationships')
+            .select('id, eit_id, status, created_at, eit_profiles (id, full_name, email)')
+            .eq('supervisor_id', user.id)
+            .eq('status', 'pending'),
+          supabase
+            .from('supervisor_eit_relationships')
+            .select('eit_id, eit_profiles (id, full_name, email)')
+            .eq('supervisor_id', user.id)
+            .eq('status', 'active')
+        ]);
+
+        if (pendingReqsRes.error) throw pendingReqsRes.error;
+        if (relationshipsRes.error) throw relationshipsRes.error;
+
+        // Process pending requests
+        const pendingReqs: PendingRequest[] = (pendingReqsRes.data || []).map((req: any) => ({
           ...req,
           eit_profiles: Array.isArray(req.eit_profiles) ? req.eit_profiles[0] : req.eit_profiles
         }));
         setPending(pendingReqs);
-        // Fetch active EITs
-        const { data: relationshipsRaw } = await supabase
-          .from('supervisor_eit_relationships')
-          .select('eit_id, eit_profiles (id, full_name, email)')
-          .eq('supervisor_id', user.id)
-          .eq('status', 'active');
-        const eitList: EIT[] = (relationshipsRaw || []).map((rel: any) => Array.isArray(rel.eit_profiles) ? rel.eit_profiles[0] : rel.eit_profiles);
-        setEITs(eitList);
-        // Fetch progress for each EIT
-        const progressEntries = await Promise.all(
-          eitList.map(async (eit) => [eit.id, await fetchEITProgress(eit.id)])
+
+        // Process active EITs
+        const eitList: EIT[] = (relationshipsRes.data || []).map((rel: any) => 
+          Array.isArray(rel.eit_profiles) ? rel.eit_profiles[0] : rel.eit_profiles
         );
+        setEITs(eitList);
+
+        // Fetch progress for all EITs in parallel
+        const progressPromises = eitList.map(eit => fetchEITProgress(eit.id));
+        const progressResults = await Promise.all(progressPromises);
+        const progressEntries = eitList.map((eit, index) => [eit.id, progressResults[index]]);
         setProgressMap(Object.fromEntries(progressEntries));
+
       } catch (err) {
-        // handle error
+        console.error('Error fetching team data:', err);
+        setError('Failed to load team data. Please try again.');
       } finally {
         setLoading(false);
       }
     };
+
     fetchTeam();
   }, []);
 
   const handleRequest = async (id: string, accept: boolean) => {
     setLoading(true);
     try {
-      await supabase
+      const { error } = await supabase
         .from('supervisor_eit_relationships')
         .update({ status: accept ? 'active' : 'denied', updated_at: new Date().toISOString() })
         .eq('id', id);
-      // Refresh
-      window.location.reload();
+
+      if (error) throw error;
+
+      // Update local state instead of reloading
+      setPending(prev => prev.filter(req => req.id !== id));
+      if (accept) {
+        const updatedReq = pending.find(req => req.id === id);
+        if (updatedReq) {
+          setEITs(prev => [...prev, updatedReq.eit_profiles]);
+        }
+      }
     } catch (err) {
-      // handle error
+      console.error('Error handling request:', err);
+      setError('Failed to process request. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -124,21 +159,26 @@ const SupervisorTeam: React.FC = () => {
   const handleEITClick = async (eit: EIT) => {
     setSelectedEIT(eit);
     setSkillsLoading(true);
+    // Log the current supervisor's auth user
+    const userResult = await supabase.auth.getUser();
+    console.log('Supervisor auth user:', userResult);
     console.log('SupervisorTeam: Fetching skills for EIT', eit.id);
+    // Fetch all skills for the EIT (no supervisor_score filter)
     const { data: skills, error } = await supabase
       .from('eit_skills')
       .select('skill_id, rank, supervisor_score, category_name, skill_name, status, eit_id')
-      .eq('eit_id', eit.id)
-      .not('rank', 'is', null)
-      .not('supervisor_score', 'is', null);
+      .eq('eit_id', eit.id);
     if (error) console.error('Supabase error:', error);
     console.log('Fetched skills:', skills);
+    // Filter to only skills with a supervisor_score
+    const filteredSkills = (skills || []).filter((skill: any) => skill.supervisor_score !== null && skill.supervisor_score !== undefined);
     // Organize by category and sort numerically by skill number
     const byCategory: Record<string, any[]> = {};
-    (skills || []).forEach((skill: any) => {
+    filteredSkills.forEach((skill: any) => {
       if (!byCategory[skill.category_name]) byCategory[skill.category_name] = [];
       byCategory[skill.category_name].push(skill);
     });
+    console.log('Grouped by category:', byCategory);
     Object.keys(byCategory).forEach(category => {
       byCategory[category].sort((a, b) => {
         // Extract the number from the skill name (e.g., '1.2 ...')
@@ -152,6 +192,7 @@ const SupervisorTeam: React.FC = () => {
   };
 
   if (loading) return <LoadingSpinner />;
+  if (error) return <div className="p-6 text-red-600">{error}</div>;
 
   return (
     <div className="p-6">
