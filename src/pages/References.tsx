@@ -9,6 +9,8 @@ interface Validator {
   full_name: string;
   email: string;
   description: string;
+  status: string;
+  score: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -42,6 +44,8 @@ interface ValidatorPopupProps {
   skillId: string;
   existingValidator?: Validator;
   onSave: () => void;
+  status: string;
+  loadValidators: () => void;
 }
 
 interface ReferencePopupProps {
@@ -59,7 +63,9 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
   skillName, 
   skillId,
   existingValidator,
-  onSave 
+  onSave,
+  status,
+  loadValidators
 }) => {
   const [formData, setFormData] = useState({
     fullName: existingValidator?.full_name || '',
@@ -125,8 +131,10 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
 
       onSave();
       onClose();
+      setTimeout(() => loadValidators(), 300);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error('Validator insert error:', err);
+      setError(err instanceof Error ? err.message : JSON.stringify(err));
     } finally {
       setLoading(false);
     }
@@ -167,6 +175,7 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
               placeholder="Enter validator's full name"
               required
+              disabled={status !== 'draft'}
             />
           </div>
 
@@ -181,6 +190,7 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
               placeholder="Enter validator's email"
               required
+              disabled={status !== 'draft'}
             />
           </div>
 
@@ -195,6 +205,7 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
               placeholder="Enter description of validation"
               rows={4}
               required
+              disabled={status !== 'draft'}
             />
           </div>
 
@@ -730,22 +741,62 @@ const References: React.FC = () => {
                             <h4 className="font-medium text-slate-800">{skill.name}</h4>
                             <div className="flex items-center gap-2">
                               {validators[skill.id]?.map((validator) => (
-                                <button
-                                  key={validator.id}
-                                  onClick={() => {
-                                    setSelectedSkill(skill.id);
-                                    setSelectedValidator(validator);
-                                    // Dispatch event to scroll to validator
-                                    window.dispatchEvent(new CustomEvent('scroll-to-item', {
-                                      detail: { itemId: validator.id, itemType: 'validator' }
-                                    }));
-                                  }}
-                                  className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-colors flex items-center gap-2"
-                                  data-validator-id={validator.id}
-                                >
-                                  <Edit2 size={14} />
-                                  {validator.full_name}
-                                </button>
+                                <div key={validator.id} className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => {
+                                      if (validator.status === 'draft') {
+                                        setSelectedSkill(skill.id);
+                                        setSelectedValidator(validator);
+                                        window.dispatchEvent(new CustomEvent('scroll-to-item', {
+                                          detail: { itemId: validator.id, itemType: 'validator' }
+                                        }));
+                                      }
+                                    }}
+                                    className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${validator.status !== 'draft' ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'text-slate-600 hover:text-slate-700 hover:bg-slate-50'}`}
+                                    data-validator-id={validator.id}
+                                    disabled={validator.status !== 'draft'}
+                                  >
+                                    <Edit2 size={14} />
+                                    {validator.full_name}
+                                  </button>
+                                  {/* Status tag */}
+                                  <span className={`ml-2 px-2 py-0.5 rounded text-xs font-semibold ${
+                                    validator.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+                                    validator.status === 'pending' ? 'bg-blue-100 text-blue-800' :
+                                    validator.status === 'scored' ? 'bg-green-100 text-green-800' :
+                                    'bg-slate-100 text-slate-500'
+                                  }`}>
+                                    {validator.status.charAt(0).toUpperCase() + validator.status.slice(1)}
+                                  </span>
+                                  {/* Show score if scored */}
+                                  {validator.status === 'scored' && (
+                                    <span className="ml-2 text-green-700 font-bold">Score: {validator.score}</span>
+                                  )}
+                                  {/* Send for Validation button if draft */}
+                                  {validator.status === 'draft' && (
+                                    <button
+                                      className="ml-2 px-2 py-0.5 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700"
+                                      onClick={async () => {
+                                        await supabase.from('validators').update({ status: 'pending' }).eq('id', validator.id);
+                                        setTimeout(() => loadValidators(), 300);
+                                      }}
+                                    >
+                                      Send for Validation
+                                    </button>
+                                  )}
+                                  {/* Add Cancel button for draft or pending status */}
+                                  {(validator.status === 'draft' || validator.status === 'pending') && (
+                                    <button
+                                      className="btn btn-danger btn-xs"
+                                      onClick={async () => {
+                                        await supabase.from('validators').delete().eq('id', validator.id);
+                                        setTimeout(() => loadValidators(), 300);
+                                      }}
+                                    >
+                                      Cancel
+                                    </button>
+                                  )}
+                                </div>
                               ))}
                               {(!validators[skill.id] || validators[skill.id].length === 0) && (
                                 <button
@@ -790,6 +841,8 @@ const References: React.FC = () => {
         skillId={selectedSkill || ''}
         existingValidator={selectedValidator || undefined}
         onSave={handleValidatorSave}
+        status={selectedValidator?.status ?? 'draft'}
+        loadValidators={loadValidators}
       />
 
       {/* Reference Popup */}

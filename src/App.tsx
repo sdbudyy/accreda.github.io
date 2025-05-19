@@ -33,6 +33,7 @@ import SupervisorDashboardContent from './pages/SupervisorDashboard'
 import RoleBasedDashboard from './components/dashboard/RoleBasedDashboard'
 import EitDashboardGate from './components/dashboard/EitDashboardGate'
 import SupervisorSkills from './pages/SupervisorSkills'
+import SupervisorValidationRequests from './pages/SupervisorValidationRequests'
 
 function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -170,6 +171,7 @@ function App() {
           <Route path="settings" element={<SupervisorSettings />} />
           <Route path="support" element={<SupervisorSupport />} />
           <Route path="skills" element={<SupervisorSkills />} />
+          <Route path="validation-requests" element={<SupervisorValidationRequests />} />
         </Route>
 
         {/* Catch all route */}

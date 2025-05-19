@@ -48,7 +48,7 @@ const SearchBar: React.FC = () => {
     if (value.trim()) {
       setIsOpen(true);
       try {
-        await search(value);
+      await search(value);
       } catch (err) {
         console.error('Search error:', err);
         // Keep the dropdown open to show the error
@@ -84,15 +84,15 @@ const SearchBar: React.FC = () => {
         break;
       case 'skill':
         if (userRole === 'eit') {
-          navigate('/dashboard/skills');
-          setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('scroll-to-skill', { 
-              detail: { 
-                skillId: result.id,
-                timestamp: Date.now()
-              }
-            }));
-          }, 500);
+        navigate('/dashboard/skills');
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('scroll-to-skill', { 
+            detail: { 
+              skillId: result.id,
+              timestamp: Date.now()
+            }
+          }));
+        }, 500);
         } else if (userRole === 'supervisor') {
           navigate('/dashboard/supervisor/skills');
           setTimeout(() => {

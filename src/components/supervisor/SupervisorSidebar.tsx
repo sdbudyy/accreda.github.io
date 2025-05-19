@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Users, FileText, ClipboardList, Settings, HelpCircle, Home, LogOut, BookOpen } from 'lucide-react';
+import { Users, FileText, ClipboardList, Settings, HelpCircle, Home, LogOut, BookOpen, CheckCircle2 } from 'lucide-react';
 import AccredaLogo from '../../assets/accreda-logo.png';
 import { supabase } from '../../lib/supabase';
 
@@ -11,6 +11,7 @@ interface SupervisorSidebarProps {
 const navItems = [
   { to: '/dashboard/supervisor', label: 'Dashboard', icon: <Home size={20} /> },
   { to: '/dashboard/supervisor/skills', label: 'Skills', icon: <BookOpen size={20} /> },
+  { to: '/dashboard/supervisor/validation-requests', label: 'Validation Requests', icon: <CheckCircle2 size={20} /> },
   { to: '/dashboard/supervisor/team', label: 'Team', icon: <Users size={20} /> },
   { to: '/dashboard/supervisor/reviews', label: 'Reviews', icon: <ClipboardList size={20} /> },
   { to: '/dashboard/supervisor/documents', label: 'Documents', icon: <FileText size={20} /> },

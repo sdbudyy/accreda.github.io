@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import Modal from '../components/common/Modal';
 
 interface EIT {
   id: string;
   full_name: string;
   email: string;
-  organization: string;
 }
 
 interface PendingRequest {
@@ -25,24 +25,23 @@ interface EITProgress {
 }
 
 const fetchEITProgress = async (eitId: string): Promise<EITProgress> => {
-  // Fetch progress for a given EIT (mimic logic from progress store)
-  // 1. Completed skills
-  // 2. Documented experiences
-  // 3. Supervisor approvals
-  // 4. Calculate overall progress
-  // (No need to load skills store, just count rows)
+  // Fetch progress for a given EIT using correct tables
+  // 1. Completed skills (eit_skills.rank is not null)
+  // 2. Documented experiences (experiences rows)
+  // 3. Supervisor approvals (experiences.supervisor_approved = true)
   const [skillsRes, expRes, apprRes] = await Promise.all([
     supabase
-      .from('skills')
-      .select('*', { count: 'exact', head: true })
+      .from('eit_skills')
+      .select('id', { count: 'exact', head: true })
+      .eq('eit_id', eitId)
+      .not('rank', 'is', null),
+    supabase
+      .from('experiences')
+      .select('id', { count: 'exact', head: true })
       .eq('eit_id', eitId),
     supabase
       .from('experiences')
-      .select('*', { count: 'exact', head: true })
-      .eq('eit_id', eitId),
-    supabase
-      .from('experiences')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .eq('eit_id', eitId)
       .eq('supervisor_approved', true),
   ]);
@@ -61,6 +60,10 @@ const SupervisorTeam: React.FC = () => {
   const [pending, setPending] = useState<PendingRequest[]>([]);
   const [eits, setEITs] = useState<EIT[]>([]);
   const [progressMap, setProgressMap] = useState<Record<string, EITProgress>>({});
+  const [selectedEIT, setSelectedEIT] = useState<EIT | null>(null);
+  const [eitSkills, setEitSkills] = useState<any[]>([]);
+  const [skillsLoading, setSkillsLoading] = useState(false);
+  const [skillsByCategory, setSkillsByCategory] = useState<Record<string, any[]>>({});
 
   useEffect(() => {
     const fetchTeam = async () => {
@@ -118,6 +121,36 @@ const SupervisorTeam: React.FC = () => {
     }
   };
 
+  const handleEITClick = async (eit: EIT) => {
+    setSelectedEIT(eit);
+    setSkillsLoading(true);
+    console.log('SupervisorTeam: Fetching skills for EIT', eit.id);
+    const { data: skills, error } = await supabase
+      .from('eit_skills')
+      .select('skill_id, rank, supervisor_score, category_name, skill_name, status, eit_id')
+      .eq('eit_id', eit.id)
+      .not('rank', 'is', null)
+      .not('supervisor_score', 'is', null);
+    if (error) console.error('Supabase error:', error);
+    console.log('Fetched skills:', skills);
+    // Organize by category and sort numerically by skill number
+    const byCategory: Record<string, any[]> = {};
+    (skills || []).forEach((skill: any) => {
+      if (!byCategory[skill.category_name]) byCategory[skill.category_name] = [];
+      byCategory[skill.category_name].push(skill);
+    });
+    Object.keys(byCategory).forEach(category => {
+      byCategory[category].sort((a, b) => {
+        // Extract the number from the skill name (e.g., '1.2 ...')
+        const numA = parseFloat((a.skill_name.match(/^[\d.]+/) || [0])[0]);
+        const numB = parseFloat((b.skill_name.match(/^[\d.]+/) || [0])[0]);
+        return numA - numB;
+      });
+    });
+    setSkillsByCategory(byCategory);
+    setSkillsLoading(false);
+  };
+
   if (loading) return <LoadingSpinner />;
 
   return (
@@ -154,15 +187,11 @@ const SupervisorTeam: React.FC = () => {
                 <div key={eit.id} className="border-b border-gray-200 pb-4 last:border-0">
                   <div>
                     <p className="text-sm text-gray-500">Name</p>
-                    <p className="font-medium">{eit.full_name}</p>
+                    <button className="font-medium text-teal-700 hover:underline" onClick={() => handleEITClick(eit)}>{eit.full_name}</button>
                   </div>
                   <div className="mt-2">
                     <p className="text-sm text-gray-500">Email</p>
                     <p className="font-medium">{eit.email}</p>
-                  </div>
-                  <div className="mt-2">
-                    <p className="text-sm text-gray-500">Organization</p>
-                    <p className="font-medium">{eit.organization}</p>
                   </div>
                   {progress && (
                     <div className="mt-4">
@@ -186,6 +215,39 @@ const SupervisorTeam: React.FC = () => {
           </div>
         </div>
       </div>
+      {/* EIT Skills Modal */}
+      {selectedEIT && (
+        <Modal isOpen={!!selectedEIT} onClose={() => setSelectedEIT(null)}>
+          <div className="p-6 max-w-lg mx-auto">
+            <h2 className="text-xl font-bold mb-4">{selectedEIT.full_name}'s Marked Skills</h2>
+            {skillsLoading ? (
+              <div>Loading...</div>
+            ) : (
+              Object.keys(skillsByCategory).length === 0 ? (
+                <div>No marked skills found.</div>
+              ) : (
+                <div className="space-y-4">
+                  {Object.entries(skillsByCategory).map(([category, skills]) => (
+                    <div key={category}>
+                      <h3 className="font-semibold text-slate-800 mb-2">{category}</h3>
+                      <ul className="list-disc ml-6">
+                        {skills.map((skill) => (
+                          <li key={skill.skill_id} className="mb-1">
+                            <span className="font-medium">{skill.skill_name}</span>
+                            <span className="text-xs text-slate-500 ml-2">
+                              (EIT Score: {skill.rank}, Validator Score: {skill.supervisor_score})
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

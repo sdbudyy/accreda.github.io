@@ -7,7 +7,6 @@ interface EIT {
   id: string;
   full_name: string;
   email: string;
-  organization: string;
 }
 
 interface Relationship {
@@ -144,10 +143,6 @@ const SupervisorDashboard: React.FC = () => {
                   <div className="mt-2">
                     <p className="text-sm text-gray-500">Email</p>
                     <p className="font-medium">{eit.email}</p>
-                  </div>
-                  <div className="mt-2">
-                    <p className="text-sm text-gray-500">Organization</p>
-                    <p className="font-medium">{eit.organization}</p>
                   </div>
                 </div>
               ))}
