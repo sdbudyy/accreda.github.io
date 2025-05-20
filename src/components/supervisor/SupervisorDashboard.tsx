@@ -106,50 +106,50 @@ const SupervisorDashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-2xl font-semibold mb-4">My EITs</h2>
+    <div className="space-y-6 bg-[#FDFBF7] min-h-screen">
+      <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6">
+        <h2 className="text-2xl font-semibold mb-4 text-[#2C3E50]">My EITs</h2>
         <ConnectionStatus userType="supervisor" />
       </div>
       
       <div className="p-6">
-        <h1 className="text-2xl font-bold mb-6">Supervisor Dashboard</h1>
+        <h1 className="text-3xl font-bold mb-8 text-[#2C3E50]">Supervisor Dashboard</h1>
 
         {/* Progress Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-semibold mb-2">Total EITs</h3>
-            <p className="text-3xl font-bold text-teal-600">{metrics.totalEITs}</p>
+          <div className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300">
+            <h3 className="text-lg font-semibold mb-2 text-[#2C3E50]">Total EITs</h3>
+            <p className="text-3xl font-bold text-[#3498DB]">{metrics.totalEITs}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-semibold mb-2">Pending Reviews</h3>
-            <p className="text-3xl font-bold text-teal-600">{metrics.pendingReviews}</p>
+          <div className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300">
+            <h3 className="text-lg font-semibold mb-2 text-[#2C3E50]">Pending Reviews</h3>
+            <p className="text-3xl font-bold text-[#3498DB]">{metrics.pendingReviews}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-semibold mb-2">Completed Reviews</h3>
-            <p className="text-3xl font-bold text-teal-600">{metrics.completedReviews}</p>
+          <div className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300">
+            <h3 className="text-lg font-semibold mb-2 text-[#2C3E50]">Completed Reviews</h3>
+            <p className="text-3xl font-bold text-[#3498DB]">{metrics.completedReviews}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-semibold mb-2">Team Progress</h3>
-            <p className="text-3xl font-bold text-teal-600">{metrics.averageTeamProgress}%</p>
+          <div className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300">
+            <h3 className="text-lg font-semibold mb-2 text-[#2C3E50]">Team Progress</h3>
+            <p className="text-3xl font-bold text-[#3498DB]">{metrics.averageTeamProgress}%</p>
           </div>
         </div>
 
         {/* Team Members */}
         {eits.length > 0 && (
-          <div className="bg-white rounded-lg shadow mb-8">
+          <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 mb-8">
             <div className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Team Members</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <h2 className="text-xl font-semibold mb-4 text-[#2C3E50]">Team Members</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {eits.map((eit) => (
-                  <div key={eit.id} className="border-b border-gray-200 pb-4 last:border-0">
+                  <div key={eit.id} className="border-b border-[#E8E4D9] pb-4 last:border-0">
                     <div>
-                      <p className="text-sm text-gray-500">Name</p>
-                      <p className="font-medium">{eit.full_name}</p>
+                      <p className="text-sm text-[#34495E]">Name</p>
+                      <p className="font-medium text-[#2C3E50]">{eit.full_name}</p>
                     </div>
                     <div className="mt-2">
-                      <p className="text-sm text-gray-500">Email</p>
-                      <p className="font-medium">{eit.email}</p>
+                      <p className="text-sm text-[#34495E]">Email</p>
+                      <p className="font-medium text-[#2C3E50]">{eit.email}</p>
                     </div>
                   </div>
                 ))}
@@ -159,26 +159,26 @@ const SupervisorDashboard: React.FC = () => {
         )}
 
         {/* Recent Activities */}
-        <div className="bg-white rounded-lg shadow">
+        <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300">
           <div className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Recent Activities</h2>
+            <h2 className="text-xl font-semibold mb-4 text-[#2C3E50]">Recent Activities</h2>
             <div className="space-y-4">
               {recentActivities.map((activity) => (
-                <div key={activity.id} className="border-b border-gray-200 pb-4 last:border-0">
+                <div key={activity.id} className="border-b border-[#E8E4D9] pb-4 last:border-0">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="font-medium">{activity.title}</h3>
-                      <p className="text-sm text-gray-500">{activity.description}</p>
+                      <h3 className="font-medium text-[#2C3E50]">{activity.title}</h3>
+                      <p className="text-sm text-[#34495E]">{activity.description}</p>
                     </div>
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-[#34495E]">
                       {new Date(activity.created_at).toLocaleDateString()}
                     </span>
                   </div>
                   <div className="mt-2">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      activity.status === 'approved' ? 'bg-green-100 text-green-800' :
-                      activity.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-gray-100 text-gray-800'
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                      activity.status === 'approved' ? 'bg-[#27AE60] bg-opacity-10 text-[#27AE60]' :
+                      activity.status === 'pending' ? 'bg-[#F1C40F] bg-opacity-10 text-[#F39C12]' :
+                      'bg-[#34495E] bg-opacity-10 text-[#34495E]'
                     }`}>
                       {activity.status.charAt(0).toUpperCase() + activity.status.slice(1)}
                     </span>

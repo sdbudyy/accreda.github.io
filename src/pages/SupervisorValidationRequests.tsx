@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { sendScoreNotification } from '../utils/notifications';
 
 interface Validator {
   id: string;
@@ -84,6 +85,14 @@ const SupervisorValidationRequests: React.FC = () => {
       .eq('id', validator.id);
     // Update eit_skills table using the new function
     await markSkillAsSupervisor(validator.eit_id, validator.skill_id, score);
+
+    // Send notification to EIT
+    const eit = eitProfiles[validator.eit_id];
+    const skill = skills[validator.skill_id];
+    if (eit && skill) {
+      await sendScoreNotification(eit.id, skill.name, score);
+    }
+
     setValidators((prev) => prev.filter((v) => v.id !== validator.id));
   };
 

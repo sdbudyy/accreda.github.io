@@ -36,6 +36,8 @@ import SupervisorSkills from './pages/SupervisorSkills'
 import SupervisorValidationRequests from './pages/SupervisorValidationRequests'
 import { useNotificationsStore } from './store/notifications'
 import SupervisorSAOFeedback from './pages/SupervisorSAOFeedback'
+import RealtimeNotifications from './components/common/RealtimeNotifications'
+import { Toaster } from 'react-hot-toast'
 
 function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -128,6 +130,8 @@ function App() {
 
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      {session && <RealtimeNotifications userId={session.user.id} />}
+      <Toaster position="top-right" />
       <Routes>
         {/* Public routes */}
         <Route path="/" element={!session ? <Landing /> : <RoleBasedDashboard />} />

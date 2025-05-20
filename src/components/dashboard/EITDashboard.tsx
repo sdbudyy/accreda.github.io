@@ -97,16 +97,16 @@ const EITDashboard: React.FC = () => {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-        <h1 className="text-2xl font-bold">EIT Dashboard</h1>
-        <div className="flex items-center space-x-2 mt-4 md:mt-0">
-          <span className="text-sm text-slate-500 flex items-center">
-            <Clock size={14} className="mr-1" /> 
+    <div className="p-6 bg-[#FDFBF7] min-h-screen">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+        <h1 className="text-3xl font-bold text-[#2C3E50]">EIT Dashboard</h1>
+        <div className="flex items-center space-x-4 mt-4 md:mt-0">
+          <span className="text-sm text-[#34495E] flex items-center">
+            <Clock size={14} className="mr-2" /> 
             Last updated: {formatLastUpdated(lastUpdated)}
           </span>
           <button 
-            className={`btn btn-primary ${(refreshing || progressLoading) ? 'opacity-75 cursor-not-allowed' : ''}`}
+            className={`px-4 py-2 bg-[#3498DB] text-white rounded-full text-sm font-medium hover:bg-[#2980B9] transition-all duration-300 transform hover:scale-105 ${(refreshing || progressLoading) ? 'opacity-75 cursor-not-allowed' : ''}`}
             onClick={fetchDashboardData}
             disabled={refreshing || progressLoading}
           >
@@ -117,41 +117,41 @@ const EITDashboard: React.FC = () => {
 
       {/* Progress Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold mb-2">Overall Progress</h3>
-          <p className="text-3xl font-bold text-teal-600">{overallProgress}%</p>
+        <div className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300">
+          <h3 className="text-lg font-semibold mb-2 text-[#2C3E50]">Overall Progress</h3>
+          <p className="text-3xl font-bold text-[#3498DB]">{overallProgress}%</p>
         </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold mb-2">Skills Completed</h3>
-          <p className="text-3xl font-bold text-teal-600">{completedSkills}/22</p>
+        <div className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300">
+          <h3 className="text-lg font-semibold mb-2 text-[#2C3E50]">Skills Completed</h3>
+          <p className="text-3xl font-bold text-[#3498DB]">{completedSkills}/22</p>
         </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold mb-2">Experiences Documented</h3>
-          <p className="text-3xl font-bold text-teal-600">{documentedExperiences}/24</p>
+        <div className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300">
+          <h3 className="text-lg font-semibold mb-2 text-[#2C3E50]">Experiences Documented</h3>
+          <p className="text-3xl font-bold text-[#3498DB]">{documentedExperiences}/24</p>
         </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold mb-2">Supervisor Approvals</h3>
-          <p className="text-3xl font-bold text-teal-600">{supervisorApprovals}/24</p>
+        <div className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300">
+          <h3 className="text-lg font-semibold mb-2 text-[#2C3E50]">Supervisor Approvals</h3>
+          <p className="text-3xl font-bold text-[#3498DB]">{supervisorApprovals}/24</p>
         </div>
       </div>
 
       {/* Supervisor Information */}
       {supervisor && (
-        <div className="bg-white rounded-lg shadow mb-8">
+        <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 mb-8">
           <div className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Supervisor Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <h2 className="text-xl font-semibold mb-4 text-[#2C3E50]">Supervisor Information</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
-                <p className="text-sm text-gray-500">Name</p>
-                <p className="font-medium">{supervisor.full_name}</p>
+                <p className="text-sm text-[#34495E]">Name</p>
+                <p className="font-medium text-[#2C3E50]">{supervisor.full_name}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Email</p>
-                <p className="font-medium">{supervisor.email}</p>
+                <p className="text-sm text-[#34495E]">Email</p>
+                <p className="font-medium text-[#2C3E50]">{supervisor.email}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Organization</p>
-                <p className="font-medium">{supervisor.organization}</p>
+                <p className="text-sm text-[#34495E]">Organization</p>
+                <p className="font-medium text-[#2C3E50]">{supervisor.organization}</p>
               </div>
             </div>
           </div>
@@ -159,26 +159,26 @@ const EITDashboard: React.FC = () => {
       )}
 
       {/* Recent Activities */}
-      <div className="bg-white rounded-lg shadow">
+      <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300">
         <div className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Recent Activities</h2>
+          <h2 className="text-xl font-semibold mb-4 text-[#2C3E50]">Recent Activities</h2>
           <div className="space-y-4">
             {recentActivities.map((activity) => (
-              <div key={activity.id} className="border-b border-gray-200 pb-4 last:border-0">
+              <div key={activity.id} className="border-b border-[#E8E4D9] pb-4 last:border-0">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-medium">{activity.title}</h3>
-                    <p className="text-sm text-gray-500">{activity.description}</p>
+                    <h3 className="font-medium text-[#2C3E50]">{activity.title}</h3>
+                    <p className="text-sm text-[#34495E]">{activity.description}</p>
                   </div>
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-[#34495E]">
                     {new Date(activity.created_at).toLocaleDateString()}
                   </span>
                 </div>
                 <div className="mt-2">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    activity.status === 'approved' ? 'bg-green-100 text-green-800' :
-                    activity.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-gray-100 text-gray-800'
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                    activity.status === 'approved' ? 'bg-[#27AE60] bg-opacity-10 text-[#27AE60]' :
+                    activity.status === 'pending' ? 'bg-[#F1C40F] bg-opacity-10 text-[#F39C12]' :
+                    'bg-[#34495E] bg-opacity-10 text-[#34495E]'
                   }`}>
                     {activity.status.charAt(0).toUpperCase() + activity.status.slice(1)}
                   </span>

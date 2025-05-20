@@ -4,6 +4,8 @@ import { User } from '@supabase/supabase-js';
 import { Check, Lock, Bell, Sun, Trash2, User as UserIcon, Mail } from 'lucide-react';
 import FileUpload from '../components/FileUpload';
 import ConnectionStatus from '../components/common/ConnectionStatus';
+import { useSupervisorNotificationPreferences } from '../store/supervisorNotificationPreferences';
+import { Switch } from '@headlessui/react';
 
 const subscriptionTiers = [
   {
@@ -46,6 +48,14 @@ const SupervisorSettings: React.FC = () => {
   const [mfaCode, setMfaCode] = useState('');
   const [mfaStatus, setMfaStatus] = useState<'idle' | 'enrolling' | 'verifying' | 'enabled' | 'error'>('idle');
   const [mfaError, setMfaError] = useState('');
+  const {
+    eitRequests,
+    skillValidationRequests,
+    saoFeedback,
+    toggleEitRequests,
+    toggleSkillValidationRequests,
+    toggleSaoFeedback,
+  } = useSupervisorNotificationPreferences();
 
   useEffect(() => {
     const getUserProfile = async () => {
@@ -359,12 +369,23 @@ const SupervisorSettings: React.FC = () => {
                   </button>
                   <button
                     className="btn btn-secondary w-fit"
-                    onClick={() => {
+                    onClick={async () => {
                       setMfaStatus('idle');
                       setMfaQr('');
                       setMfaFactorId('');
                       setMfaCode('');
                       setMfaError('');
+                      // Clean up any unverified TOTP factors
+                      try {
+                        const { data } = await supabase.auth.mfa.listFactors();
+                        if (data?.all) {
+                          for (const factor of data.all) {
+                            if (factor.factor_type === 'totp' && factor.status !== 'verified') {
+                              await supabase.auth.mfa.unenroll({ factorId: factor.id });
+                            }
+                          }
+                        }
+                      } catch (e) { /* ignore */ }
                     }}
                   >
                     Cancel
@@ -378,6 +399,20 @@ const SupervisorSettings: React.FC = () => {
                 onClick={async () => {
                   setMfaStatus('enrolling');
                   setMfaError('');
+                  setMfaQr('');
+                  setMfaFactorId('');
+                  setMfaCode('');
+                  // Clean up any unverified TOTP factors before enrolling
+                  try {
+                    const { data } = await supabase.auth.mfa.listFactors();
+                    if (data?.all) {
+                      for (const factor of data.all) {
+                        if (factor.factor_type === 'totp' && factor.status !== 'verified') {
+                          await supabase.auth.mfa.unenroll({ factorId: factor.id });
+                        }
+                      }
+                    }
+                  } catch (e) { /* ignore */ }
                   try {
                     const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp' });
                     if (error) throw error;
@@ -395,6 +430,63 @@ const SupervisorSettings: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Notification Preferences */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center">
+            <Bell className="h-6 w-6 text-gray-400 mr-2" />
+            <h2 className="text-lg font-medium text-gray-900">Notification Preferences</h2>
+          </div>
+        </div>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium text-gray-900">EIT Connection Requests</h3>
+              <p className="text-sm text-gray-500">Get notified when an EIT requests to connect with you</p>
+            </div>
+            <Switch
+              checked={eitRequests}
+              onChange={toggleEitRequests}
+              className={`${eitRequests ? 'bg-teal-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2`}
+            >
+              <span
+                className={`${eitRequests ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+              />
+            </Switch>
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium text-gray-900">Skill Validation Requests</h3>
+              <p className="text-sm text-gray-500">Get notified when an EIT requests skill validation</p>
+            </div>
+            <Switch
+              checked={skillValidationRequests}
+              onChange={toggleSkillValidationRequests}
+              className={`${skillValidationRequests ? 'bg-teal-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2`}
+            >
+              <span
+                className={`${skillValidationRequests ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+              />
+            </Switch>
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium text-gray-900">SAO Feedback</h3>
+              <p className="text-sm text-gray-500">Get notified when you receive new SAO feedback requests</p>
+            </div>
+            <Switch
+              checked={saoFeedback}
+              onChange={toggleSaoFeedback}
+              className={`${saoFeedback ? 'bg-teal-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2`}
+            >
+              <span
+                className={`${saoFeedback ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+              />
+            </Switch>
+          </div>
+        </div>
+      </div>
 
       <section className="card p-6">
         <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">

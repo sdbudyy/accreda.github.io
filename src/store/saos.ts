@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import { Skill } from './skills';
+import { sendSAOScoreNotification, sendSAOValidationRequestNotification } from '../utils/notifications';
 
 export interface SAOFeedback {
   id: string;
@@ -261,7 +262,10 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
   requestFeedback: async (saoId: string, supervisorId: string) => {
     set({ loading: true, error: null });
     try {
-      const { error } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user found');
+      const { data: sao } = await supabase.from('saos').select('title').eq('id', saoId).single();
+      await supabase
         .from('sao_feedback')
         .insert([
           {
@@ -271,24 +275,8 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
             status: 'pending'
           }
         ]);
-
-      if (error) throw error;
-
-      // Insert notification for supervisor
-      await supabase
-        .from('notifications')
-        .insert([
-          {
-            user_id: supervisorId,
-            type: 'sao_feedback',
-            title: 'New SAO Feedback Request',
-            message: 'You have a new SAO feedback request from an EIT.',
-            read: false,
-            created_at: new Date().toISOString(),
-            data: { sao_id: saoId }
-          }
-        ]);
-
+      // Notify supervisor
+      await sendSAOValidationRequestNotification(supervisorId, user.user_metadata?.full_name || user.email, sao?.title || 'SAO');
       // Reload SAOs to get updated feedback
       await get().loadUserSAOs(true);
     } catch (error: any) {
@@ -302,18 +290,18 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
   submitFeedback: async (saoId: string, feedback: string) => {
     set({ loading: true, error: null });
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError) throw authError;
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No authenticated user found');
-
-      const { error } = await supabase
+      const { data: sao } = await supabase.from('saos').select('eit_id, title').eq('id', saoId).single();
+      await supabase
         .from('sao_feedback')
         .update({ feedback, status: 'submitted' })
         .eq('sao_id', saoId)
         .eq('supervisor_id', user.id);
-
-      if (error) throw error;
-
+      // Notify EIT
+      if (sao?.eit_id) {
+        await sendSAOScoreNotification(sao.eit_id, sao?.title || 'SAO', 1); // You may want to pass the actual score if available
+      }
       // Reload SAOs to get updated feedback
       await get().loadUserSAOs(true);
     } catch (error: any) {

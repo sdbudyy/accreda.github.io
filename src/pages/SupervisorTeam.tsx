@@ -130,6 +130,20 @@ const SupervisorTeam: React.FC = () => {
     fetchTeam();
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      // Refetch progress for all EITs
+      if (eits.length > 0) {
+        const progressPromises = eits.map(eit => fetchEITProgress(eit.id));
+        const progressResults = await Promise.all(progressPromises);
+        const progressEntries = eits.map((eit, index) => [eit.id, progressResults[index]]);
+        setProgressMap(Object.fromEntries(progressEntries));
+      }
+    }, 30000); // every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [eits]);
+
   const handleRequest = async (id: string, accept: boolean) => {
     setLoading(true);
     try {
@@ -181,12 +195,27 @@ const SupervisorTeam: React.FC = () => {
     setSkillsLoading(false);
   };
 
+  // Calculate average team progress
+  const teamProgress = eits.length > 0 ? Math.round(eits.reduce((sum, eit) => sum + (progressMap[eit.id]?.overallProgress || 0), 0) / eits.length) : 0;
+
   if (loading) return <LoadingSpinner />;
   if (error) return <div className="p-6 text-red-600">{error}</div>;
 
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">Team</h1>
+      {/* Team Progress Bar */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold mb-2 text-slate-800">Team Progress</h2>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-sm font-medium text-slate-700">Average Completion</span>
+          <span className="text-sm font-semibold text-teal-600">{teamProgress}%</span>
+        </div>
+        <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+          <div className="h-full bg-teal-500 rounded-full transition-all duration-300" style={{ width: `${teamProgress}%` }}></div>
+        </div>
+        <div className="text-xs text-slate-500 mt-1">This is the average overall progress of all your connected EITs.</div>
+      </div>
       {/* Pending Requests */}
       {pending.length > 0 && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8">

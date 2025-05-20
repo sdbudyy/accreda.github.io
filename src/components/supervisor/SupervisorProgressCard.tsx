@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, ReactNode } from 'react';
 
 interface SupervisorProgressCardProps {
   title: string;
@@ -8,6 +8,40 @@ interface SupervisorProgressCardProps {
   color: 'teal' | 'blue' | 'indigo' | 'purple';
   showPercentage?: boolean;
 }
+
+const cardIcons: Record<string, ReactNode> = {
+  teal: <svg className="w-7 h-7 text-teal-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /></svg>,
+  blue: <svg className="w-7 h-7 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4" /></svg>,
+  indigo: <svg className="w-7 h-7 text-indigo-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polygon points="12,2 22,22 2,22" /></svg>,
+  purple: <svg className="w-7 h-7 text-purple-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="10" ry="6" /></svg>
+};
+
+const colorClasses = {
+  teal: {
+    border: 'border-l-8 border-teal-500',
+    bg: 'bg-teal-500',
+    text: 'text-teal-700',
+    lightBg: 'bg-teal-100'
+  },
+  blue: {
+    border: 'border-l-8 border-blue-500',
+    bg: 'bg-blue-500',
+    text: 'text-blue-700',
+    lightBg: 'bg-blue-100'
+  },
+  indigo: {
+    border: 'border-l-8 border-indigo-500',
+    bg: 'bg-indigo-500',
+    text: 'text-indigo-700',
+    lightBg: 'bg-indigo-100'
+  },
+  purple: {
+    border: 'border-l-8 border-purple-500',
+    bg: 'bg-purple-500',
+    text: 'text-purple-700',
+    lightBg: 'bg-purple-100'
+  }
+};
 
 const SupervisorProgressCard: React.FC<SupervisorProgressCardProps> = ({ 
   title, 
@@ -30,58 +64,29 @@ const SupervisorProgressCard: React.FC<SupervisorProgressCardProps> = ({
     return () => clearTimeout(timer);
   }, [percentage]);
   
-  const colorClasses = {
-    teal: {
-      bg: 'bg-teal-500',
-      text: 'text-teal-700',
-      lightBg: 'bg-teal-100'
-    },
-    blue: {
-      bg: 'bg-blue-500',
-      text: 'text-blue-700',
-      lightBg: 'bg-blue-100'
-    },
-    indigo: {
-      bg: 'bg-indigo-500',
-      text: 'text-indigo-700',
-      lightBg: 'bg-indigo-100'
-    },
-    purple: {
-      bg: 'bg-purple-500',
-      text: 'text-purple-700',
-      lightBg: 'bg-purple-100'
-    }
-  };
-
   return (
-    <div className="card hover:scale-[1.02] transition-transform duration-200">
-      <div className="flex justify-between items-start mb-3">
-        <h3 className="font-medium text-slate-800">{title}</h3>
-        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100">
-          <span className={`text-sm font-semibold ${colorClasses[color].text}`}>
-            {showPercentage ? `${percentage}%` : value}
-          </span>
+    <div className={`card shadow-lg ${colorClasses[color].border} hover:scale-[1.03] transition-transform duration-200 bg-white`}> 
+      <div className="flex items-center gap-4 mb-4">
+        <div>{cardIcons[color]}</div>
+        <div>
+          <h3 className="font-semibold text-lg text-slate-800 mb-1">{title}</h3>
+          <span className="block text-3xl font-extrabold text-slate-900 leading-tight">{showPercentage ? `${percentage}%` : value}</span>
         </div>
       </div>
-      
+      <div className="flex items-center justify-between text-sm mb-2">
+        <span className="text-slate-500 font-medium">{description}</span>
+        {total !== 100 && (
+          <span className="font-semibold text-slate-700">{value}/{total}</span>
+        )}
+      </div>
       {showPercentage && (
-        <div className="progress-bar mb-2">
+        <div className="w-full h-2 rounded bg-slate-100 mt-2">
           <div 
-            className={`progress-bar-fill ${colorClasses[color].bg}`} 
-            style={{ 
-              width: `${animatedValue}%`,
-              transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
-            }}
+            className={`${colorClasses[color].bg} h-2 rounded transition-all duration-700`} 
+            style={{ width: `${percentage}%` }}
           ></div>
         </div>
       )}
-      
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-slate-500">{description}</span>
-        {total !== 100 && (
-          <span className="font-medium text-slate-700">{value}/{total}</span>
-        )}
-      </div>
     </div>
   );
 }

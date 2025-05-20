@@ -120,10 +120,10 @@ export const useNotificationsStore = create<NotificationsState>((set, get) => ({
           filter: `user_id=eq.${user.id}`
         }, 
         (payload) => {
-          console.log('📬 New notification received:', payload);
+          const notification = payload.new as Notification;
           set(state => ({
-            notifications: [payload.new as Notification, ...state.notifications],
-            unreadCount: state.unreadCount + 1
+            notifications: [notification, ...state.notifications],
+            unreadCount: !notification.read ? state.unreadCount + 1 : state.unreadCount
           }));
         }
       )

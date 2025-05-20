@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import SupervisorProgressCard from '../components/supervisor/SupervisorProgressCard';
 import { useOutletContext } from 'react-router-dom';
+import { Clock } from 'lucide-react';
 
 interface EIT {
   id: string;
@@ -24,6 +25,9 @@ const SupervisorDashboard: React.FC = () => {
   const [supervisorName, setSupervisorName] = useState('Supervisor');
   const [lastUpdated, setLastUpdated] = useState<string>(new Date().toISOString());
   const [refreshing, setRefreshing] = useState(false);
+  const [pendingValidationRequests, setPendingValidationRequests] = useState(0);
+  const [pendingSAOFeedbackRequests, setPendingSAOFeedbackRequests] = useState(0);
+  const [progressMap, setProgressMap] = useState<Record<string, number>>({});
 
   const fetchDashboardData = async () => {
     try {
@@ -62,8 +66,24 @@ const SupervisorDashboard: React.FC = () => {
       console.log('DEBUG eitData:', eitData);
       setEITs(eitData);
 
+      // Fetch pending validation requests
+      const { count: validationCount } = await supabase
+        .from('validators')
+        .select('*', { count: 'exact', head: true })
+        .eq('email', user.email)
+        .eq('status', 'pending');
+      setPendingValidationRequests(validationCount || 0);
+
+      // Fetch pending SAO feedback requests
+      const { count: saoFeedbackCount } = await supabase
+        .from('sao_feedback')
+        .select('*', { count: 'exact', head: true })
+        .eq('supervisor_id', user.id)
+        .eq('status', 'pending');
+      setPendingSAOFeedbackRequests(saoFeedbackCount || 0);
+
       if (eitData.length > 0) {
-        // Fetch pending reviews
+        // Fetch pending reviews (legacy, for backward compatibility)
         const { data: pendingReviews, error: reviewsError } = await supabase
           .from('experiences')
           .select('*')
@@ -84,7 +104,7 @@ const SupervisorDashboard: React.FC = () => {
         // Calculate metrics
         setMetrics({
           totalEITs: eitData.length,
-          pendingReviews: pendingReviews?.length || 0,
+          pendingReviews: (pendingValidationRequests + pendingSAOFeedbackRequests),
           completedReviews: completedReviews?.length || 0,
           averageTeamProgress: 0 // TODO: Calculate based on EIT progress
         });
@@ -119,6 +139,55 @@ const SupervisorDashboard: React.FC = () => {
     }
   };
 
+  // Fetch EIT progress for all EITs
+  const fetchEITProgress = async (eitIds: string[]) => {
+    const progressResults = await Promise.all(
+      eitIds.map(async (eitId) => {
+        // Calculate progress for each EIT (reuse logic from SupervisorTeam)
+        const [skillsRes, expRes, apprRes] = await Promise.all([
+          supabase
+            .from('eit_skills')
+            .select('id', { count: 'exact', head: true })
+            .eq('eit_id', eitId)
+            .not('rank', 'is', null),
+          supabase
+            .from('experiences')
+            .select('id', { count: 'exact', head: true })
+            .eq('eit_id', eitId),
+          supabase
+            .from('experiences')
+            .select('id', { count: 'exact', head: true })
+            .eq('eit_id', eitId)
+            .eq('supervisor_approved', true),
+        ]);
+        const completedSkills = skillsRes.count || 0;
+        const documentedExperiences = expRes.count || 0;
+        const supervisorApprovals = apprRes.count || 0;
+        const skillsProgress = completedSkills / 22;
+        const experiencesProgress = documentedExperiences / 24;
+        const approvalsProgress = supervisorApprovals / 24;
+        const overallProgress = Math.round(((skillsProgress + experiencesProgress + approvalsProgress) / 3) * 100);
+        return [eitId, overallProgress];
+      })
+    );
+    setProgressMap(Object.fromEntries(progressResults));
+    return progressResults;
+  };
+
+  // Poll for live team progress
+  useEffect(() => {
+    if (eits.length > 0) {
+      fetchEITProgress(eits.map(e => e.id));
+      const interval = setInterval(() => {
+        fetchEITProgress(eits.map(e => e.id));
+      }, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [eits]);
+
+  // Calculate average team progress
+  const averageTeamProgress = eits.length > 0 ? Math.round(eits.reduce((sum, eit) => sum + (progressMap[eit.id] || 0), 0) / eits.length) : 0;
+
   useEffect(() => {
     fetchDashboardData();
   }, []);
@@ -132,16 +201,18 @@ const SupervisorDashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-slate-800 flex items-center gap-2">
             Welcome back, {supervisorName}!
+            <span className="ml-2 px-2 py-0.5 rounded text-xs font-semibold bg-purple-100 text-purple-800">SUPERVISOR</span>
           </h1>
           <p className="text-slate-500 mt-1">Here's an overview of your team's progress</p>
         </div>
         <div className="flex items-center space-x-2 mt-4 md:mt-0">
           <span className="text-sm text-slate-500 flex items-center">
+            <Clock size={14} className="mr-1" />
             Last updated: {formatLastUpdated(lastUpdated)}
           </span>
           <button
@@ -154,35 +225,37 @@ const SupervisorDashboard: React.FC = () => {
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <SupervisorProgressCard 
-          title="Total EITs" 
-          value={metrics.totalEITs} 
-          description="EITs under your supervision" 
-          color="teal"
-          showPercentage={false}
-        />
-        <SupervisorProgressCard 
-          title="Pending Reviews" 
-          value={metrics.pendingReviews} 
-          description="Items awaiting your review" 
-          color="blue"
-          showPercentage={false}
-        />
-        <SupervisorProgressCard 
-          title="Completed Reviews" 
-          value={metrics.completedReviews} 
-          description="Reviews completed" 
-          color="indigo"
-          showPercentage={false}
-        />
-        <SupervisorProgressCard 
-          title="Team Progress" 
-          value={metrics.averageTeamProgress} 
-          total={100} 
-          description="Average team completion rate" 
-          color="purple"
-          showPercentage={true}
-        />
+        <div className="bg-white rounded-2xl shadow p-6 flex flex-col gap-4 min-w-[220px]">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-lg text-slate-800">Team Progress</span>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-teal-50 text-teal-600">{averageTeamProgress}%</span>
+          </div>
+          <div className="w-full h-2 rounded bg-slate-100">
+            <div className="h-full rounded bg-teal-500 transition-all duration-700" style={{ width: `${averageTeamProgress}%` }}></div>
+          </div>
+          <div className="text-xs text-slate-500 mt-1">Average team completion rate</div>
+        </div>
+        <div className="bg-white rounded-2xl shadow p-6 flex flex-col gap-4 min-w-[220px]">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-lg text-slate-800">Total EITs</span>
+          </div>
+          <span className="block text-3xl font-extrabold text-slate-900 leading-tight">{metrics.totalEITs}</span>
+          <div className="text-xs text-slate-500 mt-1">EITs under your supervision</div>
+        </div>
+        <div className="bg-white rounded-2xl shadow p-6 flex flex-col gap-4 min-w-[220px]">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-lg text-slate-800">Pending Reviews</span>
+          </div>
+          <span className="block text-3xl font-extrabold text-slate-900 leading-tight">{pendingValidationRequests + pendingSAOFeedbackRequests}</span>
+          <div className="text-xs text-slate-500 mt-1">Validations: {pendingValidationRequests}, SAOs: {pendingSAOFeedbackRequests}</div>
+        </div>
+        <div className="bg-white rounded-2xl shadow p-6 flex flex-col gap-4 min-w-[220px]">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-lg text-slate-800">Completed Reviews</span>
+          </div>
+          <span className="block text-3xl font-extrabold text-slate-900 leading-tight">{metrics.completedReviews}</span>
+          <div className="text-xs text-slate-500 mt-1">Reviews completed</div>
+        </div>
       </div>
       {/* Team Members */}
       {eits.length > 0 && (

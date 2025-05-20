@@ -66,4 +66,24 @@ export const sendValidationRequestNotification = async (supervisorId: string, ei
     `${eitName} has requested your validation for ${skillName}.`,
     { type: 'validation_request', skillName }
   );
+};
+
+export const sendSAOScoreNotification = async (eitId: string, saoTitle: string, score: number) => {
+  return sendNotification(
+    eitId,
+    'score',
+    'New SAO Score',
+    `You received a score of ${score} for your SAO: "${saoTitle}".`,
+    { type: 'sao_score', saoTitle, score }
+  );
+};
+
+export const sendSAOValidationRequestNotification = async (supervisorId: string, eitName: string, saoTitle: string) => {
+  return sendNotification(
+    supervisorId,
+    'validation_request',
+    'New SAO Validation Request',
+    `${eitName} has requested your validation for SAO: "${saoTitle}".`,
+    { type: 'sao_validation_request', saoTitle }
+  );
 }; 
