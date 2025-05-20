@@ -1,10 +1,11 @@
 import React from 'react';
-import { Bell, Menu } from 'lucide-react';
-import UserMenu from '../UserMenu';
+import { Menu } from 'lucide-react';
 import SearchBar from '../SearchBar';
+import UserMenu from '../UserMenu';
+import NotificationsDropdown from '../common/NotificationsDropdown';
 
 interface SupervisorHeaderProps {
-  onMenuClick?: () => void;
+  onMenuClick: () => void;
 }
 
 const SupervisorHeader: React.FC<SupervisorHeaderProps> = ({ onMenuClick }) => {
@@ -31,13 +32,7 @@ const SupervisorHeader: React.FC<SupervisorHeaderProps> = ({ onMenuClick }) => {
         <div className="hidden md:block">
           <SearchBar />
         </div>
-        <button 
-          className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 relative"
-          aria-label="Notifications"
-        >
-          <Bell size={20} />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-        </button>
+        <NotificationsDropdown />
         <UserMenu />
       </div>
     </header>

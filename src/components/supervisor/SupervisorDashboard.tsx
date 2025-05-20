@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import LoadingSpinner from '../common/LoadingSpinner';
 import { useProgressStore } from '../../store/progress';
+import ConnectionStatus from '../common/ConnectionStatus';
 
 interface EIT {
   id: string;
@@ -105,79 +106,86 @@ const SupervisorDashboard: React.FC = () => {
   }
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Supervisor Dashboard</h1>
-
-      {/* Progress Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold mb-2">Total EITs</h3>
-          <p className="text-3xl font-bold text-teal-600">{metrics.totalEITs}</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold mb-2">Pending Reviews</h3>
-          <p className="text-3xl font-bold text-teal-600">{metrics.pendingReviews}</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold mb-2">Completed Reviews</h3>
-          <p className="text-3xl font-bold text-teal-600">{metrics.completedReviews}</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold mb-2">Team Progress</h3>
-          <p className="text-3xl font-bold text-teal-600">{metrics.averageTeamProgress}%</p>
-        </div>
+    <div className="space-y-6">
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-2xl font-semibold mb-4">My EITs</h2>
+        <ConnectionStatus userType="supervisor" />
       </div>
+      
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-6">Supervisor Dashboard</h1>
 
-      {/* Team Members */}
-      {eits.length > 0 && (
-        <div className="bg-white rounded-lg shadow mb-8">
+        {/* Progress Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h3 className="text-lg font-semibold mb-2">Total EITs</h3>
+            <p className="text-3xl font-bold text-teal-600">{metrics.totalEITs}</p>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h3 className="text-lg font-semibold mb-2">Pending Reviews</h3>
+            <p className="text-3xl font-bold text-teal-600">{metrics.pendingReviews}</p>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h3 className="text-lg font-semibold mb-2">Completed Reviews</h3>
+            <p className="text-3xl font-bold text-teal-600">{metrics.completedReviews}</p>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h3 className="text-lg font-semibold mb-2">Team Progress</h3>
+            <p className="text-3xl font-bold text-teal-600">{metrics.averageTeamProgress}%</p>
+          </div>
+        </div>
+
+        {/* Team Members */}
+        {eits.length > 0 && (
+          <div className="bg-white rounded-lg shadow mb-8">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-4">Team Members</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {eits.map((eit) => (
+                  <div key={eit.id} className="border-b border-gray-200 pb-4 last:border-0">
+                    <div>
+                      <p className="text-sm text-gray-500">Name</p>
+                      <p className="font-medium">{eit.full_name}</p>
+                    </div>
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-500">Email</p>
+                      <p className="font-medium">{eit.email}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Recent Activities */}
+        <div className="bg-white rounded-lg shadow">
           <div className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Team Members</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {eits.map((eit) => (
-                <div key={eit.id} className="border-b border-gray-200 pb-4 last:border-0">
-                  <div>
-                    <p className="text-sm text-gray-500">Name</p>
-                    <p className="font-medium">{eit.full_name}</p>
+            <h2 className="text-xl font-semibold mb-4">Recent Activities</h2>
+            <div className="space-y-4">
+              {recentActivities.map((activity) => (
+                <div key={activity.id} className="border-b border-gray-200 pb-4 last:border-0">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-medium">{activity.title}</h3>
+                      <p className="text-sm text-gray-500">{activity.description}</p>
+                    </div>
+                    <span className="text-sm text-gray-500">
+                      {new Date(activity.created_at).toLocaleDateString()}
+                    </span>
                   </div>
                   <div className="mt-2">
-                    <p className="text-sm text-gray-500">Email</p>
-                    <p className="font-medium">{eit.email}</p>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      activity.status === 'approved' ? 'bg-green-100 text-green-800' :
+                      activity.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {activity.status.charAt(0).toUpperCase() + activity.status.slice(1)}
+                    </span>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Recent Activities */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Recent Activities</h2>
-          <div className="space-y-4">
-            {recentActivities.map((activity) => (
-              <div key={activity.id} className="border-b border-gray-200 pb-4 last:border-0">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-medium">{activity.title}</h3>
-                    <p className="text-sm text-gray-500">{activity.description}</p>
-                  </div>
-                  <span className="text-sm text-gray-500">
-                    {new Date(activity.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-                <div className="mt-2">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    activity.status === 'approved' ? 'bg-green-100 text-green-800' :
-                    activity.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {activity.status.charAt(0).toUpperCase() + activity.status.slice(1)}
-                  </span>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </div>

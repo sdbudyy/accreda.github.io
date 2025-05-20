@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import LoadingSpinner from '../common/LoadingSpinner';
 import { useProgressStore } from '../../store/progress';
 import SkillsOverview from './SkillsOverview';
+import ConnectionStatus from '../common/ConnectionStatus';
 
 interface Supervisor {
   id: string;
@@ -76,82 +77,89 @@ const EITDashboard: React.FC = () => {
   }
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">EIT Dashboard</h1>
-
-      {/* Progress Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold mb-2">Overall Progress</h3>
-          <p className="text-3xl font-bold text-teal-600">{overallProgress}%</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold mb-2">Skills Completed</h3>
-          <p className="text-3xl font-bold text-teal-600">{completedSkills}/22</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold mb-2">Experiences Documented</h3>
-          <p className="text-3xl font-bold text-teal-600">{documentedExperiences}/24</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold mb-2">Supervisor Approvals</h3>
-          <p className="text-3xl font-bold text-teal-600">{supervisorApprovals}/24</p>
-        </div>
+    <div className="space-y-6">
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-2xl font-semibold mb-4">My Supervisor</h2>
+        <ConnectionStatus userType="eit" />
       </div>
+      
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-6">EIT Dashboard</h1>
 
-      {/* Skills Overview - Only for EITs */}
-      <SkillsOverview />
+        {/* Progress Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h3 className="text-lg font-semibold mb-2">Overall Progress</h3>
+            <p className="text-3xl font-bold text-teal-600">{overallProgress}%</p>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h3 className="text-lg font-semibold mb-2">Skills Completed</h3>
+            <p className="text-3xl font-bold text-teal-600">{completedSkills}/22</p>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h3 className="text-lg font-semibold mb-2">Experiences Documented</h3>
+            <p className="text-3xl font-bold text-teal-600">{documentedExperiences}/24</p>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h3 className="text-lg font-semibold mb-2">Supervisor Approvals</h3>
+            <p className="text-3xl font-bold text-teal-600">{supervisorApprovals}/24</p>
+          </div>
+        </div>
 
-      {/* Supervisor Information */}
-      {supervisor && (
-        <div className="bg-white rounded-lg shadow mb-8">
-          <div className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Supervisor Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <p className="text-sm text-gray-500">Name</p>
-                <p className="font-medium">{supervisor.full_name}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Email</p>
-                <p className="font-medium">{supervisor.email}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Organization</p>
-                <p className="font-medium">{supervisor.organization}</p>
+        {/* Skills Overview - Only for EITs */}
+        <SkillsOverview />
+
+        {/* Supervisor Information */}
+        {supervisor && (
+          <div className="bg-white rounded-lg shadow mb-8">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-4">Supervisor Information</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Name</p>
+                  <p className="font-medium">{supervisor.full_name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Email</p>
+                  <p className="font-medium">{supervisor.email}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Organization</p>
+                  <p className="font-medium">{supervisor.organization}</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Recent Activities */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Recent Activities</h2>
-          <div className="space-y-4">
-            {recentActivities.map((activity) => (
-              <div key={activity.id} className="border-b border-gray-200 pb-4 last:border-0">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-medium">{activity.title}</h3>
-                    <p className="text-sm text-gray-500">{activity.description}</p>
+        {/* Recent Activities */}
+        <div className="bg-white rounded-lg shadow">
+          <div className="p-6">
+            <h2 className="text-xl font-semibold mb-4">Recent Activities</h2>
+            <div className="space-y-4">
+              {recentActivities.map((activity) => (
+                <div key={activity.id} className="border-b border-gray-200 pb-4 last:border-0">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-medium">{activity.title}</h3>
+                      <p className="text-sm text-gray-500">{activity.description}</p>
+                    </div>
+                    <span className="text-sm text-gray-500">
+                      {new Date(activity.created_at).toLocaleDateString()}
+                    </span>
                   </div>
-                  <span className="text-sm text-gray-500">
-                    {new Date(activity.created_at).toLocaleDateString()}
-                  </span>
+                  <div className="mt-2">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      activity.status === 'approved' ? 'bg-green-100 text-green-800' :
+                      activity.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {activity.status.charAt(0).toUpperCase() + activity.status.slice(1)}
+                    </span>
+                  </div>
                 </div>
-                <div className="mt-2">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    activity.status === 'approved' ? 'bg-green-100 text-green-800' :
-                    activity.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {activity.status.charAt(0).toUpperCase() + activity.status.slice(1)}
-                  </span>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>

@@ -6,6 +6,7 @@ interface SupervisorProgressCardProps {
   total?: number;
   description: string;
   color: 'teal' | 'blue' | 'indigo' | 'purple';
+  showPercentage?: boolean;
 }
 
 const SupervisorProgressCard: React.FC<SupervisorProgressCardProps> = ({ 
@@ -13,7 +14,8 @@ const SupervisorProgressCard: React.FC<SupervisorProgressCardProps> = ({
   value, 
   total = 100, 
   description,
-  color 
+  color,
+  showPercentage = true
 }) => {
   const [animatedValue, setAnimatedValue] = useState(0);
   const percentage = Math.round((value / total) * 100);
@@ -57,20 +59,22 @@ const SupervisorProgressCard: React.FC<SupervisorProgressCardProps> = ({
         <h3 className="font-medium text-slate-800">{title}</h3>
         <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100">
           <span className={`text-sm font-semibold ${colorClasses[color].text}`}>
-            {percentage}%
+            {showPercentage ? `${percentage}%` : value}
           </span>
         </div>
       </div>
       
-      <div className="progress-bar mb-2">
-        <div 
-          className={`progress-bar-fill ${colorClasses[color].bg}`} 
-          style={{ 
-            width: `${animatedValue}%`,
-            transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
-          }}
-        ></div>
-      </div>
+      {showPercentage && (
+        <div className="progress-bar mb-2">
+          <div 
+            className={`progress-bar-fill ${colorClasses[color].bg}`} 
+            style={{ 
+              width: `${animatedValue}%`,
+              transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
+            }}
+          ></div>
+        </div>
+      )}
       
       <div className="flex items-center justify-between text-sm">
         <span className="text-slate-500">{description}</span>

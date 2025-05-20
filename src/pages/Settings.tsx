@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
 import { Check, Lock, Bell, Sun, Trash2, User as UserIcon, Mail } from 'lucide-react';
 import FileUpload from '../components/FileUpload';
+import ConnectionStatus from '../components/common/ConnectionStatus';
 
 const subscriptionTiers = [
   {
@@ -45,6 +46,13 @@ const Settings: React.FC = () => {
   const [supervisorEmail, setSupervisorEmail] = useState('');
   const [supervisorRequestStatus, setSupervisorRequestStatus] = useState<'idle' | 'success' | 'error' | 'notfound' | 'already' | 'pending'>('idle');
   const [supervisorRequestMessage, setSupervisorRequestMessage] = useState('');
+  const [supervisors, setSupervisors] = useState<{ id: string; full_name: string; email: string }[]>([]);
+  const [mfaEnrolled, setMfaEnrolled] = useState(false);
+  const [mfaQr, setMfaQr] = useState('');
+  const [mfaFactorId, setMfaFactorId] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaStatus, setMfaStatus] = useState<'idle' | 'enrolling' | 'verifying' | 'enabled' | 'error'>('idle');
+  const [mfaError, setMfaError] = useState('');
 
   useEffect(() => {
     const getUserProfile = async () => {
@@ -79,6 +87,22 @@ const Settings: React.FC = () => {
 
     getUserProfile();
   }, []);
+
+  useEffect(() => {
+    if (userRole === 'eit' && user) {
+      fetchSupervisors(user.id);
+    }
+  }, [userRole, user]);
+
+  useEffect(() => {
+    // Check if user has TOTP enrolled
+    if (user) {
+      supabase.auth.mfa.listFactors().then(({ data }) => {
+        const totp = data?.all?.find(f => f.factor_type === 'totp' && f.status === 'verified');
+        setMfaEnrolled(!!totp);
+      });
+    }
+  }, [user]);
 
   const handleAvatarSelect = (files: File[]) => {
     if (files.length > 0) {
@@ -218,6 +242,21 @@ const Settings: React.FC = () => {
       console.error('Error updating password:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSupervisors = async (eitId: string) => {
+    const { data } = await supabase
+      .from('supervisor_eit_relationships')
+      .select('supervisor_profiles (id, full_name, email)')
+      .eq('eit_id', eitId)
+      .eq('status', 'active');
+    if (data) {
+      setSupervisors(
+        data
+          .map((rel: any) => rel.supervisor_profiles)
+          .filter((sup: any) => sup)
+      );
     }
   };
 
@@ -380,13 +419,245 @@ const Settings: React.FC = () => {
               </div>
             )}
           </div>
-          {/* Placeholder for 2FA */}
+          {/* TOTP 2FA Section */}
           <div className="mt-4">
             <label className="label">Two-Factor Authentication</label>
-            <p className="text-slate-500 text-sm">Coming soon: Add an extra layer of security to your account.</p>
+            {mfaEnrolled ? (
+              <div className="flex flex-col gap-2">
+                <span className="text-green-700 font-medium">Enabled (TOTP)</span>
+                <button
+                  className="btn btn-danger w-fit"
+                  onClick={async () => {
+                    setMfaStatus('idle');
+                    setMfaError('');
+                    try {
+                      const { data } = await supabase.auth.mfa.listFactors();
+                      const totp = data?.all?.find(f => f.factor_type === 'totp' && f.status === 'verified');
+                      if (totp) {
+                        await supabase.auth.mfa.unenroll({ factorId: totp.id });
+                        setMfaEnrolled(false);
+                      }
+                    } catch (err) {
+                      setMfaError('Failed to disable 2FA.');
+                    }
+                  }}
+                >
+                  Disable 2FA
+                </button>
+                {mfaError && <span className="text-red-600 text-sm">{mfaError}</span>}
+              </div>
+            ) : mfaStatus === 'enrolling' ? (
+              <div className="flex flex-col gap-2">
+                <span>Scan this QR code with your authenticator app:</span>
+                {mfaQr && <img src={mfaQr} alt="TOTP QR Code" className="w-40 h-40" />}
+                <input
+                  type="text"
+                  className="input mt-2"
+                  placeholder="Enter 6-digit code"
+                  value={mfaCode}
+                  onChange={e => setMfaCode(e.target.value)}
+                  maxLength={6}
+                />
+                <div className="flex gap-2">
+                  <button
+                    className="btn btn-primary w-fit"
+                    onClick={async () => {
+                      setMfaStatus('verifying');
+                      setMfaError('');
+                      try {
+                        // Get challengeId for verification
+                        const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: mfaFactorId });
+                        if (challengeError) throw challengeError;
+                        const { error } = await supabase.auth.mfa.verify({
+                          factorId: mfaFactorId,
+                          challengeId: challengeData.id,
+                          code: mfaCode
+                        });
+                        if (error) throw error;
+                        setMfaEnrolled(true);
+                        setMfaStatus('enabled');
+                      } catch (err) {
+                        setMfaError('Invalid code. Please try again.');
+                        setMfaStatus('enrolling');
+                      }
+                    }}
+                    disabled={mfaCode.length !== 6}
+                  >
+                    Verify
+                  </button>
+                  <button
+                    className="btn btn-secondary w-fit"
+                    onClick={() => {
+                      setMfaStatus('idle');
+                      setMfaQr('');
+                      setMfaFactorId('');
+                      setMfaCode('');
+                      setMfaError('');
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+                {mfaError && <span className="text-red-600 text-sm">{mfaError}</span>}
+              </div>
+            ) : (
+              <button
+                className="btn btn-primary w-fit"
+                onClick={async () => {
+                  setMfaStatus('enrolling');
+                  setMfaError('');
+                  setMfaQr('');
+                  setMfaFactorId('');
+                  setMfaCode('');
+                  try {
+                    const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp' });
+                    if (error) throw error;
+                    setMfaQr(data.totp.qr_code);
+                    setMfaFactorId(data.id);
+                  } catch (err) {
+                    setMfaError('Failed to start 2FA enrollment.');
+                    setMfaStatus('idle');
+                  }
+                }}
+              >
+                Set up Two-Factor Authentication
+              </button>
+            )}
           </div>
         </div>
       </section>
+
+      {userRole === 'eit' && (
+        <section className="card p-6">
+          <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
+            <Mail /> Supervisor Connections
+          </h2>
+          
+          <div className="space-y-6">
+            {/* Current Connections */}
+            <div>
+              <h3 className="text-sm font-medium text-slate-700 mb-3">Current Connections</h3>
+              {supervisors.length === 0 ? (
+                <div className="text-slate-400">No active supervisor connections.</div>
+              ) : (
+                <ul className="divide-y divide-slate-200">
+                  {supervisors.map((sup) => (
+                    <li key={sup.id} className="py-2 flex flex-col md:flex-row md:items-center md:justify-between">
+                      <span className="font-medium text-slate-800">{sup.full_name}</span>
+                      <span className="text-slate-500 text-sm">{sup.email}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-slate-200 my-4"></div>
+
+            {/* Connect with Supervisor Form */}
+            <div>
+              <h3 className="text-sm font-medium text-slate-700 mb-3">Connect with a New Supervisor</h3>
+              <form
+                className="flex flex-col md:flex-row gap-4 items-start md:items-end"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setSupervisorRequestStatus('idle');
+                  setSupervisorRequestMessage('');
+                  if (!supervisorEmail) return;
+                  setLoading(true);
+                  try {
+                    // Look up supervisor by email
+                    const { data: supervisor } = await supabase
+                      .from('supervisor_profiles')
+                      .select('id, email, full_name')
+                      .eq('email', supervisorEmail)
+                      .single();
+                    if (!supervisor) {
+                      setSupervisorRequestStatus('notfound');
+                      setSupervisorRequestMessage('No supervisor found with that email.');
+                      setLoading(false);
+                      return;
+                    }
+                    // Check for existing relationship
+                    const { data: existing } = await supabase
+                      .from('supervisor_eit_relationships')
+                      .select('id, status')
+                      .eq('supervisor_id', supervisor.id)
+                      .eq('eit_id', user?.id)
+                      .maybeSingle();
+                    if (existing && existing.status === 'pending') {
+                      setSupervisorRequestStatus('pending');
+                      setSupervisorRequestMessage('A request is already pending for this supervisor.');
+                      setLoading(false);
+                      return;
+                    }
+                    if (existing && existing.status === 'active') {
+                      setSupervisorRequestStatus('already');
+                      setSupervisorRequestMessage('This supervisor is already connected.');
+                      setLoading(false);
+                      return;
+                    }
+                    // Create relationship
+                    const { error } = await supabase
+                      .from('supervisor_eit_relationships')
+                      .upsert({
+                        supervisor_id: supervisor.id,
+                        eit_id: user?.id,
+                        status: 'pending',
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString(),
+                      });
+                    if (error) throw error;
+                    setSupervisorRequestStatus('success');
+                    setSupervisorRequestMessage('Request sent! Your supervisor will see it in their dashboard.');
+                    setSupervisorEmail(''); // Clear the input after successful request
+                    if (user) {
+                      fetchSupervisors(user.id); // Refresh supervisor connections
+                    }
+                  } catch (err) {
+                    console.error(err);
+                    setSupervisorRequestStatus('error');
+                    setSupervisorRequestMessage('Failed to send request. Please try again.');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+              >
+                <div className="flex-1 w-full">
+                  <label htmlFor="supervisorEmail" className="label">Supervisor Email</label>
+                  <input
+                    type="email"
+                    id="supervisorEmail"
+                    value={supervisorEmail}
+                    onChange={e => setSupervisorEmail(e.target.value)}
+                    className="input w-full"
+                    placeholder="Enter supervisor's email"
+                    required
+                  />
+                </div>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary whitespace-nowrap" 
+                  disabled={loading}
+                >
+                  {loading ? 'Sending...' : 'Send Request'}
+                </button>
+              </form>
+              {supervisorRequestMessage && (
+                <div 
+                  className={`mt-3 text-sm p-2 rounded-md ${
+                    supervisorRequestStatus === 'success' 
+                      ? 'bg-green-50 text-green-700 border border-green-200' 
+                      : 'bg-red-50 text-red-700 border border-red-200'
+                  }`}
+                >
+                  {supervisorRequestMessage}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Notifications Card (placeholder) */}
       <section className="card p-6">
@@ -460,95 +731,6 @@ const Settings: React.FC = () => {
         >
           {message.text}
         </div>
-      )}
-
-      {userRole === 'eit' && (
-        <section className="card p-6">
-          <h2 className="text-lg font-semibold flex items-center gap-2 mb-2">
-            <Mail /> Connect with Supervisor
-          </h2>
-          <form
-            className="flex flex-col md:flex-row gap-4 items-start md:items-end"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              setSupervisorRequestStatus('idle');
-              setSupervisorRequestMessage('');
-              if (!supervisorEmail) return;
-              setLoading(true);
-              try {
-                // Look up supervisor by email
-                const { data: supervisor } = await supabase
-                  .from('supervisor_profiles')
-                  .select('id, email, full_name')
-                  .eq('email', supervisorEmail)
-                  .single();
-                if (!supervisor) {
-                  setSupervisorRequestStatus('notfound');
-                  setSupervisorRequestMessage('No supervisor found with that email.');
-                  setLoading(false);
-                  return;
-                }
-                // Check for existing relationship
-                const { data: existing } = await supabase
-                  .from('supervisor_eit_relationships')
-                  .select('id, status')
-                  .eq('supervisor_id', supervisor.id)
-                  .eq('eit_id', user?.id)
-                  .maybeSingle();
-                if (existing && existing.status === 'pending') {
-                  setSupervisorRequestStatus('pending');
-                  setSupervisorRequestMessage('A request is already pending for this supervisor.');
-                  setLoading(false);
-                  return;
-                }
-                if (existing && existing.status === 'active') {
-                  setSupervisorRequestStatus('already');
-                  setSupervisorRequestMessage('This supervisor is already connected.');
-                  setLoading(false);
-                  return;
-                }
-                // Create relationship
-                const { error } = await supabase
-                  .from('supervisor_eit_relationships')
-                  .upsert({
-                    supervisor_id: supervisor.id,
-                    eit_id: user?.id,
-                    status: 'pending',
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                  });
-                if (error) throw error;
-                setSupervisorRequestStatus('success');
-                setSupervisorRequestMessage('Request sent! Your supervisor will see it in their dashboard.');
-              } catch (err) {
-                console.error(err);
-                setSupervisorRequestStatus('error');
-                setSupervisorRequestMessage('Failed to send request. Please try again.');
-              } finally {
-                setLoading(false);
-              }
-            }}
-          >
-            <div className="flex-1">
-              <label htmlFor="supervisorEmail" className="label">Supervisor Email</label>
-              <input
-                type="email"
-                id="supervisorEmail"
-                value={supervisorEmail}
-                onChange={e => setSupervisorEmail(e.target.value)}
-                className="input"
-                placeholder="Enter supervisor's email"
-                required
-              />
-            </div>
-            <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? 'Sending...' : 'Send Request'}
-            </button>
-          </form>
-          {supervisorRequestMessage && (
-            <div className={`mt-3 text-sm ${supervisorRequestStatus === 'success' ? 'text-green-700' : 'text-red-700'}`}>{supervisorRequestMessage}</div>
-          )}
-        </section>
       )}
     </div>
   );

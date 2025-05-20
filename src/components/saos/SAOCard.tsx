@@ -1,6 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { FileEdit, Edit3, Trash2 } from 'lucide-react';
 import { SAO } from '../../types/sao';
+import SAOFeedbackComponent from './SAOFeedback';
+import { useSAOsStore } from '../../store/saos';
+import { supabase } from '../../lib/supabase';
 
 interface SAOCardProps {
   sao: SAO;
@@ -10,6 +13,25 @@ interface SAOCardProps {
 
 const SAOCard: React.FC<SAOCardProps> = ({ sao, onEdit, onDelete }) => {
   const cardRef = useRef<HTMLDivElement>(null);
+  const [isSupervisor, setIsSupervisor] = useState(false);
+  const { resolveFeedback, submitFeedback } = useSAOsStore();
+
+  useEffect(() => {
+    const checkUserRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('supervisor_profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+
+      setIsSupervisor(!!profile);
+    };
+
+    checkUserRole();
+  }, []);
 
   useEffect(() => {
     const handleHighlight = (e: CustomEvent) => {
@@ -50,19 +72,19 @@ const SAOCard: React.FC<SAOCardProps> = ({ sao, onEdit, onDelete }) => {
       </div>
       
       <p className="text-sm text-slate-600 mt-2">{sao.description}</p>
-      
-      <div className="flex justify-between items-center mt-4 pt-3 border-t border-slate-100">
-        <div className="text-xs text-slate-500">
-          <span>Updated {new Date(sao.updated_at).toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric', 
-            year: 'numeric' 
-          })}</span>
-        </div>
-        
-        <button className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700">
-          <FileEdit size={16} />
-        </button>
+      <p className="text-sm text-slate-600 mt-2 whitespace-pre-wrap">{sao.content}</p>
+
+      {sao.feedback && (
+        <SAOFeedbackComponent
+          feedback={sao.feedback}
+          onResolve={resolveFeedback}
+          onSubmitFeedback={submitFeedback}
+          isSupervisor={isSupervisor}
+        />
+      )}
+
+      <div className="mt-4 text-sm text-slate-500">
+        Created: {new Date(sao.created_at).toLocaleDateString()}
       </div>
     </div>
   );

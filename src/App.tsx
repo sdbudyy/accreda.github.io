@@ -34,6 +34,8 @@ import RoleBasedDashboard from './components/dashboard/RoleBasedDashboard'
 import EitDashboardGate from './components/dashboard/EitDashboardGate'
 import SupervisorSkills from './pages/SupervisorSkills'
 import SupervisorValidationRequests from './pages/SupervisorValidationRequests'
+import { useNotificationsStore } from './store/notifications'
+import SupervisorSAOFeedback from './pages/SupervisorSAOFeedback'
 
 function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -41,6 +43,7 @@ function App() {
   const initialize = useProgressStore(state => state.initialize)
   const setupRealtimeSubscriptions = useProgressStore(state => state.setupRealtimeSubscriptions)
   const loadUserSkills = useSkillsStore(state => state.loadUserSkills)
+  const initializeNotifications = useNotificationsStore(state => state.initialize)
   const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
   const initializeApp = async () => {
@@ -53,6 +56,8 @@ function App() {
       console.log('Progress initialized successfully');
       await setupRealtimeSubscriptions();
       console.log('Realtime subscriptions set up successfully');
+      await initializeNotifications();
+      console.log('Notifications initialized successfully');
     } catch (error) {
       console.error('Error initializing app:', error);
       // Don't throw the error, just log it
@@ -172,6 +177,7 @@ function App() {
           <Route path="support" element={<SupervisorSupport />} />
           <Route path="skills" element={<SupervisorSkills />} />
           <Route path="validation-requests" element={<SupervisorValidationRequests />} />
+          <Route path="sao-feedback" element={<SupervisorSAOFeedback />} />
         </Route>
 
         {/* Catch all route */}

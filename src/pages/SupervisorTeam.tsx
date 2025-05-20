@@ -169,24 +169,14 @@ const SupervisorTeam: React.FC = () => {
       .select('skill_id, rank, supervisor_score, category_name, skill_name, status, eit_id')
       .eq('eit_id', eit.id);
     if (error) console.error('Supabase error:', error);
-    console.log('Fetched skills:', skills);
-    // Filter to only skills with a supervisor_score
-    const filteredSkills = (skills || []).filter((skill: any) => skill.supervisor_score !== null && skill.supervisor_score !== undefined);
-    // Organize by category and sort numerically by skill number
+    console.log('Fetched skills:', skills); // DEBUG: See actual data and field names
+    // Organize by category
     const byCategory: Record<string, any[]> = {};
-    filteredSkills.forEach((skill: any) => {
+    (skills || []).forEach((skill: any) => {
       if (!byCategory[skill.category_name]) byCategory[skill.category_name] = [];
       byCategory[skill.category_name].push(skill);
     });
     console.log('Grouped by category:', byCategory);
-    Object.keys(byCategory).forEach(category => {
-      byCategory[category].sort((a, b) => {
-        // Extract the number from the skill name (e.g., '1.2 ...')
-        const numA = parseFloat((a.skill_name.match(/^[\d.]+/) || [0])[0]);
-        const numB = parseFloat((b.skill_name.match(/^[\d.]+/) || [0])[0]);
-        return numA - numB;
-      });
-    });
     setSkillsByCategory(byCategory);
     setSkillsLoading(false);
   };
@@ -259,30 +249,66 @@ const SupervisorTeam: React.FC = () => {
       {/* EIT Skills Modal */}
       {selectedEIT && (
         <Modal isOpen={!!selectedEIT} onClose={() => setSelectedEIT(null)}>
-          <div className="p-6 max-w-lg mx-auto">
-            <h2 className="text-xl font-bold mb-4">{selectedEIT.full_name}'s Marked Skills</h2>
+          <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-white rounded-lg p-8">
+            <h2 className="text-2xl font-bold mb-6">{selectedEIT.full_name}'s Skills</h2>
             {skillsLoading ? (
               <div>Loading...</div>
             ) : (
               Object.keys(skillsByCategory).length === 0 ? (
                 <div>No marked skills found.</div>
               ) : (
-                <div className="space-y-4">
-                  {Object.entries(skillsByCategory).map(([category, skills]) => (
-                    <div key={category}>
-                      <h3 className="font-semibold text-slate-800 mb-2">{category}</h3>
-                      <ul className="list-disc ml-6">
-                        {skills.map((skill) => (
-                          <li key={skill.skill_id} className="mb-1">
-                            <span className="font-medium">{skill.skill_name}</span>
-                            <span className="text-xs text-slate-500 ml-2">
-                              (EIT Score: {skill.rank}, Validator Score: {skill.supervisor_score})
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
+                <div className="pr-2">
+                  {Object.entries(skillsByCategory).map(([category, skills]) => {
+                    // Sort skills by splitting skill number by '.' and comparing each part numerically
+                    const extractSkillParts = (name: string) => {
+                      const match = name.match(/^([\d.]+)/);
+                      if (!match) return [0];
+                      return match[1].split('.').map(Number);
+                    };
+                    const sortedSkills = [...skills].sort((a, b) => {
+                      const partsA = extractSkillParts(a.skill_name);
+                      const partsB = extractSkillParts(b.skill_name);
+                      for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+                        const numA = partsA[i] ?? 0;
+                        const numB = partsB[i] ?? 0;
+                        if (numA !== numB) return numA - numB;
+                      }
+                      return 0;
+                    });
+                    return (
+                      <div key={category} className="mb-6">
+                        <h3 className="font-semibold text-slate-800 mb-3 text-lg">{category}</h3>
+                        <div className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white shadow-sm">
+                          {sortedSkills.map((skill) => (
+                            <div
+                              key={skill.skill_id}
+                              className="flex flex-row items-center gap-4 px-4 py-3 transition-colors hover:bg-slate-50 group"
+                            >
+                              <span className="font-medium text-slate-800 flex-1 min-w-0 truncate">{skill.skill_name}</span>
+                              <div className="flex gap-2">
+                                {skill.rank !== null && skill.rank !== undefined && (
+                                  <span
+                                    className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 group-hover:bg-blue-200 transition-colors"
+                                    title="EIT's self score"
+                                  >
+                                    EIT: {skill.rank}
+                                  </span>
+                                )}
+                                {skill.supervisor_score !== null && skill.supervisor_score !== undefined && (
+                                  <span
+                                    className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 group-hover:bg-green-200 transition-colors"
+                                    title="Supervisor's score"
+                                  >
+                                    Supervisor: {skill.supervisor_score}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )
             )}

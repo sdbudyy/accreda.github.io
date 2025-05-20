@@ -56,50 +56,59 @@ const SupervisorDashboard: React.FC = () => {
         .eq('status', 'active');
 
       if (relError) throw relError;
-      let eitData: EIT[] = [];
-      if (relationships) {
-        eitData = relationships.map(rel => rel.eit_profiles as unknown as EIT);
-        setEITs(eitData);
+      
+      const eitData: EIT[] = relationships ? relationships.map(rel => rel.eit_profiles as unknown as EIT) : [];
+      console.log('DEBUG relationships:', relationships);
+      console.log('DEBUG eitData:', eitData);
+      setEITs(eitData);
+
+      if (eitData.length > 0) {
+        // Fetch pending reviews
+        const { data: pendingReviews, error: reviewsError } = await supabase
+          .from('experiences')
+          .select('*')
+          .in('eit_id', eitData.map(eit => eit.id))
+          .eq('supervisor_approved', false);
+
+        if (reviewsError) throw reviewsError;
+
+        // Fetch completed reviews
+        const { data: completedReviews, error: completedError } = await supabase
+          .from('experiences')
+          .select('*')
+          .in('eit_id', eitData.map(eit => eit.id))
+          .eq('supervisor_approved', true);
+
+        if (completedError) throw completedError;
+
+        // Calculate metrics
+        setMetrics({
+          totalEITs: eitData.length,
+          pendingReviews: pendingReviews?.length || 0,
+          completedReviews: completedReviews?.length || 0,
+          averageTeamProgress: 0 // TODO: Calculate based on EIT progress
+        });
+
+        // Fetch recent activities
+        const { data: activities, error: activitiesError } = await supabase
+          .from('experiences')
+          .select('*')
+          .in('eit_id', eitData.map(eit => eit.id))
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        if (activitiesError) throw activitiesError;
+        setRecentActivities(activities || []);
+      } else {
+        // Reset metrics if no EITs
+        setMetrics({
+          totalEITs: 0,
+          pendingReviews: 0,
+          completedReviews: 0,
+          averageTeamProgress: 0
+        });
+        setRecentActivities([]);
       }
-
-      // Fetch pending reviews
-      const { data: pendingReviews, error: reviewsError } = await supabase
-        .from('experiences')
-        .select('*')
-        .in('eit_id', eitData.map(eit => eit.id))
-        .eq('status', 'pending')
-        .eq('needs_supervisor_review', true);
-
-      if (reviewsError) throw reviewsError;
-
-      // Fetch completed reviews
-      const { data: completedReviews, error: completedError } = await supabase
-        .from('experiences')
-        .select('*')
-        .in('eit_id', eitData.map(eit => eit.id))
-        .eq('status', 'approved')
-        .eq('needs_supervisor_review', false);
-
-      if (completedError) throw completedError;
-
-      // Calculate metrics
-      setMetrics({
-        totalEITs: eitData.length,
-        pendingReviews: pendingReviews?.length || 0,
-        completedReviews: completedReviews?.length || 0,
-        averageTeamProgress: 0 // TODO: Calculate based on EIT progress
-      });
-
-      // Fetch recent activities
-      const { data: activities, error: activitiesError } = await supabase
-        .from('experiences')
-        .select('*')
-        .in('eit_id', eitData.map(eit => eit.id))
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      if (activitiesError) throw activitiesError;
-      setRecentActivities(activities || []);
 
       setLastUpdated(new Date().toISOString());
     } catch (error) {
@@ -145,10 +154,35 @@ const SupervisorDashboard: React.FC = () => {
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <SupervisorProgressCard title="Total EITs" value={metrics.totalEITs} description="EITs under your supervision" color="teal" />
-        <SupervisorProgressCard title="Pending Reviews" value={metrics.pendingReviews} description="Items awaiting your review" color="blue" />
-        <SupervisorProgressCard title="Completed Reviews" value={metrics.completedReviews} description="Reviews completed" color="indigo" />
-        <SupervisorProgressCard title="Team Progress" value={metrics.averageTeamProgress} total={100} description="Average team completion rate" color="purple" />
+        <SupervisorProgressCard 
+          title="Total EITs" 
+          value={metrics.totalEITs} 
+          description="EITs under your supervision" 
+          color="teal"
+          showPercentage={false}
+        />
+        <SupervisorProgressCard 
+          title="Pending Reviews" 
+          value={metrics.pendingReviews} 
+          description="Items awaiting your review" 
+          color="blue"
+          showPercentage={false}
+        />
+        <SupervisorProgressCard 
+          title="Completed Reviews" 
+          value={metrics.completedReviews} 
+          description="Reviews completed" 
+          color="indigo"
+          showPercentage={false}
+        />
+        <SupervisorProgressCard 
+          title="Team Progress" 
+          value={metrics.averageTeamProgress} 
+          total={100} 
+          description="Average team completion rate" 
+          color="purple"
+          showPercentage={true}
+        />
       </div>
       {/* Team Members */}
       {eits.length > 0 && (

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
-import { Check, Lock, Bell, Sun, Trash2, User as UserIcon } from 'lucide-react';
+import { Check, Lock, Bell, Sun, Trash2, User as UserIcon, Mail } from 'lucide-react';
+import FileUpload from '../components/FileUpload';
+import ConnectionStatus from '../components/common/ConnectionStatus';
 
 const subscriptionTiers = [
   {
@@ -34,6 +36,16 @@ const SupervisorSettings: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [currentPlan, setCurrentPlan] = useState('Free');
+  const [eits, setEITs] = useState<{ id: string; full_name: string; email: string }[]>([]);
+  const [eitEmail, setEitEmail] = useState('');
+  const [eitRequestStatus, setEitRequestStatus] = useState<'idle' | 'success' | 'error' | 'notfound' | 'already' | 'pending'>('idle');
+  const [eitRequestMessage, setEitRequestMessage] = useState('');
+  const [mfaEnrolled, setMfaEnrolled] = useState(false);
+  const [mfaQr, setMfaQr] = useState('');
+  const [mfaFactorId, setMfaFactorId] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaStatus, setMfaStatus] = useState<'idle' | 'enrolling' | 'verifying' | 'enabled' | 'error'>('idle');
+  const [mfaError, setMfaError] = useState('');
 
   useEffect(() => {
     const getUserProfile = async () => {
@@ -43,6 +55,26 @@ const SupervisorSettings: React.FC = () => {
         setFullName(user.user_metadata?.full_name || '');
         setEmail(user.email || '');
         setNewEmail(user.email || '');
+        // Fetch all active EIT connections
+        supabase
+          .from('supervisor_eit_relationships')
+          .select('eit_profiles (id, full_name, email)')
+          .eq('supervisor_id', user.id)
+          .eq('status', 'active')
+          .then(({ data }) => {
+            if (data) {
+              setEITs(
+                data
+                  .map((rel: any) => rel.eit_profiles)
+                  .filter((eit: any) => eit)
+              );
+            }
+          });
+        // Check if user has TOTP enrolled
+        supabase.auth.mfa.listFactors().then(({ data }) => {
+          const totp = data?.all?.find(f => f.factor_type === 'totp' && f.status === 'verified');
+          setMfaEnrolled(!!totp);
+        });
       }
     };
     getUserProfile();
@@ -259,10 +291,230 @@ const SupervisorSettings: React.FC = () => {
               </div>
             )}
           </div>
-          {/* Placeholder for 2FA */}
+          {/* TOTP 2FA Section */}
           <div className="mt-4">
             <label className="label">Two-Factor Authentication</label>
-            <p className="text-slate-500 text-sm">Coming soon: Add an extra layer of security to your account.</p>
+            {mfaEnrolled ? (
+              <div className="flex flex-col gap-2">
+                <span className="text-green-700 font-medium">Enabled (TOTP)</span>
+                <button
+                  className="btn btn-danger w-fit"
+                  onClick={async () => {
+                    setMfaStatus('idle');
+                    setMfaError('');
+                    try {
+                      const { data } = await supabase.auth.mfa.listFactors();
+                      const totp = data?.all?.find(f => f.factor_type === 'totp' && f.status === 'verified');
+                      if (totp) {
+                        await supabase.auth.mfa.unenroll({ factorId: totp.id });
+                        setMfaEnrolled(false);
+                      }
+                    } catch (err) {
+                      setMfaError('Failed to disable 2FA.');
+                    }
+                  }}
+                >
+                  Disable 2FA
+                </button>
+                {mfaError && <span className="text-red-600 text-sm">{mfaError}</span>}
+              </div>
+            ) : mfaStatus === 'enrolling' ? (
+              <div className="flex flex-col gap-2">
+                <span>Scan this QR code with your authenticator app:</span>
+                {mfaQr && <img src={mfaQr} alt="TOTP QR Code" className="w-40 h-40" />}
+                <input
+                  type="text"
+                  className="input mt-2"
+                  placeholder="Enter 6-digit code"
+                  value={mfaCode}
+                  onChange={e => setMfaCode(e.target.value)}
+                  maxLength={6}
+                />
+                <div className="flex gap-2">
+                  <button
+                    className="btn btn-primary w-fit"
+                    onClick={async () => {
+                      setMfaStatus('verifying');
+                      setMfaError('');
+                      try {
+                        // Get challengeId for verification
+                        const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: mfaFactorId });
+                        if (challengeError) throw challengeError;
+                        const { error } = await supabase.auth.mfa.verify({
+                          factorId: mfaFactorId,
+                          challengeId: challengeData.id,
+                          code: mfaCode
+                        });
+                        if (error) throw error;
+                        setMfaEnrolled(true);
+                        setMfaStatus('enabled');
+                      } catch (err) {
+                        setMfaError('Invalid code. Please try again.');
+                        setMfaStatus('enrolling');
+                      }
+                    }}
+                    disabled={mfaCode.length !== 6}
+                  >
+                    Verify
+                  </button>
+                  <button
+                    className="btn btn-secondary w-fit"
+                    onClick={() => {
+                      setMfaStatus('idle');
+                      setMfaQr('');
+                      setMfaFactorId('');
+                      setMfaCode('');
+                      setMfaError('');
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+                {mfaError && <span className="text-red-600 text-sm">{mfaError}</span>}
+              </div>
+            ) : (
+              <button
+                className="btn btn-primary w-fit"
+                onClick={async () => {
+                  setMfaStatus('enrolling');
+                  setMfaError('');
+                  try {
+                    const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp' });
+                    if (error) throw error;
+                    setMfaQr(data.totp.qr_code);
+                    setMfaFactorId(data.id);
+                  } catch (err) {
+                    setMfaError('Failed to start 2FA enrollment.');
+                    setMfaStatus('idle');
+                  }
+                }}
+              >
+                Set up Two-Factor Authentication
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="card p-6">
+        <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
+          <Mail /> EIT Connections
+        </h2>
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-sm font-medium text-slate-700 mb-3">Current Connections</h3>
+            {eits.length === 0 ? (
+              <div className="text-slate-400">No active EIT connections.</div>
+            ) : (
+              <ul className="divide-y divide-slate-200">
+                {eits.map((eit) => (
+                  <li key={eit.id} className="py-2 flex flex-col md:flex-row md:items-center md:justify-between">
+                    <span className="font-medium text-slate-800">{eit.full_name}</span>
+                    <span className="text-slate-500 text-sm">{eit.email}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          {/* Divider */}
+          <div className="border-t border-slate-200 my-4"></div>
+          {/* Connect with EIT Form */}
+          <div>
+            <h3 className="text-sm font-medium text-slate-700 mb-3">Connect with a New EIT</h3>
+            <form
+              className="flex flex-col md:flex-row gap-4 items-start md:items-end"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setEitRequestStatus('idle');
+                setEitRequestMessage('');
+                if (!eitEmail) return;
+                setLoading(true);
+                try {
+                  // Look up EIT by email
+                  const { data: eit } = await supabase
+                    .from('eit_profiles')
+                    .select('id, email, full_name')
+                    .eq('email', eitEmail)
+                    .single();
+                  if (!eit) {
+                    setEitRequestStatus('notfound');
+                    setEitRequestMessage('No EIT found with that email.');
+                    setLoading(false);
+                    return;
+                  }
+                  // Check for existing relationship
+                  const { data: existing } = await supabase
+                    .from('supervisor_eit_relationships')
+                    .select('id, status')
+                    .eq('supervisor_id', user?.id)
+                    .eq('eit_id', eit.id)
+                    .maybeSingle();
+                  if (existing && existing.status === 'pending') {
+                    setEitRequestStatus('pending');
+                    setEitRequestMessage('A request is already pending for this EIT.');
+                    setLoading(false);
+                    return;
+                  }
+                  if (existing && existing.status === 'active') {
+                    setEitRequestStatus('already');
+                    setEitRequestMessage('This EIT is already connected.');
+                    setLoading(false);
+                    return;
+                  }
+                  // Create relationship
+                  const { error } = await supabase
+                    .from('supervisor_eit_relationships')
+                    .upsert({
+                      supervisor_id: user?.id,
+                      eit_id: eit.id,
+                      status: 'pending',
+                      created_at: new Date().toISOString(),
+                      updated_at: new Date().toISOString(),
+                    });
+                  if (error) throw error;
+                  setEitRequestStatus('success');
+                  setEitRequestMessage('Request sent! The EIT will see it in their dashboard.');
+                  setEitEmail('');
+                } catch (err) {
+                  console.error(err);
+                  setEitRequestStatus('error');
+                  setEitRequestMessage('Failed to send request. Please try again.');
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            >
+              <div className="flex-1 w-full">
+                <label htmlFor="eitEmail" className="label">EIT Email</label>
+                <input
+                  type="email"
+                  id="eitEmail"
+                  value={eitEmail}
+                  onChange={e => setEitEmail(e.target.value)}
+                  className="input w-full"
+                  placeholder="Enter EIT's email"
+                  required
+                />
+              </div>
+              <button 
+                type="submit" 
+                className="btn btn-primary whitespace-nowrap" 
+                disabled={loading}
+              >
+                {loading ? 'Sending...' : 'Send Request'}
+              </button>
+            </form>
+            {eitRequestMessage && (
+              <div 
+                className={`mt-3 text-sm p-2 rounded-md ${
+                  eitRequestStatus === 'success' 
+                    ? 'bg-green-50 text-green-700 border border-green-200' 
+                    : 'bg-red-50 text-red-700 border border-red-200'
+                }`}
+              >
+                {eitRequestMessage}
+              </div>
+            )}
           </div>
         </div>
       </section>

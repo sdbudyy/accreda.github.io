@@ -2,6 +2,16 @@ import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import { Skill } from './skills';
 
+export interface SAOFeedback {
+  id: string;
+  sao_id: string;
+  supervisor_id: string;
+  feedback: string;
+  status: 'pending' | 'submitted' | 'resolved';
+  created_at: string;
+  updated_at: string;
+}
+
 export interface SAO {
   id: string;
   title: string;
@@ -9,6 +19,7 @@ export interface SAO {
   created_at: string;
   updated_at: string;
   skills: Skill[];
+  feedback?: SAOFeedback[];
 }
 
 interface SAOsState {
@@ -21,6 +32,9 @@ interface SAOsState {
   deleteSAO: (id: string) => Promise<void>;
   loadUserSAOs: (force?: boolean) => Promise<void>;
   clearState: () => void;
+  requestFeedback: (saoId: string, supervisorId: string) => Promise<void>;
+  submitFeedback: (saoId: string, feedback: string) => Promise<void>;
+  resolveFeedback: (feedbackId: string) => Promise<void>;
 }
 
 export const useSAOsStore = create<SAOsState>((set, get) => ({
@@ -244,6 +258,92 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
     }
   },
 
+  requestFeedback: async (saoId: string, supervisorId: string) => {
+    set({ loading: true, error: null });
+    try {
+      const { error } = await supabase
+        .from('sao_feedback')
+        .insert([
+          {
+            sao_id: saoId,
+            supervisor_id: supervisorId,
+            feedback: '',
+            status: 'pending'
+          }
+        ]);
+
+      if (error) throw error;
+
+      // Insert notification for supervisor
+      await supabase
+        .from('notifications')
+        .insert([
+          {
+            user_id: supervisorId,
+            type: 'sao_feedback',
+            title: 'New SAO Feedback Request',
+            message: 'You have a new SAO feedback request from an EIT.',
+            read: false,
+            created_at: new Date().toISOString(),
+            data: { sao_id: saoId }
+          }
+        ]);
+
+      // Reload SAOs to get updated feedback
+      await get().loadUserSAOs(true);
+    } catch (error: any) {
+      set({ error: `Failed to request feedback: ${error.message || 'Unknown error'}` });
+      throw error;
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  submitFeedback: async (saoId: string, feedback: string) => {
+    set({ loading: true, error: null });
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      if (!user) throw new Error('No authenticated user found');
+
+      const { error } = await supabase
+        .from('sao_feedback')
+        .update({ feedback, status: 'submitted' })
+        .eq('sao_id', saoId)
+        .eq('supervisor_id', user.id);
+
+      if (error) throw error;
+
+      // Reload SAOs to get updated feedback
+      await get().loadUserSAOs(true);
+    } catch (error: any) {
+      set({ error: `Failed to submit feedback: ${error.message || 'Unknown error'}` });
+      throw error;
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  resolveFeedback: async (feedbackId: string) => {
+    set({ loading: true, error: null });
+    try {
+      const { error } = await supabase
+        .from('sao_feedback')
+        .update({ status: 'resolved' })
+        .eq('id', feedbackId);
+
+      if (error) throw error;
+
+      // Reload SAOs to get updated feedback
+      await get().loadUserSAOs(true);
+    } catch (error: any) {
+      set({ error: `Failed to resolve feedback: ${error.message || 'Unknown error'}` });
+      throw error;
+    } finally {
+      set({ loading: false });
+    }
+  },
+
   loadUserSAOs: async (force = false) => {
     const now = Date.now();
     const lastFetched = get().lastFetched;
@@ -268,6 +368,14 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
           sao_skills (
             skill_id,
             category_name
+          ),
+          sao_feedback:sao_feedback_sao_id_fkey (
+            id,
+            supervisor_id,
+            feedback,
+            status,
+            created_at,
+            updated_at
           )
         `)
         .eq('eit_id', user.id)
@@ -288,7 +396,8 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
           name: '', // Name not available directly, can be looked up if needed
           category_name: skill.category_name,
           status: 'not-started'
-        }))
+        })),
+        feedback: sao.sao_feedback || []
       })) || [];
 
       console.log('Transformed SAOs:', transformedSAOs.length);

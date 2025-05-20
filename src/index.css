@@ -99,3 +99,20 @@
 html {
   scroll-behavior: smooth;
 }
+
+/* Add highlight animation */
+@keyframes highlight {
+  0% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: rgba(20, 184, 166, 0.1);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.highlight {
+  animation: highlight 2s ease-in-out;
+}

@@ -3,6 +3,8 @@ import { Bookmark, Users, CheckCircle2, Award, X, Edit2, Briefcase, Calendar, Ma
 import Timeline from '../components/references/Timeline';
 import { useSkillsStore } from '../store/skills';
 import { supabase } from '../lib/supabase';
+import SupervisorAutocomplete from '../components/references/SupervisorAutocomplete';
+import { sendValidationRequestNotification } from '../utils/notifications';
 
 interface Validator {
   id: string;
@@ -102,6 +104,24 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No authenticated user');
 
+      // Get EIT profile for notification
+      const { data: eitProfile, error: eitError } = await supabase
+        .from('eit_profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+
+      if (eitError) throw eitError;
+
+      // Get supervisor profile for notification
+      const { data: supervisorProfile, error: supervisorError } = await supabase
+        .from('supervisor_profiles')
+        .select('id')
+        .eq('email', formData.email)
+        .single();
+
+      if (supervisorError) throw supervisorError;
+
       if (existingValidator) {
         // Update existing validator
         const { error: updateError } = await supabase
@@ -127,6 +147,13 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
           }]);
 
         if (insertError) throw insertError;
+
+        // Send notification to supervisor
+        await sendValidationRequestNotification(
+          supervisorProfile.id,
+          eitProfile.full_name,
+          skillName
+        );
       }
 
       onSave();
@@ -168,13 +195,9 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
             <label className="block text-sm font-medium text-slate-700 mb-1">
               Full Name
             </label>
-            <input
-              type="text"
+            <SupervisorAutocomplete
               value={formData.fullName}
-              onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-              placeholder="Enter validator's full name"
-              required
+              onChange={(name, email) => setFormData(prev => ({ ...prev, fullName: name, email }))}
               disabled={status !== 'draft'}
             />
           </div>

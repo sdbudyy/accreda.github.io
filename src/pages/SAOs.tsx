@@ -4,6 +4,7 @@ import { useSkillsStore, Category, Skill } from '../store/skills';
 import { useSAOsStore, SAO } from '../store/saos';
 import { useSearchParams } from 'react-router-dom';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { supabase } from '../lib/supabase';
 
 interface SAOModalProps {
   isOpen: boolean;
@@ -18,8 +19,43 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO }) => {
   const [isSkillsModalOpen, setIsSkillsModalOpen] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [enhancedText, setEnhancedText] = useState<string | null>(null);
+  const [selectedSupervisor, setSelectedSupervisor] = useState<string>('');
+  const [supervisors, setSupervisors] = useState<Array<{ id: string; name: string }>>([]);
   const { skillCategories } = useSkillsStore();
-  const { createSAO, updateSAO, loading, error } = useSAOsStore();
+  const { createSAO, updateSAO, loading, error, requestFeedback } = useSAOsStore();
+
+  // Load supervisors when modal opens
+  useEffect(() => {
+    const loadSupervisors = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: relationships } = await supabase
+        .from('supervisor_eit_relationships')
+        .select(`
+          supervisor_id,
+          supervisor_profiles (
+            id,
+            full_name
+          )
+        `)
+        .eq('eit_id', user.id)
+        .eq('status', 'active');
+
+      if (relationships) {
+        setSupervisors(
+          relationships.map((rel: any) => ({
+            id: rel.supervisor_profiles.id,
+            name: rel.supervisor_profiles.full_name
+          }))
+        );
+      }
+    };
+
+    if (isOpen) {
+      loadSupervisors();
+    }
+  }, [isOpen]);
 
   // Reset form when modal opens with editSAO
   useEffect(() => {
@@ -42,9 +78,29 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO }) => {
       } else {
         await createSAO(title, sao, selectedSkills);
       }
+
+      // If a supervisor is selected, request feedback
+      if (selectedSupervisor) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: saos } = await supabase
+            .from('saos')
+            .select('id')
+            .eq('eit_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (saos) {
+            await requestFeedback(saos.id, selectedSupervisor);
+          }
+        }
+      }
+
       setTitle('');
       setSao('');
       setSelectedSkills([]);
+      setSelectedSupervisor('');
       onClose();
     } catch (error) {
       console.error('Error saving SAO:', error);
@@ -258,6 +314,31 @@ Format the response as a clear SAO statement with Situation, Action, and Outcome
               <Plus size={20} />
               Select Skills
             </button>
+          </div>
+
+          {/* Supervisor Feedback Section */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Request Supervisor Feedback (Optional)
+            </label>
+            <select
+              value={selectedSupervisor}
+              onChange={(e) => setSelectedSupervisor(e.target.value)}
+              className="w-full px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 text-lg"
+              disabled={loading || supervisors.length === 0}
+            >
+              <option value="">Select a supervisor</option>
+              {supervisors.map((supervisor) => (
+                <option key={supervisor.id} value={supervisor.id}>
+                  {supervisor.name}
+                </option>
+              ))}
+            </select>
+            {supervisors.length === 0 && (
+              <p className="mt-2 text-sm text-slate-500">
+                No active supervisors found. Connect with a supervisor first.
+              </p>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 mt-8">

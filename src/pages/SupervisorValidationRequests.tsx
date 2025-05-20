@@ -95,12 +95,15 @@ const SupervisorValidationRequests: React.FC = () => {
       {validators.length === 0 ? (
         <div>No pending validation requests.</div>
       ) : (
-        <div className="space-y-4">
+        <div id="validation-requests" className="space-y-4">
           {validators.map((validator) => {
             const eit = eitProfiles[validator.eit_id];
             const skill = skills[validator.skill_id];
             return (
-              <div key={validator.id} className="bg-white rounded-lg shadow p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div 
+                key={validator.id} 
+                className="bg-white rounded-lg shadow p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 transition-all duration-300"
+              >
                 <div>
                   <div className="font-semibold">Skill: {skill ? skill.name : validator.skill_id}</div>
                   <div className="text-slate-600">EIT: {eit ? `${eit.full_name} (${eit.email})` : validator.eit_id}</div>
