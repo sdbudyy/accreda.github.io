@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { sendScoreNotification } from '../utils/notifications';
 import SAOFeedbackComponent from '../components/saos/SAOFeedback';
-import { X } from 'lucide-react';
+import { X, Info, Clock } from 'lucide-react';
 
 // --- Skill Validation Types ---
 interface Validator {
@@ -37,6 +37,181 @@ interface SAOFeedback {
   };
 }
 
+// Add SKILL_SUMMARIES mapping for rubric info
+const SKILL_SUMMARIES: Record<string, string> = {
+  '1.1 Regulations, Codes & Standards': `Correct selection and application of statutory and technical requirements.
+Evidence: Explicit citation of CSA, IEC, ABSA, etc.; design reviews addressing code clauses.
+Level cues:
+1 = can name relevant codes.
+3 = interprets and applies clauses without oversight.
+5 = authoring corporate standards; mentoring others on compliance.`,
+  '1.2 Technical & Design Constraints': `Identifying limits (temperature, load, schedule) and designing within them.
+Evidence: Trade-off studies, design margin calculations, interdisciplinary coordination notes.
+Level cues:
+1 = recognises simple constraints given by others.
+3 = optimises design under multiple constraints.
+5 = sets project-wide constraint envelopes and negotiates them.`,
+  '1.3 Risk Management for Technical Work': `Systematic identification and mitigation of technical risks (distinct from safety).
+Evidence: FMEA tables, hazard logs, risk registers with action plans.
+Level cues:
+1 = attends risk meetings.
+3 = creates risk matrix and closes actions.
+5 = institutionalises risk methodologies across projects.`,
+  '1.4 Application of Theory': `Using engineering science to create or validate designs.
+Evidence: Hand calculations, simulation models, design notes.
+Level cues:
+1 = performs textbook calcs shown by others.
+3 = selects appropriate theory and justifies assumptions.
+5 = derives novel analytical methods adopted by peers.`,
+  '1.5 Solution Techniques & Results Verification': `Self-checking, peer-reviewing, and validating outputs.
+Evidence: Check prints, back-calculations, test-vs-model comparisons.
+Level cues:
+1 = runs software without independent check.
+3 = uses alternative method to cross-verify.
+5 = implements QA verification workflows enterprise-wide.`,
+  '1.6 Safety in Design & Technical Work': `Integrating safety / HAZOP thinking into technical tasks.
+Evidence: SIL/LOPA studies, safety factors, safeguard design notes.
+Level cues:
+1 = attends toolbox talks.
+3 = designs safety features and documents residual risk.
+5 = chairs safety reviews and influences corporate safety culture.`,
+  '1.7 Systems & Their Components': `Understanding and managing interactions within complex systems.
+Evidence: System block diagrams, interface registers, control narratives.
+Level cues:
+1 = works on single component.
+3 = balances interfaces across disciplines.
+5 = architects whole-of-plant integration strategies.`,
+  '1.8 Project or Asset Life-Cycle Awareness': `Considering feasibility through decommissioning.
+Evidence: Stage-gate reports, O&M cost analyses, end-of-life plans.
+Level cues:
+1 = aware of immediate project phase.
+3 = optimises design for O&M and eventual retirement.
+5 = leads life-cycle cost optimisation across portfolio.`,
+  '1.9 Quality Assurance': `Ensuring designs and deliverables meet defined quality criteria.
+Evidence: ITPs, NCR resolution, audit findings.
+Level cues:
+1 = follows checklists.
+3 = designs QA checks and resolves NCRs.
+5 = drives continuous-improvement programs, reduces defect rates.`,
+  '1.10 Engineering Documentation': `Creating clear drawings, reports, calculations.
+Evidence: Issued-for-construction packages, calculation books.
+Level cues:
+1 = fills templates.
+3 = authors multi-disciplinary documents accepted without major edits.
+5 = sets documentation standards and trains staff.`,
+  '2.1 Oral Communication (English)': `Clear, professional spoken English (presentations, meetings).
+Evidence: Recorded presentations, client kick-off meetings.
+Level cues:
+1 = reads prepared notes.
+3 = leads technical meetings, answers questions concisely.
+5 = facilitates high-stakes negotiations.`,
+  '2.2 Written Communication (English)': `Clear, structured technical writing.
+Evidence: Formal reports, proposals, standards.
+Level cues:
+1 = grammar issues persist.
+3 = reports accepted by clients without rewrite.
+5 = publishes guidance documents adopted by organisation.`,
+  '2.3 Reading & Comprehension (English)': `Using written technical material effectively.
+Evidence: Mark-ups showing critical review, code interpretation memos.
+Level cues:
+1 = needs help interpreting dense specs.
+3 = extracts crucial requirements, flags conflicts.
+5 = synthesises complex literature into design policy.`,
+  '3.1 Project Management Principles': `Scope, schedule, risk, change control.
+Evidence: Gantt charts, change-order logs, status reports.
+Level cues:
+1 = tracks own tasks only.
+3 = develops baselines, mitigates slippage.
+5 = manages multi-discipline programs, mentors PMs.`,
+  '3.2 Finances & Budget': `Cost estimating, cash-flow tracking, value engineering.
+Evidence: CAPEX/OPEX estimates, variance analyses.
+Level cues:
+1 = inputs timesheets.
+3 = owns WBS cost code, forecasts EAC accurately.
+5 = optimises portfolio budgets, secures funding approvals.`,
+  '4.1 Promote Team Effectiveness & Resolve Conflict': `Fostering collaboration and addressing interpersonal issues.
+Evidence: Meeting minutes, stakeholder feedback, conflict-resolution plans.
+Level cues:
+1 = participates politely.
+3 = facilitates consensus, resolves minor conflicts.
+5 = leads high-tension negotiations, builds high-performing multi-site teams.`,
+  '5.1 Professional Accountability (Ethics, Liability, Limits)': `Acting ethically, declaring limits, managing conflicts of interest.
+Evidence: Signed professional-practice declarations, ethics case notes.
+Level cues:
+1 = knows the Code of Ethics exists.
+3 = raises concerns proactively, seeks guidance.
+5 = champions ethical culture, develops training modules.`,
+  '6.1 Protection of the Public Interest': `Safety audits, public-impact assessments.
+Evidence: Safety audits, public-impact assessments.
+Level cues:
+1 = identifies obvious hazards.
+3 = designs to mitigate societal risk.
+5 = influences public-safety policy.`,
+  '6.2 Benefits of Engineering to the Public': `Community engagement records, cost-benefit studies.
+Evidence: Community engagement records, cost-benefit studies.
+Level cues:
+1 = mentions public benefit.
+3 = quantifies benefits, presents to stakeholders.
+5 = leads projects delivering measurable public value.`,
+  '6.3 Role of Regulatory Bodies': `Compliance registers, correspondence with AHJs.
+Evidence: Compliance registers, correspondence with AHJs.
+Level cues:
+1 = names APEGA.
+3 = coordinates approvals with multiple regulators.
+5 = advises regulators, serves on industry committees.`,
+  '6.4 Application of Sustainability Principles': `Life-cycle carbon analyses, circular-economy studies.
+Evidence: Life-cycle carbon analyses, circular-economy studies.
+Level cues:
+1 = reuses specs.
+3 = optimises design for energy/resource efficiency.
+5 = drives corporate ESG strategy.`,
+  '6.5 Promotion of Sustainability': `Training sessions delivered, sustainability KPIs met.
+Evidence: Training sessions delivered, sustainability KPIs met.
+Level cues:
+1 = attends webinars.
+3 = implements team sustainability actions.
+5 = publishes best-practice guides, influences supply chain.`
+};
+
+// Helper to format rubric string into sections
+function formatRubric(skillName: string) {
+  const rubric = SKILL_SUMMARIES[skillName];
+  if (!rubric) return <span>No summary available for this skill.</span>;
+  // Split into sections
+  const [definition, evidenceLine, ...levelLines] = rubric.split(/\n|\r/).filter(Boolean);
+  const evidence = evidenceLine?.replace(/^Evidence:/, '').trim();
+  const levelCues = levelLines.filter(l => l.trim().match(/^\d/));
+  return (
+    <div>
+      <div className="mb-2">
+        <span className="font-semibold">Skill Definition:</span>
+        <span className="block text-slate-700 mt-1">{definition}</span>
+      </div>
+      {evidence && (
+        <div className="mb-2">
+          <span className="font-semibold">Evidence supervisors might look for:</span>
+          <ul className="list-disc ml-6 mt-1 text-slate-700">
+            {evidence.split(';').map((ev, i) => <li key={i}>{ev.trim()}</li>)}
+          </ul>
+        </div>
+      )}
+      {levelCues.length > 0 && (
+        <div className="mb-1">
+          <span className="font-semibold">Level-specific indicators (cues):</span>
+          <ul className="mt-1 ml-6 text-slate-700">
+            {levelCues.map((cue, i) => {
+              const match = cue.match(/^(\d)\s*=\s*(.*)$/);
+              return match ? (
+                <li key={i}><span className="font-bold">{match[1]}</span>: {match[2]}</li>
+              ) : <li key={i}>{cue}</li>;
+            })}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const SupervisorReviews: React.FC = () => {
   const [tab, setTab] = useState<'skills' | 'saos'>('skills');
 
@@ -56,22 +231,41 @@ const SupervisorReviews: React.FC = () => {
   const [isSAOModalOpen, setIsSAOModalOpen] = useState(false);
   const [eitNameMap, setEitNameMap] = useState<Record<string, string>>({});
 
+  // --- Additional State ---
+  const [rubricSkill, setRubricSkill] = useState<string | null>(null);
+  const [showHistoryMode, setShowHistoryMode] = useState(false);
+  const [pendingValidators, setPendingValidators] = useState<Validator[]>([]);
+  const [pendingSAOs, setPendingSAOs] = useState<SAOFeedback[]>([]);
+  const [allSAOs, setAllSAOs] = useState<SAOFeedback[]>([]);
+
   // --- Fetch Skill Validation Requests ---
   useEffect(() => {
-    const fetchValidatorsAndMeta = async () => {
+    const fetchAllReviewedSkills = async () => {
       setLoadingSkills(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: validators, error } = await supabase
+      // Fetch all validations by this supervisor
+      const { data: validations, error } = await supabase
+        .from('skill_validations')
+        .select('*')
+        .eq('validator_id', user.id)
+        .order('validated_at', { ascending: false });
+      // Fetch pending validations (from validators table)
+      const { data: pending, error: pendingError } = await supabase
         .from('validators')
         .select('*')
         .eq('email', user.email)
         .eq('status', 'pending');
-      if (error || !validators) { setLoadingSkills(false); return; }
-      setValidators(validators);
-      // Fetch EIT profiles and skills in parallel
-      const eitIds = Array.from(new Set(validators.map(v => v.eit_id)));
-      const skillIds = Array.from(new Set(validators.map(v => v.skill_id)));
+      if (error || !validations) { setLoadingSkills(false); return; }
+      // For each validation, get EIT and skill info
+      const eitIds = Array.from(new Set([
+        ...validations.map(v => v.eit_id),
+        ...(pending || []).map(v => v.eit_id)
+      ]));
+      const skillIds = Array.from(new Set([
+        ...validations.map(v => v.skill_id),
+        ...(pending || []).map(v => v.skill_id)
+      ]));
       const [{ data: eits }, { data: skillsData }] = await Promise.all([
         supabase.from('eit_profiles').select('id, full_name, email').in('id', eitIds),
         supabase.from('skills').select('id, name').in('id', skillIds)
@@ -82,36 +276,36 @@ const SupervisorReviews: React.FC = () => {
       const skillMap: Record<string, Skill> = {};
       (skillsData || []).forEach((s: any) => { skillMap[s.id] = s; });
       setSkills(skillMap);
-      // Fetch history for each validator request (by eit_id + skill_id) from skill_validations
-      const historyObj: Record<string, any[]> = {};
-      await Promise.all(validators.map(async (validator) => {
-        const { data: prev } = await supabase
-          .from('skill_validations')
-          .select('score, feedback, validated_at, validator_id')
-          .eq('eit_id', validator.eit_id)
-          .eq('skill_id', validator.skill_id)
-          .order('validated_at', { ascending: false });
-        let historyWithNames = prev || [];
-        if (historyWithNames.length > 0) {
-          const validatorIds = Array.from(new Set(historyWithNames.map((h: any) => h.validator_id)));
-          const { data: validatorProfiles } = await supabase
-            .from('supervisor_profiles')
-            .select('id, full_name, email')
-            .in('id', validatorIds);
-          const profileMap: Record<string, any> = {};
-          (validatorProfiles || []).forEach((p: any) => { profileMap[p.id] = p; });
-          historyWithNames = historyWithNames.map((h: any) => ({
-            ...h,
-            full_name: profileMap[h.validator_id]?.full_name || '',
-            email: profileMap[h.validator_id]?.email || ''
-          }));
-        }
-        historyObj[validator.id] = historyWithNames;
-      }));
-      setHistory(historyObj);
+      // Group validations by (eit_id, skill_id)
+      const grouped: Record<string, any[]> = {};
+      validations.forEach(v => {
+        const key = `${v.eit_id}_${v.skill_id}`;
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(v);
+      });
+      // For display, use the most recent validation for each (eit_id, skill_id)
+      const latestValidators: Validator[] = Object.values(grouped).map(vList => {
+        const latest = vList[0];
+        return {
+          id: `${latest.eit_id}_${latest.skill_id}`,
+          skill_id: latest.skill_id,
+          full_name: eitMap[latest.eit_id]?.full_name || '',
+          email: eitMap[latest.eit_id]?.email || '',
+          description: latest.feedback || '',
+          status: 'completed',
+          score: latest.score,
+          created_at: latest.validated_at,
+          updated_at: latest.validated_at,
+          eit_id: latest.eit_id,
+        };
+      });
+      setValidators(latestValidators);
+      setPendingValidators(pending || []);
+      // Set up history for each (eit_id, skill_id)
+      setHistory(grouped);
       setLoadingSkills(false);
     };
-    fetchValidatorsAndMeta();
+    fetchAllReviewedSkills();
   }, []);
 
   // --- Fetch SAO Feedback Requests ---
@@ -127,7 +321,8 @@ const SupervisorReviews: React.FC = () => {
         .eq('supervisor_id', user.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      setFeedbackRequests(data || []);
+      setAllSAOs(data || []);
+      setPendingSAOs((data || []).filter((req: SAOFeedback) => req.status === 'pending'));
       // Fetch EIT names for all unique eit_ids
       const eitIds = Array.from(new Set((data || []).map((req: any) => req.sao?.eit_id).filter(Boolean)));
       if (eitIds.length > 0) {
@@ -152,34 +347,59 @@ const SupervisorReviews: React.FC = () => {
     setScoreInputs((prev) => ({ ...prev, [id]: value }));
   };
   const handleSubmit = async (validator: Validator) => {
-    const score = scoreInputs[validator.id];
-    if (!score || score < 1 || score > 5) return;
-    await supabase
-      .from('validators')
-      .update({ status: 'scored', score })
-      .eq('id', validator.id);
-    await supabase
-      .from('eit_skills')
-      .update({ supervisor_score: score, status: 'completed' })
-      .eq('eit_id', validator.eit_id)
-      .eq('skill_id', validator.skill_id);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    await supabase
-      .from('skill_validations')
-      .insert({
-        eit_id: validator.eit_id,
-        skill_id: validator.skill_id,
-        validator_id: user.id,
-        score,
-        validated_at: new Date().toISOString()
+    try {
+      const score = scoreInputs[validator.id];
+      if (!score || score < 1 || score > 5) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      // Save new validation record
+      const [eit_id, skill_id] = validator.id.split('_');
+      const { data: validation, error: validationError } = await supabase
+        .from('skill_validations')
+        .insert({
+          eit_id,
+          skill_id,
+          validator_id: user.id,
+          score: score,
+          validated_at: new Date().toISOString(),
+          feedback: validator.description // Store the description as feedback
+        })
+        .select()
+        .single();
+      if (validationError) throw validationError;
+      // Update local state: add new validation to history and update latest score
+      setHistory(prev => {
+        const key = `${eit_id}_${skill_id}`;
+        return {
+          ...prev,
+          [key]: [
+            {
+              ...validation,
+              full_name: user.user_metadata?.full_name || '',
+              email: user.email
+            },
+            ...(prev[key] || [])
+          ]
+        };
       });
-    const eit = eitProfiles[validator.eit_id];
-    const skill = skills[validator.skill_id];
-    if (eit && skill) {
-      await sendScoreNotification(eit.id, skill.name, score);
+      setValidators(prev => prev.map(v => v.id === validator.id ? {
+        ...v,
+        score,
+        updated_at: new Date().toISOString()
+      } : v));
+      setScoreInputs(prev => {
+        const next = { ...prev };
+        delete next[validator.id];
+        return next;
+      });
+      // Send notification
+      const eit = eitProfiles[eit_id];
+      if (eit) {
+        await sendScoreNotification(eit.email, skill_id, score);
+      }
+    } catch (error) {
+      console.error('Error submitting score:', error);
     }
-    setValidators((prev) => prev.filter((v) => v.id !== validator.id));
   };
   const handleResolve = async (feedbackId: string) => {
     await supabase
@@ -198,10 +418,13 @@ const SupervisorReviews: React.FC = () => {
       .update({ feedback, status: 'submitted' })
       .eq('sao_id', saoId)
       .eq('supervisor_id', user.id);
-    setFeedbackRequests((prev) =>
+    setAllSAOs((prev) =>
       prev.map((f) =>
         f.sao_id === saoId ? { ...f, feedback, status: 'submitted' } : f
       )
+    );
+    setPendingSAOs((prev) =>
+      prev.filter((f) => !(f.sao_id === saoId && f.status !== 'pending'))
     );
   };
 
@@ -212,8 +435,8 @@ const SupervisorReviews: React.FC = () => {
         <h1 className="text-2xl font-bold">Review Center</h1>
       </div>
       {/* Centered Toggle */}
-      <div className="flex justify-center my-8">
-        <div className="relative flex bg-slate-100 rounded-full p-1 shadow-inner gap-0">
+      <div className="flex justify-center my-8 gap-4 items-center">
+        <div className="relative flex bg-slate-100 rounded-full p-1 shadow-inner gap-0 items-center">
           <button
             onClick={() => setTab('skills')}
             className={`px-6 py-2 rounded-full font-semibold transition-all duration-200 text-sm focus:outline-none z-10
@@ -233,17 +456,26 @@ const SupervisorReviews: React.FC = () => {
             SAOs
           </button>
         </div>
+        {/* Clock icon for toggling history mode, now separate */}
+        <button
+          className={`p-2 rounded-full text-slate-500 hover:bg-slate-200 transition ${showHistoryMode ? 'bg-slate-300' : ''}`}
+          title="Show History"
+          onClick={() => setShowHistoryMode((prev) => !prev)}
+          type="button"
+        >
+          <Clock size={20} />
+        </button>
       </div>
       {/* Skills Tab */}
-      {tab === 'skills' && (
+      {tab === 'skills' && !showHistoryMode && (
         <div>
           {loadingSkills ? (
             <div>Loading...</div>
-          ) : validators.length === 0 ? (
+          ) : pendingValidators.length === 0 ? (
             <div>No pending skill validation requests.</div>
           ) : (
             <div className="space-y-4">
-              {validators.map((validator) => {
+              {pendingValidators.map((validator) => {
                 const eit = eitProfiles[validator.eit_id];
                 const skill = skills[validator.skill_id];
                 return (
@@ -252,24 +484,21 @@ const SupervisorReviews: React.FC = () => {
                     className="bg-white rounded-lg shadow p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 transition-all duration-300"
                   >
                     <div>
-                      <div className="font-semibold">Skill: {skill ? skill.name : validator.skill_id}</div>
+                      <div className="font-semibold flex items-center gap-2">
+                        Skill: {skill ? skill.name : validator.skill_id}
+                        {skill && (
+                          <button
+                            className="ml-1 p-1 rounded-full text-blue-500 hover:bg-blue-50"
+                            title="View Skill Rubric"
+                            onClick={() => setRubricSkill(skill.name)}
+                            type="button"
+                          >
+                            <Info size={18} />
+                          </button>
+                        )}
+                      </div>
                       <div className="text-slate-600">EIT: {eit ? `${eit.full_name} (${eit.email})` : validator.eit_id}</div>
                       <div className="text-slate-600">Description: {validator.description}</div>
-                      {/* History Section */}
-                      {history[validator.id] && history[validator.id].length > 0 && (
-                        <div className="mt-2 text-xs text-slate-500">
-                          <div className="font-semibold text-slate-700 mb-1">History:</div>
-                          <ul className="space-y-1">
-                            {history[validator.id].map((h, idx) => (
-                              <li key={idx} className="flex gap-2 items-center">
-                                <span>Score: <span className="font-semibold text-green-700">{h.score}</span></span>
-                                <span>by {h.full_name || h.email || 'Unknown'}</span>
-                                <span>on {h.validated_at ? new Date(h.validated_at).toLocaleDateString() : ''}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <input
@@ -279,7 +508,7 @@ const SupervisorReviews: React.FC = () => {
                         value={scoreInputs[validator.id] || ''}
                         onChange={(e) => handleScoreChange(validator.id, Number(e.target.value))}
                         className="input w-24"
-                        placeholder="Score (1-5)"
+                        placeholder="Score"
                       />
                       <button
                         className="btn btn-primary"
@@ -296,8 +525,92 @@ const SupervisorReviews: React.FC = () => {
           )}
         </div>
       )}
+      {/* History Mode */}
+      {tab === 'skills' && showHistoryMode && (
+        <div>
+          <div className="text-xl font-bold mb-4">History</div>
+          {loadingSkills ? (
+            <div>Loading...</div>
+          ) : Object.keys(history).length === 0 ? (
+            <div>No history available.</div>
+          ) : (
+            <div className="space-y-4">
+              {Object.entries(history).map(([key, entries]) => {
+                const latest = entries[0];
+                const eit = eitProfiles[latest.eit_id];
+                const skill = skills[latest.skill_id];
+                return (
+                  <div
+                    key={key}
+                    className="bg-white rounded-lg shadow p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 transition-all duration-300"
+                  >
+                    <div>
+                      <div className="font-semibold flex items-center gap-2">
+                        Skill: {skill ? skill.name : latest.skill_id}
+                        {skill && (
+                          <button
+                            className="ml-1 p-1 rounded-full text-blue-500 hover:bg-blue-50"
+                            title="View Skill Rubric"
+                            onClick={() => setRubricSkill(skill.name)}
+                            type="button"
+                          >
+                            <Info size={18} />
+                          </button>
+                        )}
+                      </div>
+                      <div className="text-slate-600">EIT: {eit ? `${eit.full_name} (${eit.email})` : latest.eit_id}</div>
+                      <div className="text-slate-600">Description: {latest.feedback || ''}</div>
+                      <div className="mt-3 border-t pt-3">
+                        <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                          {entries.map((h, idx) => (
+                            <div key={idx} className="bg-slate-50 rounded-lg p-2 text-sm">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="font-medium text-slate-700">Score: {h.score}</span>
+                                <span className="text-xs text-slate-500">
+                                  {h.validated_at ? new Date(h.validated_at).toLocaleDateString() : ''}
+                                </span>
+                              </div>
+                              {h.feedback && (
+                                <div className="text-slate-600 text-xs mt-1">
+                                  <span className="font-medium">Feedback:</span> {h.feedback}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={1}
+                        max={5}
+                        value={scoreInputs[`${latest.eit_id}_${latest.skill_id}`] || ''}
+                        onChange={(e) => handleScoreChange(`${latest.eit_id}_${latest.skill_id}`, Number(e.target.value))}
+                        className="input w-24"
+                        placeholder="Score"
+                      />
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => handleSubmit({
+                          ...latest,
+                          id: `${latest.eit_id}_${latest.skill_id}`,
+                          description: latest.feedback || ''
+                        })}
+                        disabled={!scoreInputs[`${latest.eit_id}_${latest.skill_id}`] || scoreInputs[`${latest.eit_id}_${latest.skill_id}`] < 1 || scoreInputs[`${latest.eit_id}_${latest.skill_id}`] > 5}
+                      >
+                        Update Score
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
       {/* SAOs Tab */}
-      {tab === 'saos' && (
+      {tab === 'saos' && !showHistoryMode && (
         <div>
           <button
             onClick={fetchFeedbackRequests}
@@ -310,11 +623,11 @@ const SupervisorReviews: React.FC = () => {
             <div>Loading...</div>
           ) : error ? (
             <div className="text-red-600">{error}</div>
-          ) : feedbackRequests.length === 0 ? (
-            <div className="text-slate-500">No feedback requests assigned to you.</div>
+          ) : pendingSAOs.length === 0 ? (
+            <div className="text-slate-500">No pending feedback requests assigned to you.</div>
           ) : (
             <div className="space-y-4">
-              {feedbackRequests.map((req) => (
+              {pendingSAOs.map((req) => (
                 <div 
                   key={req.id} 
                   className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow cursor-pointer"
@@ -339,11 +652,41 @@ const SupervisorReviews: React.FC = () => {
                           Feedback Submitted
                         </span>
                       )}
-                      {req.status === 'resolved' && (
-                        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-800">
-                          Resolved
-                        </span>
-                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      {tab === 'saos' && showHistoryMode && (
+        <div>
+          <div className="text-xl font-bold mb-4">History</div>
+          {loadingSAOs ? (
+            <div>Loading...</div>
+          ) : allSAOs.filter((req) => req.status === 'submitted').length === 0 ? (
+            <div className="text-slate-500">No SAO history available.</div>
+          ) : (
+            <div className="space-y-4">
+              {allSAOs.filter((req) => req.status === 'submitted').map((req) => (
+                <div 
+                  key={req.id} 
+                  className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => {
+                    setSelectedSAO(req);
+                    setIsSAOModalOpen(true);
+                  }}
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h2 className="text-lg font-semibold text-teal-600">{req.sao?.title || 'Untitled SAO'}</h2>
+                      <p className="text-sm text-slate-500">From: {eitNameMap[req.sao?.eit_id || ''] || req.sao?.eit_id || 'Unknown'}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                        Feedback Submitted
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -385,6 +728,22 @@ const SupervisorReviews: React.FC = () => {
                 isSupervisor={true}
               />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rubric Modal */}
+      {rubricSkill && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full relative">
+            <button
+              className="absolute top-2 right-2 text-slate-400 hover:text-slate-600"
+              onClick={() => setRubricSkill(null)}
+            >
+              ×
+            </button>
+            <h3 className="text-lg font-semibold mb-4">{rubricSkill}</h3>
+            {formatRubric(rubricSkill)}
           </div>
         </div>
       )}

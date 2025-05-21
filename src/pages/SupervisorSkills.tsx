@@ -113,7 +113,7 @@ const SupervisorSkills: React.FC = () => {
 
       // Get all EITs connected to this supervisor
       const { data: eitConnections, error: connectionsError } = await supabase
-        .from('eit_supervisor_connections')
+        .from('supervisor_eit_relationships')
         .select('eit_id')
         .eq('supervisor_id', user.id);
 
@@ -155,8 +155,7 @@ const SupervisorSkills: React.FC = () => {
         if (category) {
           if (skill.supervisor_score !== null && skill.supervisor_score !== undefined) {
             categoryStats[category.name].allScores.push(skill.supervisor_score);
-          }
-          if (skill.status === 'completed') {
+            // Count as marked if supervisor_score is set
             categoryStats[category.name].completed += 1;
           }
         }
@@ -211,48 +210,53 @@ const SupervisorSkills: React.FC = () => {
 
       {/* Category Progress Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        {skillCategories.map((category) => (
-          <div key={category.name} className="bg-white rounded-lg border border-slate-200 p-4">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="font-medium text-slate-900">{category.name}</h3>
-              <span className={`px-2 py-1 rounded-full text-sm font-medium ${getMeanColor(categoryAverages[category.name]?.average || 0)}`}>
-                {categoryAverages[category.name]?.average?.toFixed(1) || '0.0'}
-              </span>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <div className="flex justify-between text-xs text-slate-500 mb-1">
-                  <span>Average Score</span>
-                  <span>{categoryAverages[category.name]?.average?.toFixed(1) || '0.0'}/5.0</span>
+        {skillCategories.map((category) => {
+          const average = categoryAverages[category.name]?.average || 0;
+          const supervisorPercent = categoryAverages[category.name]?.completionRate || 0;
+          // For supervisor score, convert percent to a 0-5 scale for the bar
+          const supervisorScoreOutOfFive = (supervisorPercent / 100) * 5;
+          return (
+            <div key={category.name} className="bg-white rounded-lg border border-slate-200 p-4">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="font-medium text-slate-900 text-lg">{category.name}</h3>
+              </div>
+              <div className="space-y-5">
+                {/* Average EIT Self Score */}
+                <div className="grid grid-cols-[auto_48px_1fr_56px] items-center gap-4">
+                  <span className="text-base font-semibold">Average EIT Self Score</span>
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 text-slate-800 text-sm font-bold border border-slate-200">
+                    {Math.round((average / 5) * 100)}%
+                  </div>
+                  <div className="w-full max-w-[160px] bg-slate-200 rounded-full h-2">
+                    <div
+                      className="h-2 rounded-full"
+                      style={{ width: `${(average / 5) * 100}%`, background: '#D7C3A2' }}
+                    />
+                  </div>
+                  <div className="text-xs text-slate-500 min-w-[48px] text-right">
+                    {average.toFixed(1)}/5.0
+                  </div>
                 </div>
-                <div className="w-full bg-slate-200 rounded-full h-2">
-                  <div
-                    className={`h-2 rounded-full ${
-                      categoryAverages[category.name]?.average >= 4.5 ? 'bg-green-500' :
-                      categoryAverages[category.name]?.average >= 3.5 ? 'bg-blue-500' :
-                      categoryAverages[category.name]?.average >= 2.5 ? 'bg-yellow-500' :
-                      categoryAverages[category.name]?.average >= 1.5 ? 'bg-orange-500' :
-                      'bg-red-500'
-                    }`}
-                    style={{ width: `${(categoryAverages[category.name]?.average || 0) * 20}%` }}
-                  />
+                {/* Average Supervisor Score */}
+                <div className="grid grid-cols-[auto_48px_1fr_56px] items-center gap-4">
+                  <span className="text-base font-semibold">Average Supervisor Score</span>
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 text-slate-800 text-sm font-bold border border-slate-200">
+                    {Math.round(supervisorPercent)}%
+                  </div>
+                  <div className="w-full max-w-[160px] bg-slate-200 rounded-full h-2">
+                    <div
+                      className="h-2 rounded-full"
+                      style={{ width: `${(supervisorScoreOutOfFive / 5) * 100}%`, background: '#D7C3A2' }}
+                    />
+                  </div>
+                  <div className="text-xs text-slate-500 min-w-[48px] text-right">
+                    {supervisorScoreOutOfFive.toFixed(1)}/5.0
+                  </div>
                 </div>
               </div>
-              <div>
-                <div className="flex justify-between text-xs text-slate-500 mb-1">
-                  <span>Completion Rate</span>
-                  <span>{categoryAverages[category.name]?.completionRate?.toFixed(1) || '0.0'}%</span>
-                </div>
-                <div className="w-full bg-slate-200 rounded-full h-2">
-                  <div
-                    className={`h-2 rounded-full ${getCompletionColor(categoryAverages[category.name]?.completionRate || 0)}`}
-                    style={{ width: `${categoryAverages[category.name]?.completionRate || 0}%` }}
-                  />
-                </div>
-              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div>
