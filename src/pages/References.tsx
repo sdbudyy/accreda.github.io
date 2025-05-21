@@ -793,7 +793,7 @@ const References: React.FC = () => {
                                   </span>
                                   {/* Show score if scored */}
                                   {validator.status === 'scored' && (
-                                    <span className="ml-2 text-green-700 font-bold">Score: {validator.score}</span>
+                                    <span className="ml-2 text-green-700 font-bold">Supervisor Score: {validator.score}</span>
                                   )}
                                   {/* Send for Validation button if draft */}
                                   {validator.status === 'draft' && (

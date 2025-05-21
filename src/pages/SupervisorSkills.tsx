@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState, memo } from 'react';
 import { useSkillsStore, Skill, Category } from '../store/skills';
-import { AlertTriangle, Info } from 'lucide-react';
+import { AlertTriangle, Info, Award } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { useNavigate } from 'react-router-dom';
 
 // Expanded skill summaries for each skill
 const SKILL_SUMMARIES: Record<string, string> = {
@@ -19,7 +21,13 @@ const SKILL_SUMMARIES: Record<string, string> = {
   '2.3 Reading & Comprehension (English)': `Reads and comprehends technical documents, standards, and instructions in English. Example: Interpreting a complex engineering standard or technical manual.`,
   '3.1 Project Management Principles': `Applies project management principles to plan, execute, and close projects successfully. Example: Creating a project schedule, managing resources, and tracking progress.`,
   '3.2 Finances & Budget': `Manages project finances and budgets, including cost estimation, tracking, and reporting. Example: Preparing a project budget and monitoring expenses to stay within limits.`,
-  // ...add more detailed summaries for all other skills as needed...
+  '4.1 Promote Team Effectiveness & Resolve Conflict': `Demonstrates the ability to work effectively in teams, resolve conflicts, and promote collaboration. Example: Facilitating a team meeting to resolve technical disagreements and reach consensus.`,
+  '5.1 Professional Accountability (Ethics, Liability, Limits)': `Understands and applies professional ethics, legal responsibilities, and limitations in engineering practice. Example: Making decisions that prioritize public safety and environmental protection while considering legal implications.`,
+  '6.1 Protection of the Public Interest': `Prioritizes public safety, health, and welfare in engineering decisions and actions. Example: Ensuring a design meets all safety requirements and minimizes potential risks to the public.`,
+  '6.2 Benefits of Engineering to the Public': `Understands and communicates how engineering solutions benefit society and improve quality of life. Example: Explaining how a new infrastructure project will improve community access and safety.`,
+  '6.3 Role of Regulatory Bodies': `Understands the role and importance of regulatory bodies in engineering practice. Example: Working with building inspectors to ensure compliance with local regulations.`,
+  '6.4 Application of Sustainability Principles': `Applies sustainability principles to engineering solutions, considering environmental, social, and economic impacts. Example: Designing a building with energy-efficient systems and sustainable materials.`,
+  '6.5 Promotion of Sustainability': `Actively promotes and implements sustainable practices in engineering work. Example: Leading initiatives to reduce waste and energy consumption in manufacturing processes.`
 };
 
 const SkillItem = memo(({ skill, skillRef }: { skill: Skill, skillRef?: (el: HTMLDivElement | null) => void }) => {
@@ -72,6 +80,9 @@ const CategorySection = memo(({ category }: { category: Category }) => (
 const SupervisorSkills: React.FC = () => {
   const { skillCategories, loadUserSkills, loading, error } = useSkillsStore();
   const skillRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+  const [categoryAverages, setCategoryAverages] = useState<Record<string, { average: number; completionRate: number }>>({});
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadUserSkills();
@@ -94,8 +105,156 @@ const SupervisorSkills: React.FC = () => {
     return () => window.removeEventListener('scroll-to-skill', handleScrollToSkill as EventListener);
   }, []);
 
+  // Add new function to calculate category averages and completion rates
+  const calculateCategoryAverages = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get all EITs connected to this supervisor
+      const { data: eitConnections, error: connectionsError } = await supabase
+        .from('eit_supervisor_connections')
+        .select('eit_id')
+        .eq('supervisor_id', user.id);
+
+      if (connectionsError) throw connectionsError;
+
+      const eitIds = eitConnections.map(conn => conn.eit_id);
+
+      // Get all skills for these EITs
+      const { data: skills, error: skillsError } = await supabase
+        .from('eit_skills')
+        .select('*')
+        .in('eit_id', eitIds);
+
+      if (skillsError) throw skillsError;
+
+      // Calculate averages and completion rates for each category
+      const categoryStats: Record<string, { 
+        allScores: number[]; // Array to store all supervisor scores
+        completed: number; 
+        total: number;
+        eitCount: number; // Track number of EITs
+      }> = {};
+      
+      // Initialize category stats
+      skillCategories.forEach(category => {
+        categoryStats[category.name] = {
+          allScores: [],
+          completed: 0,
+          total: category.skills.length * eitIds.length,
+          eitCount: eitIds.length
+        };
+      });
+      
+      skills.forEach(skill => {
+        const category = skillCategories.find(cat => 
+          cat.skills.some(s => s.id === skill.skill_id)
+        );
+        
+        if (category) {
+          if (skill.supervisor_score !== null && skill.supervisor_score !== undefined) {
+            categoryStats[category.name].allScores.push(skill.supervisor_score);
+          }
+          if (skill.status === 'completed') {
+            categoryStats[category.name].completed += 1;
+          }
+        }
+      });
+
+      // Calculate final averages and completion rates
+      const averages: Record<string, { average: number; completionRate: number }> = {};
+      Object.entries(categoryStats).forEach(([category, stats]) => {
+        const totalScore = stats.allScores.reduce((sum, score) => sum + score, 0);
+        const scoreCount = stats.allScores.length;
+        
+        averages[category] = {
+          average: scoreCount > 0 ? Number((totalScore / scoreCount).toFixed(1)) : 0,
+          completionRate: stats.total > 0 ? Number(((stats.completed / stats.total) * 100).toFixed(1)) : 0
+        };
+      });
+
+      setCategoryAverages(averages);
+    } catch (error) {
+      console.error('Error calculating category averages:', error);
+    }
+  };
+
+  useEffect(() => {
+    calculateCategoryAverages();
+  }, []);
+
+  const getMeanColor = (mean: number) => {
+    if (mean >= 4.5) return 'bg-green-100 text-green-700';
+    if (mean >= 3.5) return 'bg-blue-100 text-blue-700';
+    if (mean >= 2.5) return 'bg-yellow-100 text-yellow-700';
+    if (mean >= 1.5) return 'bg-orange-100 text-orange-700';
+    return 'bg-red-100 text-red-700';
+  };
+
+  const getCompletionColor = (rate: number) => {
+    if (rate >= 80) return 'bg-green-500';
+    if (rate >= 60) return 'bg-blue-500';
+    if (rate >= 40) return 'bg-yellow-500';
+    if (rate >= 20) return 'bg-orange-500';
+    return 'bg-red-500';
+  };
+
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold text-slate-900 flex items-center">
+          <Award size={24} className="mr-2 text-teal-600" />
+          Skills
+        </h1>
+      </div>
+
+      {/* Category Progress Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        {skillCategories.map((category) => (
+          <div key={category.name} className="bg-white rounded-lg border border-slate-200 p-4">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-medium text-slate-900">{category.name}</h3>
+              <span className={`px-2 py-1 rounded-full text-sm font-medium ${getMeanColor(categoryAverages[category.name]?.average || 0)}`}>
+                {categoryAverages[category.name]?.average?.toFixed(1) || '0.0'}
+              </span>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <div className="flex justify-between text-xs text-slate-500 mb-1">
+                  <span>Average Score</span>
+                  <span>{categoryAverages[category.name]?.average?.toFixed(1) || '0.0'}/5.0</span>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full ${
+                      categoryAverages[category.name]?.average >= 4.5 ? 'bg-green-500' :
+                      categoryAverages[category.name]?.average >= 3.5 ? 'bg-blue-500' :
+                      categoryAverages[category.name]?.average >= 2.5 ? 'bg-yellow-500' :
+                      categoryAverages[category.name]?.average >= 1.5 ? 'bg-orange-500' :
+                      'bg-red-500'
+                    }`}
+                    style={{ width: `${(categoryAverages[category.name]?.average || 0) * 20}%` }}
+                  />
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-xs text-slate-500 mb-1">
+                  <span>Completion Rate</span>
+                  <span>{categoryAverages[category.name]?.completionRate?.toFixed(1) || '0.0'}%</span>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full ${getCompletionColor(categoryAverages[category.name]?.completionRate || 0)}`}
+                    style={{ width: `${categoryAverages[category.name]?.completionRate || 0}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-slate-800">Skills & Competencies</h1>
         <p className="text-slate-500 mt-1">View the EIT program competencies</p>

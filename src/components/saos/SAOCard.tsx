@@ -53,9 +53,22 @@ const SAOCard: React.FC<SAOCardProps> = ({ sao, onEdit, onDelete }) => {
       ref={cardRef}
       className="card hover:shadow-md transition-shadow"
     >
-      <div className="flex justify-between">
+      <div className="flex justify-between items-center">
         <h3 className="font-semibold text-lg text-slate-800">{sao.title}</h3>
-        <div className="flex space-x-1">
+        <div className="flex items-center space-x-2">
+          {/* Status Tag */}
+          {sao.status === 'draft' && (
+            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-200 text-slate-700">Draft</span>
+          )}
+          {sao.status === 'in-review' && (
+            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">Pending</span>
+          )}
+          {sao.status === 'approved' && (
+            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">Approved</span>
+          )}
+          {sao.status === 'rejected' && (
+            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">Rejected</span>
+          )}
           <button 
             onClick={() => onEdit(sao)}
             className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700"

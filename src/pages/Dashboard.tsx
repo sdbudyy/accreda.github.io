@@ -124,6 +124,7 @@ const Dashboard: React.FC = () => {
     }
   }, [googleToken]);
 
+  const approvedSAOs = saos.filter(sao => (sao as any).status === 'approved');
   const progressStats: ProgressStat[] = [
     { 
       title: 'Overall Progress', 
@@ -142,17 +143,10 @@ const Dashboard: React.FC = () => {
     },
     { 
       title: 'SAOs Completed', 
-      value: saos.length,
+      value: approvedSAOs.length,
       total: 24,
-      description: `${24 - saos.length} SAOs remaining to complete`,
+      description: `${24 - approvedSAOs.length} SAOs remaining to complete`,
       color: 'indigo' 
-    },
-    { 
-      title: 'Supervisor Approvals', 
-      value: supervisorApprovals,
-      total: totalApprovals,
-      description: `${totalApprovals - supervisorApprovals} items pending approval`,
-      color: 'purple' 
     },
   ];
 
@@ -234,8 +228,8 @@ const Dashboard: React.FC = () => {
       )}
 
       {/* Progress Cards */}
-      <Suspense fallback={<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">{[...Array(4)].map((_, i) => <div key={i} className="card animate-pulse h-32" />)}</div>}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <Suspense fallback={<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{[...Array(3)].map((_, i) => <div key={i} className="card animate-pulse h-32" />)}</div>}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {progressStats.map((stat, index) => (
             <ProgressCard key={index} {...stat} />
           ))}

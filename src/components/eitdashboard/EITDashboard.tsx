@@ -87,7 +87,7 @@ const EITDashboard: React.FC = () => {
         <h1 className="text-2xl font-bold mb-6">EIT Dashboard</h1>
 
         {/* Progress Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white p-6 rounded-lg shadow">
             <h3 className="text-lg font-semibold mb-2">Overall Progress</h3>
             <p className="text-3xl font-bold text-teal-600">{overallProgress}%</p>
@@ -99,10 +99,6 @@ const EITDashboard: React.FC = () => {
           <div className="bg-white p-6 rounded-lg shadow">
             <h3 className="text-lg font-semibold mb-2">Experiences Documented</h3>
             <p className="text-3xl font-bold text-teal-600">{documentedExperiences}/24</p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-semibold mb-2">Supervisor Approvals</h3>
-            <p className="text-3xl font-bold text-teal-600">{supervisorApprovals}/24</p>
           </div>
         </div>
 

@@ -265,6 +265,11 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No authenticated user found');
       const { data: sao } = await supabase.from('saos').select('title').eq('id', saoId).single();
+      // Update SAO status to 'in-review' when requesting feedback
+      await supabase
+        .from('saos')
+        .update({ status: 'in-review' })
+        .eq('id', saoId);
       await supabase
         .from('sao_feedback')
         .insert([

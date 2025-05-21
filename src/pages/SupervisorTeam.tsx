@@ -287,57 +287,64 @@ const SupervisorTeam: React.FC = () => {
                 <div>No marked skills found.</div>
               ) : (
                 <div className="pr-2">
-                  {Object.entries(skillsByCategory).map(([category, skills]) => {
-                    // Sort skills by splitting skill number by '.' and comparing each part numerically
-                    const extractSkillParts = (name: string) => {
-                      const match = name.match(/^([\d.]+)/);
-                      if (!match) return [0];
-                      return match[1].split('.').map(Number);
-                    };
-                    const sortedSkills = [...skills].sort((a, b) => {
-                      const partsA = extractSkillParts(a.skill_name);
-                      const partsB = extractSkillParts(b.skill_name);
-                      for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
-                        const numA = partsA[i] ?? 0;
-                        const numB = partsB[i] ?? 0;
-                        if (numA !== numB) return numA - numB;
-                      }
-                      return 0;
-                    });
-                    return (
-                      <div key={category} className="mb-6">
-                        <h3 className="font-semibold text-slate-800 mb-3 text-lg">{category}</h3>
-                        <div className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white shadow-sm">
-                          {sortedSkills.map((skill) => (
-                            <div
-                              key={skill.skill_id}
-                              className="flex flex-row items-center gap-4 px-4 py-3 transition-colors hover:bg-slate-50 group"
-                            >
-                              <span className="font-medium text-slate-800 flex-1 min-w-0 truncate">{skill.skill_name}</span>
-                              <div className="flex gap-2">
-                                {skill.rank !== null && skill.rank !== undefined && (
-                                  <span
-                                    className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 group-hover:bg-blue-200 transition-colors"
-                                    title="EIT's self score"
-                                  >
-                                    EIT: {skill.rank}
-                                  </span>
-                                )}
-                                {skill.supervisor_score !== null && skill.supervisor_score !== undefined && (
-                                  <span
-                                    className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 group-hover:bg-green-200 transition-colors"
-                                    title="Supervisor's score"
-                                  >
-                                    Supervisor: {skill.supervisor_score}
-                                  </span>
-                                )}
+                  {Object.entries(skillsByCategory)
+                    .sort(([categoryA], [categoryB]) => {
+                      // Extract category numbers and compare them
+                      const numA = parseInt(categoryA.match(/\d+/)?.[0] || '0');
+                      const numB = parseInt(categoryB.match(/\d+/)?.[0] || '0');
+                      return numA - numB;
+                    })
+                    .map(([category, skills]) => {
+                      // Sort skills by splitting skill number by '.' and comparing each part numerically
+                      const extractSkillParts = (name: string) => {
+                        const match = name.match(/^([\d.]+)/);
+                        if (!match) return [0];
+                        return match[1].split('.').map(Number);
+                      };
+                      const sortedSkills = [...skills].sort((a, b) => {
+                        const partsA = extractSkillParts(a.skill_name);
+                        const partsB = extractSkillParts(b.skill_name);
+                        for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+                          const numA = partsA[i] ?? 0;
+                          const numB = partsB[i] ?? 0;
+                          if (numA !== numB) return numA - numB;
+                        }
+                        return 0;
+                      });
+                      return (
+                        <div key={category} className="mb-6">
+                          <h3 className="font-semibold text-slate-800 mb-3 text-lg">{category}</h3>
+                          <div className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white shadow-sm">
+                            {sortedSkills.map((skill) => (
+                              <div
+                                key={skill.skill_id}
+                                className="flex flex-row items-center gap-4 px-4 py-3 transition-colors hover:bg-slate-50 group"
+                              >
+                                <span className="font-medium text-slate-800 flex-1 min-w-0 truncate">{skill.skill_name}</span>
+                                <div className="flex gap-2">
+                                  {skill.rank !== null && skill.rank !== undefined && (
+                                    <span
+                                      className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 group-hover:bg-blue-200 transition-colors"
+                                      title="EIT's self score"
+                                    >
+                                      EIT: {skill.rank}
+                                    </span>
+                                  )}
+                                  {skill.supervisor_score !== null && skill.supervisor_score !== undefined && (
+                                    <span
+                                      className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 group-hover:bg-green-200 transition-colors"
+                                      title="Supervisor's score"
+                                    >
+                                      Supervisor: {skill.supervisor_score}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
                 </div>
               )
             )}
