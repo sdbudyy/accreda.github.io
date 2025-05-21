@@ -193,7 +193,16 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
         throw skillsError;
       }
 
-      // Reload SAOs to get the updated list
+      // Update local state immediately
+      set(state => ({
+        saos: state.saos.map(sao => 
+          sao.id === id 
+            ? { ...sao, title, content, status, skills }
+            : sao
+        )
+      }));
+
+      // Reload SAOs to ensure everything is in sync
       await get().loadUserSAOs();
     } catch (error: any) {
       console.error('Error in updateSAO:', {

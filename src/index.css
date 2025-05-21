@@ -46,11 +46,12 @@
   }
 
   .progress-bar {
-    @apply h-2 rounded-full bg-slate-200 overflow-hidden;
+    @apply h-2 rounded-full bg-slate-100 overflow-hidden;
   }
 
   .progress-bar-fill {
     @apply h-full rounded-full transition-all duration-500 ease-out;
+    background-color: #D7C3A2;
   }
 
   .input {

@@ -346,21 +346,35 @@ Format the response as a clear SAO statement with Situation, Action, and Outcome
           {/* Supervisor Feedback Section */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
-              Request Supervisor Feedback (Optional)
+              Supervisor Selection
             </label>
-            <select
-              value={selectedSupervisor}
-              onChange={(e) => setSelectedSupervisor(e.target.value)}
-              className="w-full px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 text-lg"
-              disabled={loading || supervisors.length === 0}
-            >
-              <option value="">Select a supervisor</option>
-              {supervisors.map((supervisor) => (
-                <option key={supervisor.id} value={supervisor.id}>
-                  {supervisor.name}
-                </option>
-              ))}
-            </select>
+            <div className="flex gap-3">
+              <select
+                value={selectedSupervisor}
+                onChange={(e) => setSelectedSupervisor(e.target.value)}
+                className="flex-1 px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 text-lg"
+                disabled={loading || supervisors.length === 0}
+              >
+                <option value="">Select a supervisor</option>
+                {supervisors.map((supervisor) => (
+                  <option key={supervisor.id} value={supervisor.id}>
+                    {supervisor.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedSupervisor && editSAO) {
+                    requestFeedback(editSAO.id, selectedSupervisor);
+                  }
+                }}
+                disabled={!selectedSupervisor || loading || !editSAO}
+                className="px-4 py-3 bg-teal-600 text-white rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Send for Validation
+              </button>
+            </div>
             {supervisors.length === 0 && (
               <p className="mt-2 text-sm text-slate-500">
                 No active supervisors found. Connect with a supervisor first.
@@ -474,6 +488,13 @@ const SAOCard: React.FC<{
       <div className="flex justify-between items-start mb-4">
         <h3 className="text-lg font-semibold text-slate-900">{sao.title}</h3>
         <div className="flex items-center gap-2">
+          {/* Status Tag */}
+          {sao.status === 'draft' && (
+            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-200 text-slate-700">Draft</span>
+          )}
+          {sao.status === 'complete' && (
+            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">Complete</span>
+          )}
           <button
             onClick={() => onEdit(sao)}
             className="text-slate-400 hover:text-teal-600 transition-colors"

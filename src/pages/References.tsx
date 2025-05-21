@@ -5,6 +5,7 @@ import { useSkillsStore } from '../store/skills';
 import { supabase } from '../lib/supabase';
 import SupervisorAutocomplete from '../components/references/SupervisorAutocomplete';
 import { sendValidationRequestNotification } from '../utils/notifications';
+import { toast } from 'react-hot-toast';
 
 interface Validator {
   id: string;
@@ -445,6 +446,7 @@ const References: React.FC = () => {
   const workExperienceRef = useRef<HTMLDivElement>(null);
   const referencesSectionRef = useRef<HTMLDivElement>(null);
   const validatorsSectionRef = useRef<HTMLDivElement>(null);
+  const [nudgeCooldowns, setNudgeCooldowns] = useState<Record<string, number>>({});
 
   // Get completed skills grouped by category
   const completedSkillsByCategory = skillCategories.map(category => ({
@@ -795,16 +797,70 @@ const References: React.FC = () => {
                                   {validator.status === 'scored' && (
                                     <span className="ml-2 text-green-700 font-bold">Supervisor Score: {validator.score}</span>
                                   )}
-                                  {/* Send for Validation button if draft */}
-                                  {validator.status === 'draft' && (
+                                  {/* Nudge Supervisor button for pending or scored status */}
+                                  {(validator.status === 'pending') && (
                                     <button
-                                      className="ml-2 px-2 py-0.5 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700"
+                                      className={`ml-2 px-2 py-0.5 text-xs font-medium bg-orange-500 text-white rounded hover:bg-orange-600 disabled:bg-orange-200 disabled:cursor-not-allowed`}
+                                      disabled={!!(nudgeCooldowns[validator.id] && Date.now() - nudgeCooldowns[validator.id] < 5 * 60 * 1000)}
                                       onClick={async () => {
+                                        // Set cooldown
+                                        setNudgeCooldowns((prev: any) => ({ ...prev, [validator.id]: Date.now() }));
+                                        // Get EIT profile for notification
+                                        const { data: { user } } = await supabase.auth.getUser();
+                                        if (!user) return;
+                                        const { data: eitProfile } = await supabase
+                                          .from('eit_profiles')
+                                          .select('full_name')
+                                          .eq('id', user.id)
+                                          .single();
+                                        // Send notification to supervisor
+                                        await sendValidationRequestNotification(
+                                          validator.id, // supervisorId (assuming validator.id is supervisorId, adjust if needed)
+                                          eitProfile?.full_name || user.email,
+                                          skill.name
+                                        );
+                                        // Set status back to pending in DB
                                         await supabase.from('validators').update({ status: 'pending' }).eq('id', validator.id);
-                                        setTimeout(() => loadValidators(), 300);
+                                        // Reload validators to update UI
+                                        await loadValidators();
+                                        toast.success('Nudge sent!');
                                       }}
                                     >
-                                      Send for Validation
+                                      {nudgeCooldowns[validator.id] && Date.now() - nudgeCooldowns[validator.id] < 5 * 60 * 1000
+                                        ? `Nudged (wait ${Math.ceil((5 * 60 * 1000 - (Date.now() - nudgeCooldowns[validator.id])) / 1000)}s)`
+                                        : 'Nudge Supervisor'}
+                                    </button>
+                                  )}
+                                  {validator.status === 'scored' && (
+                                    <button
+                                      className={`ml-2 px-2 py-0.5 text-xs font-medium bg-green-800 text-white rounded hover:bg-green-900 disabled:bg-green-300 disabled:cursor-not-allowed`}
+                                      disabled={!!(nudgeCooldowns[validator.id] && Date.now() - nudgeCooldowns[validator.id] < 5 * 60 * 1000)}
+                                      onClick={async () => {
+                                        setNudgeCooldowns((prev: any) => ({ ...prev, [validator.id]: Date.now() }));
+                                        // Get EIT profile for notification
+                                        const { data: { user } } = await supabase.auth.getUser();
+                                        if (!user) return;
+                                        const { data: eitProfile } = await supabase
+                                          .from('eit_profiles')
+                                          .select('full_name')
+                                          .eq('id', user.id)
+                                          .single();
+                                        // Send notification to supervisor
+                                        await sendValidationRequestNotification(
+                                          validator.id, // supervisorId (assuming validator.id is supervisorId, adjust if needed)
+                                          eitProfile?.full_name || user.email,
+                                          skill.name
+                                        );
+                                        // Set status back to pending in DB
+                                        await supabase.from('validators').update({ status: 'pending' }).eq('id', validator.id);
+                                        // Reload validators to update UI
+                                        await loadValidators();
+                                        toast.success('Rescore request sent!');
+                                      }}
+                                    >
+                                      {nudgeCooldowns[validator.id] && Date.now() - nudgeCooldowns[validator.id] < 5 * 60 * 1000
+                                        ? `Requested (wait ${Math.ceil((5 * 60 * 1000 - (Date.now() - nudgeCooldowns[validator.id])) / 60000)} min)`
+                                        : 'Ask for Rescore'}
                                     </button>
                                   )}
                                   {/* Add Cancel button for draft or pending status */}

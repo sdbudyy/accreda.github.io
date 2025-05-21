@@ -33,9 +33,7 @@ import SupervisorDashboardContent from './pages/SupervisorDashboard'
 import RoleBasedDashboard from './components/dashboard/RoleBasedDashboard'
 import EitDashboardGate from './components/dashboard/EitDashboardGate'
 import SupervisorSkills from './pages/SupervisorSkills'
-import SupervisorValidationRequests from './pages/SupervisorValidationRequests'
 import { useNotificationsStore } from './store/notifications'
-import SupervisorSAOFeedback from './pages/SupervisorSAOFeedback'
 import RealtimeNotifications from './components/common/RealtimeNotifications'
 import { Toaster } from 'react-hot-toast'
 
@@ -180,8 +178,6 @@ function App() {
           <Route path="settings" element={<SupervisorSettings />} />
           <Route path="support" element={<SupervisorSupport />} />
           <Route path="skills" element={<SupervisorSkills />} />
-          <Route path="validation-requests" element={<SupervisorValidationRequests />} />
-          <Route path="sao-feedback" element={<SupervisorSAOFeedback />} />
         </Route>
 
         {/* Catch all route */}

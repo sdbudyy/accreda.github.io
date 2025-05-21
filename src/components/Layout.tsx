@@ -14,7 +14,7 @@ const Layout: React.FC<LayoutProps> = ({ appLoaded }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#F5F7FA]">
       {/* Sidebar - hidden on mobile */}
       <div className="hidden md:block">
         <RoleAwareSidebar />

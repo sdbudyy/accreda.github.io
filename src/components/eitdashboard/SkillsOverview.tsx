@@ -32,21 +32,11 @@ const SkillsOverview: React.FC = () => {
     const completed = category.skills.filter((skill: Skill) => skill.rank !== undefined).length;
     const total = category.skills.length;
     
-    // Assign colors based on category index
-    const colors = [
-      'bg-blue-500',
-      'bg-teal-500',
-      'bg-indigo-500',
-      'bg-purple-500',
-      'bg-pink-500',
-      'bg-orange-500'
-    ];
-    
     return {
       name: category.name,
       completed,
       total,
-      color: colors[index % colors.length]
+      color: '[#D7C3A2]'
     };
   });
 
@@ -90,8 +80,8 @@ const SkillsOverview: React.FC = () => {
               </div>
               <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                 <div 
-                  className={`h-full ${category.color} rounded-full transition-all duration-300`} 
-                  style={{ width: `${percentage}%` }}
+                  className="h-full rounded-full transition-all duration-300"
+                  style={{ width: `${percentage}%`, background: '#D7C3A2' }}
                 ></div>
               </div>
             </div>

@@ -4,6 +4,7 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import SupervisorProgressCard from '../components/supervisor/SupervisorProgressCard';
 import { useOutletContext } from 'react-router-dom';
 import { Clock } from 'lucide-react';
+import { supervisorService, SupervisorCategoryAverage } from '../services/supervisorService';
 
 interface EIT {
   id: string;
@@ -28,6 +29,7 @@ const SupervisorDashboard: React.FC = () => {
   const [pendingValidationRequests, setPendingValidationRequests] = useState(0);
   const [pendingSAOFeedbackRequests, setPendingSAOFeedbackRequests] = useState(0);
   const [progressMap, setProgressMap] = useState<Record<string, number>>({});
+  const [categoryAverages, setCategoryAverages] = useState<SupervisorCategoryAverage[]>([]);
 
   const fetchDashboardData = async () => {
     try {
@@ -128,6 +130,15 @@ const SupervisorDashboard: React.FC = () => {
           averageTeamProgress: 0
         });
         setRecentActivities([]);
+      }
+
+      // Fetch category averages
+      try {
+        const averages = await supervisorService.getCategoryAverages(user.id);
+        setCategoryAverages(averages);
+      } catch (err) {
+        console.error('Error fetching category averages:', err);
+        setCategoryAverages([]);
       }
 
       setLastUpdated(new Date().toISOString());
@@ -257,6 +268,22 @@ const SupervisorDashboard: React.FC = () => {
           <div className="text-xs text-slate-500 mt-1">Reviews completed</div>
         </div>
       </div>
+      {/* Category Averages Cards */}
+      {categoryAverages.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
+          {categoryAverages.map((cat) => (
+            <div key={cat.category} className="bg-white rounded-2xl shadow p-6 flex flex-col gap-2 min-w-[220px]">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-lg text-slate-800">{cat.category}</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-600">
+                  {cat.average_score?.toFixed(2) ?? '0.00'}
+                </span>
+              </div>
+              <div className="text-xs text-slate-500 mt-1">Avg. self-score (from {cat.num_eits} EIT{cat.num_eits !== 1 ? 's' : ''})</div>
+            </div>
+          ))}
+        </div>
+      )}
       {/* Team Members */}
       {eits.length > 0 && (
         <div className="card mb-8">

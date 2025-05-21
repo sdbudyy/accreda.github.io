@@ -11,10 +11,8 @@ interface SupervisorSidebarProps {
 const navItems = [
   { to: '/dashboard/supervisor', label: 'Dashboard', icon: <Home size={20} /> },
   { to: '/dashboard/supervisor/skills', label: 'Skills', icon: <BookOpen size={20} /> },
-  { to: '/dashboard/supervisor/validation-requests', label: 'Validation Requests', icon: <CheckCircle2 size={20} /> },
   { to: '/dashboard/supervisor/team', label: 'Team', icon: <Users size={20} /> },
   { to: '/dashboard/supervisor/reviews', label: 'Reviews', icon: <ClipboardList size={20} /> },
-  { to: '/dashboard/supervisor/sao-feedback', label: 'SAO Feedback', icon: <ClipboardList size={20} /> },
   { to: '/dashboard/supervisor/documents', label: 'Documents', icon: <FileText size={20} /> },
   { to: '/dashboard/supervisor/settings', label: 'Settings', icon: <Settings size={20} /> },
 ];

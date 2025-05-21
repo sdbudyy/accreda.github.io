@@ -462,7 +462,7 @@ const RecentActivities: React.FC = () => {
                 </div>
               </div>
               <button
-                className="ml-2 px-3 py-1 text-xs bg-teal-100 text-teal-700 rounded hover:bg-teal-200"
+                className="ml-2 px-3 py-1 text-xs bg-amber-100 text-amber-700 hover:bg-amber-200"
                 onClick={() => handleView(activity)}
               >
                 View
@@ -476,8 +476,8 @@ const RecentActivities: React.FC = () => {
         )}
         
         <button 
-          className="w-full text-center py-2 text-sm text-teal-600 hover:text-teal-700 mt-2"
-          onClick={handleViewMore}
+          className="w-full text-center py-2 text-lg text-teal-600 hover:underline font-medium"
+          onClick={() => navigate('/dashboard/activities')}
         >
           View more activities
         </button>
@@ -513,7 +513,7 @@ const RecentActivities: React.FC = () => {
                       </div>
                     </div>
                     <button
-                      className="ml-2 px-3 py-1 text-xs bg-teal-100 text-teal-700 rounded hover:bg-teal-200"
+                      className="ml-2 px-3 py-1 text-xs bg-amber-100 text-amber-700 hover:bg-amber-200"
                       onClick={() => {
                         handleView(activity);
                         setShowModal(false);
