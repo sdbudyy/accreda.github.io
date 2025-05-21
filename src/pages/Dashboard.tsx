@@ -124,7 +124,7 @@ const Dashboard: React.FC = () => {
     }
   }, [googleToken]);
 
-  const approvedSAOs = saos.filter(sao => (sao as any).status === 'approved');
+  const completedSAOs = saos.filter(sao => sao.status === 'complete');
   const progressStats: ProgressStat[] = [
     { 
       title: 'Overall Progress', 
@@ -142,10 +142,10 @@ const Dashboard: React.FC = () => {
       color: 'blue' 
     },
     { 
-      title: 'SAOs Completed', 
-      value: approvedSAOs.length,
+      title: 'Completed SAOs', 
+      value: completedSAOs.length,
       total: 24,
-      description: `${24 - approvedSAOs.length} SAOs remaining to complete`,
+      description: `${24 - completedSAOs.length} SAOs remaining to complete`,
       color: 'indigo' 
     },
   ];

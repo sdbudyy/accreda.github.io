@@ -19,6 +19,7 @@ export interface SAO {
   content: string;
   created_at: string;
   updated_at: string;
+  status: 'draft' | 'complete';
   skills: Skill[];
   feedback?: SAOFeedback[];
 }
@@ -28,8 +29,8 @@ interface SAOsState {
   loading: boolean;
   error: string | null;
   lastFetched: number | null;
-  createSAO: (title: string, content: string, skills: Skill[]) => Promise<void>;
-  updateSAO: (id: string, title: string, content: string, skills: Skill[]) => Promise<void>;
+  createSAO: (title: string, content: string, skills: Skill[], status: 'draft' | 'complete') => Promise<void>;
+  updateSAO: (id: string, title: string, content: string, skills: Skill[], status: 'draft' | 'complete') => Promise<void>;
   deleteSAO: (id: string) => Promise<void>;
   loadUserSAOs: (force?: boolean) => Promise<void>;
   clearState: () => void;
@@ -51,7 +52,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
     lastFetched: null
   }),
 
-  createSAO: async (title: string, content: string, skills: Skill[]) => {
+  createSAO: async (title: string, content: string, skills: Skill[], status: 'draft' | 'complete') => {
     set({ loading: true, error: null });
     try {
       console.log('Creating new SAO...');
@@ -73,14 +74,15 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
 
       console.log('Creating SAO:', { title, content, skills, eit_id: user.id });
 
-      // First, create the SAO
+      // First, create the SAO with draft status
       const { data: sao, error: saoError } = await supabase
         .from('saos')
         .insert([
           {
             eit_id: user.id,
             title,
-            content
+            content,
+            status
           }
         ])
         .select()
@@ -141,7 +143,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
     }
   },
 
-  updateSAO: async (id: string, title: string, content: string, skills: Skill[]) => {
+  updateSAO: async (id: string, title: string, content: string, skills: Skill[], status: 'draft' | 'complete') => {
     set({ loading: true, error: null });
     try {
       console.log('Updating SAO:', { id, title, content, skills });
@@ -155,7 +157,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
       // Update the SAO
       const { error: saoError } = await supabase
         .from('saos')
-        .update({ title, content })
+        .update({ title, content, status })
         .eq('id', id)
         .eq('eit_id', user.id);
 

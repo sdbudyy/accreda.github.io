@@ -176,7 +176,7 @@ const SupervisorDashboard: React.FC = () => {
                   </div>
                   <div className="mt-2">
                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                      activity.status === 'approved' ? 'bg-[#27AE60] bg-opacity-10 text-[#27AE60]' :
+                      activity.status === 'complete' ? 'bg-[#27AE60] bg-opacity-10 text-[#27AE60]' :
                       activity.status === 'pending' ? 'bg-[#F1C40F] bg-opacity-10 text-[#F39C12]' :
                       'bg-[#34495E] bg-opacity-10 text-[#34495E]'
                     }`}>

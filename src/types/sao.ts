@@ -3,7 +3,7 @@ export interface SAO {
   title: string;
   description: string;
   content: string;
-  status: 'draft' | 'in-review' | 'approved' | 'rejected';
+  status: 'draft' | 'complete';
   eit_id: string;
   created_at: string;
   updated_at: string;

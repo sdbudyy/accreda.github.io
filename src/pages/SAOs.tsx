@@ -16,6 +16,7 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO }) => {
   const [title, setTitle] = useState('');
   const [sao, setSao] = useState('');
   const [selectedSkills, setSelectedSkills] = useState<Skill[]>([]);
+  const [status, setStatus] = useState<'draft' | 'complete'>('draft');
   const [isSkillsModalOpen, setIsSkillsModalOpen] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [enhancedText, setEnhancedText] = useState<string | null>(null);
@@ -63,10 +64,12 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO }) => {
       setTitle(editSAO.title);
       setSao(editSAO.content);
       setSelectedSkills(editSAO.skills);
+      setStatus(editSAO.status || 'draft');
     } else if (isOpen) {
       setTitle('');
       setSao('');
       setSelectedSkills([]);
+      setStatus('draft');
     }
   }, [isOpen, editSAO]);
 
@@ -74,9 +77,11 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO }) => {
     e.preventDefault();
     try {
       if (editSAO) {
-        await updateSAO(editSAO.id, title, sao, selectedSkills);
+        console.log('Calling updateSAO with:', { id: editSAO.id, title, sao, selectedSkills, status });
+        await updateSAO(editSAO.id, title, sao, selectedSkills, status);
       } else {
-        await createSAO(title, sao, selectedSkills);
+        console.log('Calling createSAO with:', { title, sao, selectedSkills, status });
+        await createSAO(title, sao, selectedSkills, status);
       }
 
       // If a supervisor is selected, request feedback
@@ -281,6 +286,28 @@ Format the response as a clear SAO statement with Situation, Action, and Outcome
                 </div>
               </div>
             )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                className={`px-4 py-2 rounded-full border text-sm font-semibold transition-colors duration-200 ${status === 'draft' ? 'bg-slate-200 text-slate-800 border-slate-400' : 'bg-white text-slate-500 border-slate-200'}`}
+                onClick={() => setStatus('draft')}
+                aria-pressed={status === 'draft'}
+              >
+                Draft
+              </button>
+              <button
+                type="button"
+                className={`px-4 py-2 rounded-full border text-sm font-semibold transition-colors duration-200 ${status === 'complete' ? 'bg-green-200 text-green-800 border-green-400' : 'bg-white text-slate-500 border-slate-200'}`}
+                onClick={() => setStatus('complete')}
+                aria-pressed={status === 'complete'}
+              >
+                Completed
+              </button>
+            </div>
           </div>
 
           <div>

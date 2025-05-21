@@ -146,7 +146,7 @@ const EITDashboard: React.FC = () => {
                   </div>
                   <div className="mt-2">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      activity.status === 'approved' ? 'bg-green-100 text-green-800' :
+                      activity.status === 'complete' ? 'bg-green-100 text-green-800' :
                       activity.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>

@@ -60,14 +60,8 @@ const SAOCard: React.FC<SAOCardProps> = ({ sao, onEdit, onDelete }) => {
           {sao.status === 'draft' && (
             <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-200 text-slate-700">Draft</span>
           )}
-          {sao.status === 'in-review' && (
-            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">Pending</span>
-          )}
-          {sao.status === 'approved' && (
-            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">Approved</span>
-          )}
-          {sao.status === 'rejected' && (
-            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">Rejected</span>
+          {sao.status === 'complete' && (
+            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">Complete</span>
           )}
           <button 
             onClick={() => onEdit(sao)}
