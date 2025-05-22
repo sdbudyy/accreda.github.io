@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { FileText, Download, Trash2, AlertCircle, Upload, Search, Filter, X, Edit2 } from 'lucide-react';
 import { useDocumentsStore, Document } from '../store/documents';
 import { supabase } from '../lib/supabase';
+import { useSubscriptionStore } from '../store/subscriptionStore';
 
 const Documents: React.FC = () => {
   const {
@@ -13,6 +14,9 @@ const Documents: React.FC = () => {
     deleteDocument,
     loadUserDocuments,
   } = useDocumentsStore();
+
+  const { tier, documentLimit, fetchSubscription } = useSubscriptionStore();
+  const [documentCreatedCount, setDocumentCreatedCount] = useState<number>(0);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
@@ -51,6 +55,24 @@ const Documents: React.FC = () => {
     };
     window.addEventListener('scroll-to-document', handleScrollToDocument as EventListener);
     return () => window.removeEventListener('scroll-to-document', handleScrollToDocument as EventListener);
+  }, []);
+
+  useEffect(() => {
+    const fetchCount = async () => {
+      await fetchSubscription();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from('subscriptions')
+          .select('document_created_count')
+          .eq('user_id', user.id)
+          .single();
+        if (data && typeof data.document_created_count === 'number') {
+          setDocumentCreatedCount(data.document_created_count);
+        }
+      }
+    };
+    fetchCount();
   }, []);
 
   // Handle document creation
@@ -157,15 +179,24 @@ const Documents: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Document Limit Banner */}
+      {tier === 'free' && (
+        <div className="p-4 mb-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-900 text-center font-semibold">
+          {documentCreatedCount < documentLimit
+            ? `You have ${documentLimit - documentCreatedCount} document${documentLimit - documentCreatedCount === 1 ? '' : 's'} left on the Free plan.`
+            : 'You have reached your document upload limit for the Free plan. Upgrade to add more.'}
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl md:text-3xl font-bold text-slate-800">Documents</h1>
-        <label className="btn btn-primary cursor-pointer">
+        <label className={`btn flex items-center cursor-pointer ${tier === 'free' && documentCreatedCount >= documentLimit ? 'bg-gray-300 text-gray-500 border-gray-300 cursor-not-allowed' : 'btn-primary'}`}>
           <Upload size={16} className="mr-1.5" />
           Upload Document
           <input
             type="file"
             className="hidden"
             onChange={handleCreateDocument}
+            disabled={tier === 'free' && documentCreatedCount >= documentLimit}
           />
         </label>
       </div>

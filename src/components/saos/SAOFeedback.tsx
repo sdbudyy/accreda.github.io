@@ -78,7 +78,7 @@ const SAOFeedbackComponent: React.FC<SAOFeedbackProps> = ({
                     {getStatusText(item.status)}
                   </span>
                 </div>
-                {isSupervisor && item.status === 'submitted' && (
+                {isSupervisor && item.status === 'submitted' && false && (
                   <button
                     onClick={() => onResolve(item.id)}
                     className="text-sm text-teal-600 hover:text-teal-700"

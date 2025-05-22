@@ -27,16 +27,15 @@ const SkillsOverview: React.FC = () => {
     return () => window.removeEventListener('scroll-to-skill', handleScrollToSkill as EventListener);
   }, []);
 
-  // Calculate progress for each category
+  const categoryColors = ['bg-teal-500', 'bg-blue-500', 'bg-indigo-500', 'bg-purple-500', 'bg-pink-500', 'bg-green-500'];
   const categoryProgress: SkillCategoryProps[] = skillCategories.map((category: Category, index: number) => {
     const completed = category.skills.filter((skill: Skill) => skill.rank !== undefined).length;
     const total = category.skills.length;
-    
     return {
       name: category.name,
       completed,
       total,
-      color: '[#D7C3A2]'
+      color: categoryColors[index % categoryColors.length]
     };
   });
 
@@ -80,8 +79,8 @@ const SkillsOverview: React.FC = () => {
               </div>
               <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                 <div 
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{ width: `${percentage}%`, background: '#D7C3A2' }}
+                  className={`h-full rounded-full transition-all duration-300 ${category.color}`}
+                  style={{ width: `${percentage}%` }}
                 ></div>
               </div>
             </div>

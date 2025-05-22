@@ -84,6 +84,8 @@ const SupervisorSkills: React.FC = () => {
   const [categoryAverages, setCategoryAverages] = useState<Record<string, { average: number; completionRate: number }>>({});
   const navigate = useNavigate();
 
+  const categoryColors = ['#14b8a6', '#3b82f6', '#6366f1', '#a21caf', '#ec4899', '#22c55e']; // teal, blue, indigo, purple, pink, green
+
   useEffect(() => {
     loadUserSkills();
   }, [loadUserSkills]);
@@ -210,11 +212,12 @@ const SupervisorSkills: React.FC = () => {
 
       {/* Category Progress Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        {skillCategories.map((category) => {
+        {skillCategories.map((category, index) => {
           const average = categoryAverages[category.name]?.average || 0;
           const supervisorPercent = categoryAverages[category.name]?.completionRate || 0;
           // For supervisor score, convert percent to a 0-5 scale for the bar
           const supervisorScoreOutOfFive = (supervisorPercent / 100) * 5;
+          const color = categoryColors[index % categoryColors.length];
           return (
             <div key={category.name} className="bg-white rounded-lg border border-slate-200 p-4">
               <div className="flex justify-between items-center mb-2">
@@ -222,34 +225,42 @@ const SupervisorSkills: React.FC = () => {
               </div>
               <div className="space-y-5">
                 {/* Average EIT Self Score */}
-                <div className="grid grid-cols-[auto_48px_1fr_56px] items-center gap-4">
-                  <span className="text-base font-semibold">Average EIT Self Score</span>
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 text-slate-800 text-sm font-bold border border-slate-200">
-                    {Math.round((average / 5) * 100)}%
+                <div className="flex items-center gap-4">
+                  <span className="w-40 text-base font-semibold">Average EIT Self Score</span>
+                  <div className="w-10 flex-shrink-0 flex justify-center">
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 text-slate-800 text-sm font-bold border border-slate-200">
+                      {Math.round((average / 5) * 100)}%
+                    </div>
                   </div>
-                  <div className="w-full max-w-[160px] bg-slate-200 rounded-full h-2">
-                    <div
-                      className="h-2 rounded-full"
-                      style={{ width: `${(average / 5) * 100}%`, background: '#D7C3A2' }}
-                    />
+                  <div className="flex-1">
+                    <div className="w-full max-w-[160px] bg-slate-200 rounded-full h-2">
+                      <div
+                        className="h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${(average / 5) * 100}%`, background: color }}
+                      />
+                    </div>
                   </div>
-                  <div className="text-xs text-slate-500 min-w-[48px] text-right">
+                  <div className="w-14 text-xs text-slate-500 text-right">
                     {average.toFixed(1)}/5.0
                   </div>
                 </div>
                 {/* Average Supervisor Score */}
-                <div className="grid grid-cols-[auto_48px_1fr_56px] items-center gap-4">
-                  <span className="text-base font-semibold">Average Supervisor Score</span>
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 text-slate-800 text-sm font-bold border border-slate-200">
-                    {Math.round(supervisorPercent)}%
+                <div className="flex items-center gap-4">
+                  <span className="w-40 text-base font-semibold">Average Supervisor Score</span>
+                  <div className="w-10 flex-shrink-0 flex justify-center">
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 text-slate-800 text-sm font-bold border border-slate-200">
+                      {Math.round(supervisorPercent)}%
+                    </div>
                   </div>
-                  <div className="w-full max-w-[160px] bg-slate-200 rounded-full h-2">
-                    <div
-                      className="h-2 rounded-full"
-                      style={{ width: `${(supervisorScoreOutOfFive / 5) * 100}%`, background: '#D7C3A2' }}
-                    />
+                  <div className="flex-1">
+                    <div className="w-full max-w-[160px] bg-slate-200 rounded-full h-2">
+                      <div
+                        className="h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${(supervisorScoreOutOfFive / 5) * 100}%`, background: color }}
+                      />
+                    </div>
                   </div>
-                  <div className="text-xs text-slate-500 min-w-[48px] text-right">
+                  <div className="w-14 text-xs text-slate-500 text-right">
                     {supervisorScoreOutOfFive.toFixed(1)}/5.0
                   </div>
                 </div>

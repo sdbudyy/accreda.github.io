@@ -7,22 +7,6 @@ import ConnectionStatus from '../components/common/ConnectionStatus';
 import { useSupervisorNotificationPreferences } from '../store/supervisorNotificationPreferences';
 import { Switch } from '@headlessui/react';
 
-const subscriptionTiers = [
-  {
-    name: 'Free',
-    price: '$0',
-    description: 'Perfect for getting started',
-    features: [
-      'Basic progress tracking',
-      'Up to 5 documents',
-      'Standard support',
-      'Basic analytics'
-    ],
-    buttonText: 'Current Plan',
-    isPopular: false
-  }
-];
-
 const SupervisorSettings: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [fullName, setFullName] = useState('');
@@ -625,44 +609,6 @@ const SupervisorSettings: React.FC = () => {
           <Sun /> Appearance
         </h2>
         <p className="text-slate-500 text-sm">Coming soon: Switch between light and dark mode.</p>
-      </section>
-
-      {/* Subscription Card */}
-      <section className="card p-6">
-        <h2 className="text-lg font-semibold mb-4">Subscription Plan</h2>
-        <div className="grid gap-6 md:grid-cols-1">
-          {subscriptionTiers.map((tier) => (
-            <div
-              key={tier.name}
-              className={`relative rounded-lg border ${tier.isPopular ? 'border-teal-500' : 'border-slate-200'} p-6`}
-            >
-              {tier.isPopular && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-teal-500 text-white px-3 py-1 rounded-full text-sm">
-                  Most Popular
-                </span>
-              )}
-              <h3 className="text-lg font-semibold">{tier.name}</h3>
-              <div className="mt-2 flex items-baseline">
-                <span className="text-2xl font-bold">{tier.price}</span>
-              </div>
-              <p className="mt-2 text-sm text-slate-500">{tier.description}</p>
-              <ul className="mt-4 space-y-2">
-                {tier.features.map((feature) => (
-                  <li key={feature} className="flex items-center">
-                    <Check className="h-4 w-4 text-teal-500 mr-2" />
-                    <span className="text-sm text-slate-600">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-              <button
-                className={`mt-6 w-full rounded-md px-4 py-2 text-sm font-medium ${tier.isPopular ? 'bg-teal-600 text-white hover:bg-teal-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
-                disabled={true}
-              >
-                {tier.buttonText}
-              </button>
-            </div>
-          ))}
-        </div>
       </section>
 
       {/* Danger Zone */}

@@ -6,6 +6,7 @@ import FileUpload from '../components/FileUpload';
 import ConnectionStatus from '../components/common/ConnectionStatus';
 import { useNotificationPreferences } from '../store/notificationPreferences';
 import { Switch } from '@headlessui/react';
+import { useSubscriptionStore } from '../store/subscriptionStore';
 
 const defaultAvatar =
   'https://ui-avatars.com/api/?name=User&background=E0F2FE&color=0891B2&size=128';
@@ -51,6 +52,18 @@ const Settings: React.FC = () => {
     toggleUserSkills,
   } = useNotificationPreferences();
 
+  const { 
+    tier,
+    documentLimit,
+    saoLimit,
+    supervisorLimit,
+    hasAiAccess,
+    fetchSubscription,
+    checkDocumentLimit,
+    checkSaoLimit,
+    checkSupervisorLimit
+  } = useSubscriptionStore();
+
   useEffect(() => {
     const getUserProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -83,6 +96,7 @@ const Settings: React.FC = () => {
     };
 
     getUserProfile();
+    fetchSubscription();
   }, []);
 
   useEffect(() => {
@@ -100,6 +114,10 @@ const Settings: React.FC = () => {
       });
     }
   }, [user]);
+
+  useEffect(() => {
+    fetchSubscription();
+  }, []);
 
   const handleAvatarSelect = (files: File[]) => {
     if (files.length > 0) {
@@ -378,25 +396,98 @@ const Settings: React.FC = () => {
 
           {/* Subscription Section */}
           <div className="pt-8">
-            <section className="bg-white shadow rounded-lg p-8 mb-8 border border-blue-100">
-              <div className="mb-6 text-center">
-                <h2 className="text-2xl font-bold text-blue-900 mb-2">Subscription Plan</h2>
-                <p className="text-gray-600 text-md max-w-2xl mx-auto">
-                  Perfect for getting started
-                </p>
-              </div>
-              <div className="max-w-md mx-auto border border-gray-200 rounded-2xl p-8 bg-gradient-to-br from-blue-50 to-white flex flex-col items-center shadow-sm">
+            <div className="mb-6 text-center">
+              <h2 className="text-2xl font-bold text-blue-900 mb-2">Choose Your Plan</h2>
+              <p className="text-gray-600 text-md max-w-2xl mx-auto">
+                Select the plan that best fits your needs
+              </p>
+            </div>
+            <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+              {/* Free Plan */}
+              <div className={`border ${tier === 'free' ? 'border-blue-500' : 'border-gray-200'} rounded-2xl p-8 bg-gradient-to-br from-blue-50 to-white flex flex-col items-center shadow-sm`}>
                 <h3 className="text-2xl font-bold text-blue-900 mb-2">Free</h3>
                 <p className="text-5xl font-extrabold text-blue-800 mb-4">$0</p>
                 <ul className="mb-6 w-full space-y-3">
-                  <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Basic progress tracking</li>
-                  <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Up to 5 documents</li>
+                  <li className="flex items-center text-gray-700">
+                    <span className="text-green-500 mr-2">✓</span>
+                    Up to 5 documents
+                  </li>
+                  <li className="flex items-center text-gray-700">
+                    <span className="text-green-500 mr-2">✓</span>
+                    Up to 5 SAOs
+                  </li>
+                  <li className="flex items-center text-gray-700">
+                    <span className="text-green-500 mr-2">✓</span>
+                    Connect with 1 supervisor
+                  </li>
                   <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Standard support</li>
-                  <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Basic analytics</li>
+                  <li className="flex items-center text-gray-700"><span className="text-red-500 mr-2">✗</span> AI Features</li>
                 </ul>
-                <span className="inline-block bg-blue-100 text-blue-800 px-4 py-2 rounded-full font-semibold text-sm shadow">Current Plan</span>
+                {tier === 'free' ? (
+                  <span className="inline-block bg-blue-100 text-blue-800 px-4 py-2 rounded-full font-semibold text-sm shadow">Current Plan</span>
+                ) : (
+                  <button 
+                    onClick={() => window.location.href = 'mailto:contact@accreda.com?subject=Downgrade to Free Plan'}
+                    className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-semibold text-sm shadow transition-colors"
+                  >
+                    Contact to Downgrade
+                  </button>
+                )}
               </div>
-            </section>
+
+              {/* Pro Plan */}
+              <div className={`border ${tier === 'pro' ? 'border-teal-500' : 'border-gray-200'} rounded-2xl p-8 bg-gradient-to-br from-teal-50 to-white flex flex-col items-center shadow-sm relative`}>
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                  <span className="bg-teal-500 text-white px-4 py-1 rounded-full text-sm font-semibold">Most Popular</span>
+                </div>
+                <h3 className="text-2xl font-bold text-teal-900 mb-2">Pro</h3>
+                <div className="text-center mb-4">
+                  <p className="text-5xl font-extrabold text-teal-800">$17.99</p>
+                  <p className="text-sm text-gray-600">per month</p>
+                  <p className="text-sm text-teal-600 font-medium mt-1">or $14.99/month billed yearly</p>
+                </div>
+                <ul className="mb-6 w-full space-y-3">
+                  <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Unlimited documents</li>
+                  <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Unlimited SAOs</li>
+                  <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Unlimited supervisors</li>
+                  <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Priority support</li>
+                  <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> AI Features</li>
+                </ul>
+                {tier === 'pro' ? (
+                  <span className="inline-block bg-teal-100 text-teal-800 px-4 py-2 rounded-full font-semibold text-sm shadow">Current Plan</span>
+                ) : (
+                  <button 
+                    onClick={() => window.location.href = 'mailto:contact@accreda.com?subject=Upgrade to Pro Plan'}
+                    className="inline-block bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full font-semibold text-sm shadow transition-colors"
+                  >
+                    Upgrade to Pro
+                  </button>
+                )}
+              </div>
+
+              {/* Enterprise Plan */}
+              <div className={`border ${tier === 'enterprise' ? 'border-purple-500' : 'border-gray-200'} rounded-2xl p-8 bg-gradient-to-br from-purple-50 to-white flex flex-col items-center shadow-sm`}>
+                <h3 className="text-2xl font-bold text-purple-900 mb-2">Enterprise</h3>
+                <p className="text-base font-semibold text-purple-800 mb-4">Custom Pricing</p>
+                <ul className="mb-6 w-full space-y-3">
+                  <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Everything in Pro</li>
+                  <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> 24/7 priority support</li>
+                  <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Custom integrations</li>
+                  <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Dedicated account manager</li>
+                  <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Access to Supervisor Dashboard</li>
+                </ul>
+                {tier === 'enterprise' ? (
+                  <span className="inline-block bg-purple-100 text-purple-800 px-4 py-2 rounded-full font-semibold text-sm shadow">Current Plan</span>
+                ) : (
+                  <button 
+                    onClick={() => window.location.href = 'mailto:contact@accreda.com?subject=Enterprise Plan Inquiry'}
+                    className="inline-block bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-full font-semibold text-sm shadow transition-colors"
+                  >
+                    Contact Us
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Security Card */}
@@ -601,6 +692,11 @@ const Settings: React.FC = () => {
 
                 <div>
                   <h3 className="text-sm font-medium text-slate-700 mb-3">Connect with a New Supervisor</h3>
+                  {tier === 'free' && supervisors.length >= supervisorLimit && (
+                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-yellow-900 font-semibold text-center">
+                      You have reached your supervisor connection limit for the Free plan. Upgrade to add more.
+                    </div>
+                  )}
                   <form
                     className="flex flex-col md:flex-row gap-4 items-start md:items-end"
                     onSubmit={async (e) => {
@@ -677,12 +773,13 @@ const Settings: React.FC = () => {
                         className="input w-full"
                         placeholder="Enter supervisor's email"
                         required
+                        disabled={tier === 'free' && supervisors.length >= supervisorLimit}
                       />
                     </div>
                     <button 
                       type="submit" 
                       className="btn btn-primary whitespace-nowrap" 
-                      disabled={loading}
+                      disabled={loading || (tier === 'free' && supervisors.length >= supervisorLimit)}
                     >
                       {loading ? 'Sending...' : 'Send Request'}
                     </button>

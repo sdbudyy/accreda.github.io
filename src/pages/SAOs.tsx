@@ -5,14 +5,26 @@ import { useSAOsStore, SAO } from '../store/saos';
 import { useSearchParams } from 'react-router-dom';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { supabase } from '../lib/supabase';
+import SAOFeedbackComponent from '../components/saos/SAOFeedback';
+import Modal from '../components/common/Modal';
+import { useSubscriptionStore } from '../store/subscriptionStore';
 
 interface SAOModalProps {
   isOpen: boolean;
   onClose: () => void;
   editSAO?: SAO;
+  onCreated?: () => void;
 }
 
-const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO }) => {
+// Utility to get the most recent feedback
+function getMostRecentFeedback(feedbackArr: { updated_at: string; status: string }[]): { updated_at: string; status: string } | null {
+  if (!feedbackArr || feedbackArr.length === 0) return null;
+  return feedbackArr.reduce((latest, curr) =>
+    new Date(curr.updated_at) > new Date(latest.updated_at) ? curr : latest
+  );
+}
+
+const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated }) => {
   const [title, setTitle] = useState('');
   const [sao, setSao] = useState('');
   const [selectedSkills, setSelectedSkills] = useState<Skill[]>([]);
@@ -23,7 +35,14 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO }) => {
   const [selectedSupervisor, setSelectedSupervisor] = useState<string>('');
   const [supervisors, setSupervisors] = useState<Array<{ id: string; name: string }>>([]);
   const { skillCategories } = useSkillsStore();
-  const { createSAO, updateSAO, loading, error, requestFeedback } = useSAOsStore();
+  const { createSAO, updateSAO, loading, error, requestFeedback, loadUserSAOs } = useSAOsStore();
+  const [ruleModalOpen, setRuleModalOpen] = useState(false);
+  const [ruleModalMessage, setRuleModalMessage] = useState('');
+  const { checkSaoLimit, tier, fetchSubscription } = useSubscriptionStore();
+  const [limitError, setLimitError] = useState<string | null>(null);
+  const [saoCreatedCount, setSaoCreatedCount] = useState<number>(0);
+
+  const mostRecentFeedback = editSAO && editSAO.feedback ? getMostRecentFeedback(editSAO.feedback) : null;
 
   // Load supervisors when modal opens
   useEffect(() => {
@@ -73,9 +92,37 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO }) => {
     }
   }, [isOpen, editSAO]);
 
+  // Fetch the user's subscription to get sao_created_count
+  useEffect(() => {
+    const fetchCount = async () => {
+      await fetchSubscription();
+      // Fetch the count from the subscriptions table
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from('subscriptions')
+          .select('sao_created_count')
+          .eq('user_id', user.id)
+          .single();
+        if (data && typeof data.sao_created_count === 'number') {
+          setSaoCreatedCount(data.sao_created_count);
+        }
+      }
+    };
+    fetchCount();
+  }, [isOpen]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLimitError(null);
     try {
+      if (!editSAO && tier === 'free') {
+        const canCreate = await checkSaoLimit();
+        if (!canCreate) {
+          setLimitError('You have reached your SAO limit for the Free plan. Upgrade to add more.');
+          return;
+        }
+      }
       if (editSAO) {
         console.log('Calling updateSAO with:', { id: editSAO.id, title, sao, selectedSkills, status });
         await updateSAO(editSAO.id, title, sao, selectedSkills, status);
@@ -107,6 +154,8 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO }) => {
       setSelectedSkills([]);
       setSelectedSupervisor('');
       onClose();
+      loadUserSAOs();
+      onCreated && onCreated();
     } catch (error) {
       console.error('Error saving SAO:', error);
     }
@@ -189,23 +238,83 @@ Format the response as a clear SAO statement with Situation, Action, and Outcome
     setEnhancedText(null);
   };
 
+  // Rule check and request feedback
+  const handleRequestFeedback = async () => {
+    if (!selectedSupervisor || !editSAO) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    // 1. Count how many skills this supervisor has validated for this EIT
+    const { count: supervisorCount } = await supabase
+      .from('skill_validations')
+      .select('*', { count: 'exact', head: true })
+      .eq('eit_id', user.id)
+      .eq('validator_id', selectedSupervisor);
+    if ((supervisorCount || 0) >= 20) {
+      setRuleModalMessage('This supervisor has already validated 20 skills for you. Please select a different supervisor.');
+      setRuleModalOpen(true);
+      return;
+    }
+    // 2. Count unique supervisors for this EIT
+    const { data: allValidations } = await supabase
+      .from('skill_validations')
+      .select('validator_id')
+      .eq('eit_id', user.id);
+    const uniqueSupervisors = new Set((allValidations || []).map((v: any) => v.validator_id));
+    // If this is a new supervisor, add to the set
+    uniqueSupervisors.add(selectedSupervisor);
+    if (uniqueSupervisors.size < 3) {
+      setRuleModalMessage('You must use at least 3 different supervisors for your validations. Please select a different supervisor.');
+      setRuleModalOpen(true);
+      return;
+    }
+    // If all rules pass, proceed
+    await requestFeedback(editSAO.id, selectedSupervisor);
+  };
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-semibold">
-            {editSAO ? 'Edit SAO' : 'Create New SAO'}
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-semibold">
+              {editSAO ? 'Edit SAO' : 'Create New SAO'}
+            </h2>
+            {mostRecentFeedback && mostRecentFeedback.status === 'pending' && (
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">Pending</span>
+            )}
+            {mostRecentFeedback && mostRecentFeedback.status === 'submitted' && (
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">Marked</span>
+            )}
+          </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
             <X size={24} />
           </button>
         </div>
 
+        {/* Show limit error if present */}
+        {limitError && (
+          <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-md text-sm font-semibold text-center">
+            {limitError}
+          </div>
+        )}
+
         {error && (
           <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-md text-sm">
             {error}
+          </div>
+        )}
+
+        {/* Show supervisor feedback if present */}
+        {editSAO && editSAO.feedback && editSAO.feedback.length > 0 && (
+          <div className="mb-6">
+            <SAOFeedbackComponent
+              feedback={editSAO.feedback}
+              onResolve={async () => Promise.resolve()}
+              onSubmitFeedback={async () => Promise.resolve()}
+              isSupervisor={false}
+            />
           </div>
         )}
 
@@ -244,26 +353,28 @@ Format the response as a clear SAO statement with Situation, Action, and Outcome
                 required
                 disabled={loading || isEnhancing}
               />
-              <button
-                type="button"
-                onClick={handleEnhanceWithAI}
-                disabled={!sao.trim() || loading || isEnhancing}
-                className="absolute top-4 right-4 p-3 text-slate-400 hover:text-teal-600 hover:bg-slate-100 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group"
-                title="Enhance with AI"
-              >
-                <div className="relative">
-                  <Sparkles 
-                    size={24} 
-                    className={`${isEnhancing ? 'animate-pulse' : ''} transition-transform duration-300 group-hover:scale-110`}
-                  />
-                  {isEnhancing && (
-                    <div className="absolute inset-0 animate-ping rounded-full bg-teal-400 opacity-20" />
-                  )}
-                </div>
-                <span className="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-slate-800 text-white px-3 py-1.5 rounded text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
-                  Enhance with AI
-                </span>
-              </button>
+              {tier !== 'free' && (
+                <button
+                  type="button"
+                  onClick={handleEnhanceWithAI}
+                  disabled={!sao.trim() || loading || isEnhancing}
+                  className="absolute top-4 right-4 p-3 text-slate-400 hover:text-teal-600 hover:bg-slate-100 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group"
+                  title="Enhance with AI"
+                >
+                  <div className="relative">
+                    <Sparkles 
+                      size={24} 
+                      className={`${isEnhancing ? 'animate-pulse' : ''} transition-transform duration-300 group-hover:scale-110`}
+                    />
+                    {isEnhancing && (
+                      <div className="absolute inset-0 animate-ping rounded-full bg-teal-400 opacity-20" />
+                    )}
+                  </div>
+                  <span className="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-slate-800 text-white px-3 py-1.5 rounded text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                    Enhance with AI
+                  </span>
+                </button>
+              )}
             </div>
             {enhancedText && (
               <div className="mt-3 flex items-center gap-3">
@@ -364,11 +475,7 @@ Format the response as a clear SAO statement with Situation, Action, and Outcome
               </select>
               <button
                 type="button"
-                onClick={() => {
-                  if (selectedSupervisor && editSAO) {
-                    requestFeedback(editSAO.id, selectedSupervisor);
-                  }
-                }}
+                onClick={handleRequestFeedback}
                 disabled={!selectedSupervisor || loading || !editSAO}
                 className="px-4 py-3 bg-teal-600 text-white rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -456,6 +563,20 @@ Format the response as a clear SAO statement with Situation, Action, and Outcome
             </div>
           </div>
         )}
+
+        {/* Rule Violation Modal */}
+        <Modal isOpen={ruleModalOpen} onClose={() => setRuleModalOpen(false)}>
+          <div className="p-6">
+            <h2 className="text-lg font-semibold mb-4 text-red-700">Validation Rule Violation</h2>
+            <p className="text-slate-700 mb-4">{ruleModalMessage}</p>
+            <button
+              className="btn btn-primary"
+              onClick={() => setRuleModalOpen(false)}
+            >
+              OK
+            </button>
+          </div>
+        </Modal>
       </div>
     </div>
   );
@@ -469,6 +590,8 @@ const SAOCard: React.FC<{
   const cardRef = useRef<HTMLDivElement>(null);
   const [searchParams] = useSearchParams();
   const saoId = searchParams.get('saoId');
+
+  const mostRecentFeedback = sao.feedback ? getMostRecentFeedback(sao.feedback) : null;
 
   useEffect(() => {
     if (saoId === sao.id) {
@@ -486,7 +609,15 @@ const SAOCard: React.FC<{
       className="bg-white rounded-lg shadow p-6"
     >
       <div className="flex justify-between items-start mb-4">
-        <h3 className="text-lg font-semibold text-slate-900">{sao.title}</h3>
+        <div className="flex items-center gap-3">
+          <h3 className="text-lg font-semibold text-slate-900">{sao.title}</h3>
+          {mostRecentFeedback && mostRecentFeedback.status === 'pending' && (
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">Pending</span>
+          )}
+          {mostRecentFeedback && mostRecentFeedback.status === 'submitted' && (
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">Marked</span>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           {/* Status Tag */}
           {sao.status === 'draft' && (
@@ -533,8 +664,30 @@ const SAOs: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSAO, setEditingSAO] = useState<SAO | undefined>();
   const { saos, loading, error, loadUserSAOs, deleteSAO } = useSAOsStore();
+  const { tier, saoLimit, fetchSubscription } = useSubscriptionStore();
   const [searchParams] = useSearchParams();
   const saoId = searchParams.get('saoId');
+  const [saoCreatedCount, setSaoCreatedCount] = useState<number>(0);
+
+  // Fetch the user's subscription to get sao_created_count
+  useEffect(() => {
+    const fetchCount = async () => {
+      await fetchSubscription();
+      // Fetch the count from the subscriptions table
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from('subscriptions')
+          .select('sao_created_count')
+          .eq('user_id', user.id)
+          .single();
+        if (data && typeof data.sao_created_count === 'number') {
+          setSaoCreatedCount(data.sao_created_count);
+        }
+      }
+    };
+    fetchCount();
+  }, [isModalOpen]);
 
   useEffect(() => {
     loadUserSAOs();
@@ -564,18 +717,32 @@ const SAOs: React.FC = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingSAO(undefined);
+    loadUserSAOs();
   };
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
+      {/* SAO Limit Banner */}
+      {tier === 'free' && (
+        <div className="p-4 mb-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-900 text-center font-semibold">
+          {saoCreatedCount < saoLimit
+            ? `You have ${saoLimit - saoCreatedCount} SAO${saoLimit - saoCreatedCount === 1 ? '' : 's'} left on the Free plan.`
+            : 'You have reached your SAO limit for the Free plan. Upgrade to add more.'}
+        </div>
+      )}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Situation-Action-Outcome (SAO)</h1>
           <p className="text-slate-500 mt-1">Write and manage your SAO essays.</p>
         </div>
         <button
-          onClick={() => setIsModalOpen(true)}
-          className="btn btn-primary flex items-center gap-2"
+          onClick={() => {
+            if (saoCreatedCount < saoLimit) setIsModalOpen(true);
+          }}
+          className={`btn flex items-center gap-2 ${saoCreatedCount >= saoLimit ? 'bg-gray-300 text-gray-500 border-gray-300 cursor-not-allowed' : 'btn-primary'}`}
+          disabled={saoCreatedCount >= saoLimit}
+          aria-disabled={saoCreatedCount >= saoLimit}
+          title={saoCreatedCount >= saoLimit ? 'You have reached your SAO limit for the Free plan.' : 'Start a new SAO'}
         >
           <Plus size={18} />
           Start New SAO
@@ -628,6 +795,10 @@ const SAOs: React.FC = () => {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         editSAO={editingSAO}
+        onCreated={() => {
+          loadUserSAOs();
+          setIsModalOpen(false);
+        }}
       />
     </div>
   );

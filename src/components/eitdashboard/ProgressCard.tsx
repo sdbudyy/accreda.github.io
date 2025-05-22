@@ -30,24 +30,24 @@ const ProgressCard: React.FC<ProgressCardProps> = ({
   
   const colorClasses = {
     teal: {
-      bg: '[#D7C3A2]',
-      text: 'text-amber-700',
-      lightBg: 'bg-amber-50'
+      bg: 'bg-teal-500',
+      text: 'text-teal-700',
+      lightBg: 'bg-teal-100'
     },
     blue: {
-      bg: '[#D7C3A2]',
-      text: 'text-amber-700',
-      lightBg: 'bg-amber-50'
+      bg: 'bg-blue-500',
+      text: 'text-blue-700',
+      lightBg: 'bg-blue-100'
     },
     indigo: {
-      bg: '[#D7C3A2]',
-      text: 'text-amber-700',
-      lightBg: 'bg-amber-50'
+      bg: 'bg-indigo-500',
+      text: 'text-indigo-700',
+      lightBg: 'bg-indigo-100'
     },
     purple: {
-      bg: '[#D7C3A2]',
-      text: 'text-amber-700',
-      lightBg: 'bg-amber-50'
+      bg: 'bg-purple-500',
+      text: 'text-purple-700',
+      lightBg: 'bg-purple-100'
     }
   };
 

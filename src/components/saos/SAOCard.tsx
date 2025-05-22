@@ -63,6 +63,11 @@ const SAOCard: React.FC<SAOCardProps> = ({ sao, onEdit, onDelete }) => {
           {sao.status === 'complete' && (
             <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">Complete</span>
           )}
+          {sao.feedback && sao.feedback.length > 0 && (
+            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+              {sao.feedback.some(f => f.status === 'pending') ? 'Feedback Pending' : 'Has Feedback'}
+            </span>
+          )}
           <button 
             onClick={() => onEdit(sao)}
             className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700"
