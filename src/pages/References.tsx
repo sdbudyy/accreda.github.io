@@ -792,7 +792,10 @@ const References: React.FC = () => {
             </div>
           </button>
           <button
-            onClick={() => setActiveTab('validators')}
+            onClick={async () => {
+              await loadValidators();
+              setActiveTab('validators');
+            }}
             className={`flex-1 py-3 px-4 text-sm font-medium ${
               activeTab === 'validators'
                 ? 'text-teal-600 border-b-2 border-teal-600'

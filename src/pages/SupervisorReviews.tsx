@@ -214,6 +214,7 @@ function formatRubric(skillName: string) {
 
 const SupervisorReviews: React.FC = () => {
   const [tab, setTab] = useState<'skills' | 'saos'>('skills');
+  const [selectedEIT, setSelectedEIT] = useState<string>('all');
 
   // --- Skill Validation State ---
   const [validators, setValidators] = useState<Validator[]>([]);
@@ -237,6 +238,21 @@ const SupervisorReviews: React.FC = () => {
   const [pendingValidators, setPendingValidators] = useState<Validator[]>([]);
   const [pendingSAOs, setPendingSAOs] = useState<SAOFeedback[]>([]);
   const [allSAOs, setAllSAOs] = useState<SAOFeedback[]>([]);
+
+  // Filter validators and SAOs based on selected EIT
+  const filteredValidators = selectedEIT === 'all' 
+    ? pendingValidators 
+    : pendingValidators.filter(v => v.eit_id === selectedEIT);
+
+  const filteredSAOs = selectedEIT === 'all'
+    ? pendingSAOs
+    : pendingSAOs.filter(s => s.sao?.eit_id === selectedEIT);
+
+  const filteredHistory = selectedEIT === 'all'
+    ? history
+    : Object.fromEntries(
+        Object.entries(history).filter(([key]) => key.startsWith(selectedEIT + '_'))
+      );
 
   // --- Fetch Skill Validation Requests ---
   useEffect(() => {
@@ -434,48 +450,81 @@ const SupervisorReviews: React.FC = () => {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Review Center</h1>
       </div>
-      {/* Centered Toggle */}
-      <div className="flex justify-center my-8 gap-4 items-center">
-        <div className="relative flex bg-slate-100 rounded-full p-1 shadow-inner gap-0 items-center">
+      {/* Top Controls Row: History (left), Toggle (center), Refresh & EIT Filter (right) */}
+      <div className="flex items-center justify-between my-8 w-full">
+        {/* Left: Refresh Button */}
+        <div className="flex items-center">
           <button
-            onClick={() => setTab('skills')}
-            className={`px-6 py-2 rounded-full font-semibold transition-all duration-200 text-sm focus:outline-none z-10
-              ${tab === 'skills' ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-700 hover:text-teal-600'}`}
-            style={{ marginRight: '-0.5rem', marginLeft: '0.5rem' }}
-            aria-pressed={tab === 'skills'}
+            onClick={tab === 'skills' ? () => window.location.reload() : fetchFeedbackRequests}
+            disabled={loadingSkills || loadingSAOs}
+            className="px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Skills
-          </button>
-          <button
-            onClick={() => setTab('saos')}
-            className={`px-6 py-2 rounded-full font-semibold transition-all duration-200 text-sm focus:outline-none z-10
-              ${tab === 'saos' ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-700 hover:text-teal-600'}`}
-            style={{ marginLeft: '-0.5rem', marginRight: '0.5rem' }}
-            aria-pressed={tab === 'saos'}
-          >
-            SAOs
+            {(loadingSkills && tab === 'skills') || (loadingSAOs && tab === 'saos') ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
-        {/* Clock icon for toggling history mode, now separate */}
-        <button
-          className={`p-2 rounded-full text-slate-500 hover:bg-slate-200 transition ${showHistoryMode ? 'bg-slate-300' : ''}`}
-          title="Show History"
-          onClick={() => setShowHistoryMode((prev) => !prev)}
-          type="button"
-        >
-          <Clock size={20} />
-        </button>
+        {/* Center: Tab Toggle */}
+        <div className="flex-1 flex justify-center">
+          <div className="relative flex bg-slate-100 rounded-full p-1 shadow-inner gap-0 items-center">
+            <button
+              onClick={() => setTab('skills')}
+              className={`px-6 py-2 rounded-full font-semibold transition-all duration-200 text-sm focus:outline-none z-10
+                ${tab === 'skills' ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-700 hover:text-teal-600'}`}
+              style={{ marginRight: '-0.5rem', marginLeft: '0.5rem' }}
+              aria-pressed={tab === 'skills'}
+            >
+              Skills
+            </button>
+            <button
+              onClick={() => setTab('saos')}
+              className={`px-6 py-2 rounded-full font-semibold transition-all duration-200 text-sm focus:outline-none z-10
+                ${tab === 'saos' ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-700 hover:text-teal-600'}`}
+              style={{ marginLeft: '-0.5rem', marginRight: '0.5rem' }}
+              aria-pressed={tab === 'saos'}
+            >
+              SAOs
+            </button>
+          </div>
+        </div>
+        {/* Right: EIT Filter Dropdown & History Button */}
+        <div className="flex items-center gap-2">
+          <div className="ml-2 flex items-center gap-2">
+            <label htmlFor="eit-filter" className="text-sm font-medium text-slate-700">
+              Filter by EIT:
+            </label>
+            <select
+              id="eit-filter"
+              value={selectedEIT}
+              onChange={(e) => setSelectedEIT(e.target.value)}
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+            >
+              <option value="all">All EITs</option>
+              {Object.values(eitProfiles).map((eit) => (
+                <option key={eit.id} value={eit.id}>
+                  {eit.full_name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            className={`p-2 rounded-full text-slate-500 hover:bg-slate-200 transition ${showHistoryMode ? 'bg-slate-300' : ''}`}
+            title="Show History"
+            onClick={() => setShowHistoryMode((prev) => !prev)}
+            type="button"
+          >
+            <Clock size={20} />
+          </button>
+        </div>
       </div>
       {/* Skills Tab */}
       {tab === 'skills' && !showHistoryMode && (
         <div>
           {loadingSkills ? (
             <div>Loading...</div>
-          ) : pendingValidators.length === 0 ? (
+          ) : filteredValidators.length === 0 ? (
             <div>No pending skill validation requests.</div>
           ) : (
             <div className="space-y-4">
-              {pendingValidators.map((validator) => {
+              {filteredValidators.map((validator) => {
                 const eit = eitProfiles[validator.eit_id];
                 const skill = skills[validator.skill_id];
                 return (
@@ -531,11 +580,11 @@ const SupervisorReviews: React.FC = () => {
           <div className="text-xl font-bold mb-4">History</div>
           {loadingSkills ? (
             <div>Loading...</div>
-          ) : Object.keys(history).length === 0 ? (
+          ) : Object.keys(filteredHistory).length === 0 ? (
             <div>No history available.</div>
           ) : (
             <div className="space-y-4">
-              {Object.entries(history).map(([key, entries]) => {
+              {Object.entries(filteredHistory).map(([key, entries]) => {
                 const latest = entries[0];
                 const eit = eitProfiles[latest.eit_id];
                 const skill = skills[latest.skill_id];
@@ -612,22 +661,15 @@ const SupervisorReviews: React.FC = () => {
       {/* SAOs Tab */}
       {tab === 'saos' && !showHistoryMode && (
         <div>
-          <button
-            onClick={fetchFeedbackRequests}
-            disabled={loadingSAOs}
-            className="mb-4 px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loadingSAOs ? 'Refreshing...' : 'Refresh'}
-          </button>
           {loadingSAOs ? (
             <div>Loading...</div>
           ) : error ? (
             <div className="text-red-600">{error}</div>
-          ) : pendingSAOs.length === 0 ? (
+          ) : filteredSAOs.length === 0 ? (
             <div className="text-slate-500">No pending feedback requests assigned to you.</div>
           ) : (
             <div className="space-y-4">
-              {pendingSAOs.map((req) => (
+              {filteredSAOs.map((req) => (
                 <div 
                   key={req.id} 
                   className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow cursor-pointer"

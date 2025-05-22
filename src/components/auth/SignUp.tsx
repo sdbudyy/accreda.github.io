@@ -118,12 +118,12 @@ export default function SignUp() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#FDFBF7] py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1a365d] to-[#0f2942] py-12 px-4 sm:px-6 lg:px-8">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300"
+        className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl"
       >
         <div className="flex flex-col items-center">
           <img
@@ -132,10 +132,10 @@ export default function SignUp() {
             className="h-24 w-auto mb-6 cursor-pointer"
             onClick={() => navigate('/')}
           />
-          <h2 className="text-2xl font-bold text-[#2C3E50]">
+          <h2 className="text-2xl font-bold text-[#1a365d]">
             Create your account
           </h2>
-          <p className="mt-2 text-sm text-[#34495E]">
+          <p className="mt-2 text-sm text-[#4a5568]">
             Join EIT Track to start your journey
           </p>
         </div>
@@ -155,10 +155,10 @@ export default function SignUp() {
             <div className="flex justify-center mb-4 gap-3">
               <button
                 type="button"
-                className={`px-4 py-2 rounded-lg border font-semibold transition-all duration-200 transform focus:outline-none focus:ring-2 focus:ring-[#3498DB]
+                className={`px-4 py-2 rounded-lg border font-semibold transition-all duration-200 transform focus:outline-none focus:ring-2 focus:ring-[#1a365d]
                   ${formData.accountType === 'eit'
-                    ? 'bg-[#3498DB] text-white scale-105 shadow-lg'
-                    : 'bg-white text-[#3498DB] border-[#3498DB] hover:scale-105 hover:brightness-95'}
+                    ? 'bg-[#1a365d] text-white scale-105 shadow-lg'
+                    : 'bg-white text-[#1a365d] border-[#1a365d] hover:scale-105 hover:brightness-95'}
                 `}
                 onClick={() => setFormData({ ...formData, accountType: 'eit' })}
               >
@@ -166,10 +166,10 @@ export default function SignUp() {
               </button>
               <button
                 type="button"
-                className={`px-4 py-2 rounded-lg border font-semibold transition-all duration-200 transform focus:outline-none focus:ring-2 focus:ring-[#3498DB]
+                className={`px-4 py-2 rounded-lg border font-semibold transition-all duration-200 transform focus:outline-none focus:ring-2 focus:ring-[#1a365d]
                   ${formData.accountType === 'supervisor'
-                    ? 'bg-[#3498DB] text-white scale-105 shadow-lg'
-                    : 'bg-white text-[#3498DB] border-[#3498DB] hover:scale-105 hover:brightness-95'}
+                    ? 'bg-[#1a365d] text-white scale-105 shadow-lg'
+                    : 'bg-white text-[#1a365d] border-[#1a365d] hover:scale-105 hover:brightness-95'}
                 `}
                 onClick={() => setFormData({ ...formData, accountType: 'supervisor' })}
               >
@@ -178,7 +178,7 @@ export default function SignUp() {
             </div>
 
             <div>
-              <label htmlFor="full-name" className="block text-sm font-medium text-[#2C3E50] mb-1">
+              <label htmlFor="full-name" className="block text-sm font-medium text-[#1a365d] mb-1">
                 Full Name
               </label>
               <input
@@ -187,7 +187,7 @@ export default function SignUp() {
                 type="text"
                 autoComplete="name"
                 required
-                className="appearance-none relative block w-full px-3 py-2 border border-[#E8E4D9] placeholder-[#34495E] text-[#2C3E50] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3498DB] focus:border-transparent sm:text-sm transition-colors"
+                className="appearance-none relative block w-full px-3 py-2 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a365d] focus:border-transparent sm:text-sm transition-colors"
                 placeholder="Enter your full name"
                 value={formData.fullName}
                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
@@ -196,7 +196,7 @@ export default function SignUp() {
 
             {formData.accountType === 'supervisor' && (
               <div>
-                <label htmlFor="organization" className="block text-sm font-medium text-[#2C3E50] mb-1">
+                <label htmlFor="organization" className="block text-sm font-medium text-[#1a365d] mb-1">
                   Organization
                 </label>
                 <input
@@ -204,7 +204,7 @@ export default function SignUp() {
                   name="organization"
                   type="text"
                   required
-                  className="appearance-none relative block w-full px-3 py-2 border border-[#E8E4D9] placeholder-[#34495E] text-[#2C3E50] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3498DB] focus:border-transparent sm:text-sm transition-colors"
+                  className="appearance-none relative block w-full px-3 py-2 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a365d] focus:border-transparent sm:text-sm transition-colors"
                   placeholder="Enter your organization"
                   value={formData.organization}
                   onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
@@ -213,7 +213,7 @@ export default function SignUp() {
             )}
 
             <div>
-              <label htmlFor="email-address" className="block text-sm font-medium text-[#2C3E50] mb-1">
+              <label htmlFor="email-address" className="block text-sm font-medium text-[#1a365d] mb-1">
                 Email address
               </label>
               <input
@@ -222,14 +222,14 @@ export default function SignUp() {
                 type="email"
                 autoComplete="email"
                 required
-                className="appearance-none relative block w-full px-3 py-2 border border-[#E8E4D9] placeholder-[#34495E] text-[#2C3E50] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3498DB] focus:border-transparent sm:text-sm transition-colors"
+                className="appearance-none relative block w-full px-3 py-2 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a365d] focus:border-transparent sm:text-sm transition-colors"
                 placeholder="Enter your email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
             </div>
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-[#2C3E50] mb-1">
+              <label htmlFor="password" className="block text-sm font-medium text-[#1a365d] mb-1">
                 Password
               </label>
               <input
@@ -238,14 +238,14 @@ export default function SignUp() {
                 type="password"
                 autoComplete="new-password"
                 required
-                className="appearance-none relative block w-full px-3 py-2 border border-[#E8E4D9] placeholder-[#34495E] text-[#2C3E50] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3498DB] focus:border-transparent sm:text-sm transition-colors"
+                className="appearance-none relative block w-full px-3 py-2 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a365d] focus:border-transparent sm:text-sm transition-colors"
                 placeholder="Create a password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               />
             </div>
             <div>
-              <label htmlFor="confirm-password" className="block text-sm font-medium text-[#2C3E50] mb-1">
+              <label htmlFor="confirm-password" className="block text-sm font-medium text-[#1a365d] mb-1">
                 Confirm Password
               </label>
               <input
@@ -254,7 +254,7 @@ export default function SignUp() {
                 type="password"
                 autoComplete="new-password"
                 required
-                className="appearance-none relative block w-full px-3 py-2 border border-[#E8E4D9] placeholder-[#34495E] text-[#2C3E50] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3498DB] focus:border-transparent sm:text-sm transition-colors"
+                className="appearance-none relative block w-full px-3 py-2 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a365d] focus:border-transparent sm:text-sm transition-colors"
                 placeholder="Confirm your password"
                 value={formData.confirmPassword}
                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
@@ -266,16 +266,16 @@ export default function SignUp() {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-[#3498DB] hover:bg-[#2980B9] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#3498DB] transition-all duration-300 transform hover:scale-105 disabled:opacity-75 disabled:cursor-not-allowed"
+              className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-[#1a365d] hover:bg-[#2c5282] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1a365d] transition-all duration-300 transform hover:scale-105 disabled:opacity-75 disabled:cursor-not-allowed"
             >
               {loading ? 'Creating account...' : 'Create account'}
             </button>
           </div>
 
           <div className="text-center">
-            <p className="text-sm text-[#34495E]">
+            <p className="text-sm text-[#4a5568]">
               Already have an account?{' '}
-              <Link to="/login" className="font-medium text-[#3498DB] hover:text-[#2980B9] transition-colors">
+              <Link to="/login" className="font-medium text-[#1a365d] hover:text-[#2c5282] transition-colors">
                 Sign in
               </Link>
             </p>

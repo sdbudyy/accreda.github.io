@@ -47,12 +47,12 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#FDFBF7] py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1a365d] to-[#0f2942] py-12 px-4 sm:px-6 lg:px-8">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300"
+        className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl"
       >
         <div className="flex flex-col items-center">
           <img
@@ -61,10 +61,10 @@ export default function Login() {
             className="h-24 w-auto mb-6 cursor-pointer"
             onClick={() => navigate('/')}
           />
-          <h2 className="text-2xl font-bold text-[#2C3E50]">
+          <h2 className="text-2xl font-bold text-[#1a365d]">
             Welcome back
           </h2>
-          <p className="mt-2 text-sm text-[#34495E]">
+          <p className="mt-2 text-sm text-[#4a5568]">
             Sign in to your EIT Track account
           </p>
         </div>
@@ -83,7 +83,7 @@ export default function Login() {
           )}
           <div className="space-y-4">
             <div>
-              <label htmlFor="email-address" className="block text-sm font-medium text-[#2C3E50] mb-1">
+              <label htmlFor="email-address" className="block text-sm font-medium text-[#1a365d] mb-1">
                 Email address
               </label>
               <input
@@ -92,14 +92,14 @@ export default function Login() {
                 type="email"
                 autoComplete="email"
                 required
-                className="appearance-none relative block w-full px-3 py-2 border border-[#E8E4D9] placeholder-[#34495E] text-[#2C3E50] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3498DB] focus:border-transparent sm:text-sm transition-colors"
+                className="appearance-none relative block w-full px-3 py-2 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a365d] focus:border-transparent sm:text-sm transition-colors"
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-[#2C3E50] mb-1">
+              <label htmlFor="password" className="block text-sm font-medium text-[#1a365d] mb-1">
                 Password
               </label>
               <input
@@ -108,7 +108,7 @@ export default function Login() {
                 type="password"
                 autoComplete="current-password"
                 required
-                className="appearance-none relative block w-full px-3 py-2 border border-[#E8E4D9] placeholder-[#34495E] text-[#2C3E50] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3498DB] focus:border-transparent sm:text-sm transition-colors"
+                className="appearance-none relative block w-full px-3 py-2 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a365d] focus:border-transparent sm:text-sm transition-colors"
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -118,7 +118,7 @@ export default function Login() {
 
           <div className="flex items-center justify-end">
             <div className="text-sm">
-              <Link to="/forgot-password" className="font-medium text-[#3498DB] hover:text-[#2980B9] transition-colors">
+              <Link to="/forgot-password" className="font-medium text-[#1a365d] hover:text-[#2c5282] transition-colors">
                 Forgot your password?
               </Link>
             </div>
@@ -128,16 +128,16 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-[#3498DB] hover:bg-[#2980B9] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#3498DB] transition-all duration-300 transform hover:scale-105 disabled:opacity-75 disabled:cursor-not-allowed"
+              className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-[#1a365d] hover:bg-[#2c5282] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1a365d] transition-all duration-300 transform hover:scale-105 disabled:opacity-75 disabled:cursor-not-allowed"
             >
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
           </div>
 
           <div className="text-center">
-            <p className="text-sm text-[#34495E]">
+            <p className="text-sm text-[#4a5568]">
               Don't have an account?{' '}
-              <Link to="/signup" className="font-medium text-[#3498DB] hover:text-[#2980B9] transition-colors">
+              <Link to="/signup" className="font-medium text-[#1a365d] hover:text-[#2c5282] transition-colors">
                 Create one now
               </Link>
             </p>
