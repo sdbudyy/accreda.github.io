@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bookmark, Users, CheckCircle2, Award, X, Edit2, Briefcase, Calendar, MapPin, Plus } from 'lucide-react';
+import { Bookmark, Users, CheckCircle2, Award, X, Edit2, Briefcase, Calendar, MapPin, Plus, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import Timeline from '../components/references/Timeline';
 import { useSkillsStore } from '../store/skills';
 import { supabase } from '../lib/supabase';
@@ -447,6 +447,8 @@ const References: React.FC = () => {
   const referencesSectionRef = useRef<HTMLDivElement>(null);
   const validatorsSectionRef = useRef<HTMLDivElement>(null);
   const [nudgeCooldowns, setNudgeCooldowns] = useState<Record<string, number>>({});
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Get completed skills grouped by category
   const completedSkillsByCategory = skillCategories.map(category => ({
@@ -613,6 +615,18 @@ const References: React.FC = () => {
     loadReferences();
   };
 
+  // Sort jobs by start_date descending (most recent first)
+  const sortedJobs = [...jobs].sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime());
+  // Filter jobs by search term
+  const filteredJobs = sortedJobs.filter(job =>
+    job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    job.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (job.skills && job.skills.some(skillId => {
+      const skill = skillCategories.flatMap(cat => cat.skills).find(s => s.id === skillId);
+      return skill && skill.name.toLowerCase().includes(searchTerm.toLowerCase());
+    }))
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between" ref={workExperienceRef}>
@@ -622,8 +636,144 @@ const References: React.FC = () => {
         </h1>
       </div>
 
-      {/* Work Experience Timeline */}
-      <Timeline />
+      {/* Jobs Timeline Section */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            <Briefcase size={24} className="text-teal-600" />
+            Work Experience
+          </h2>
+          <button
+            className="btn btn-primary flex items-center gap-2 shadow-lg fixed bottom-8 right-8 z-40"
+            onClick={() => {/* open add job modal logic here */}}
+            title="Add Job"
+          >
+            <Plus size={18} /> Add Job
+          </button>
+        </div>
+        <div className="mb-6">
+          <div className="relative max-w-md">
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+              placeholder="Search jobs by title, company, or skill..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="relative border-l-2 border-slate-200 pl-6">
+          {filteredJobs.length > 0 ? (
+            filteredJobs.map((job, idx) => {
+              const isCurrent = !job.end_date;
+              const statusColor = isCurrent ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600';
+              const companyInitials = job.company
+                .split(' ')
+                .map(w => w[0])
+                .join('')
+                .toUpperCase();
+              return (
+                <div key={job.id} className="mb-10 relative">
+                  {/* Timeline dot */}
+                  <span className="absolute -left-7 top-4 w-5 h-5 rounded-full bg-white border-2 border-teal-500 flex items-center justify-center text-teal-600 font-bold text-sm shadow">
+                    {companyInitials}
+                  </span>
+                  <div className="bg-white rounded-xl shadow-md border border-slate-100 p-6 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-xl font-semibold text-slate-900 flex items-center gap-2">{job.title}
+                          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold ${statusColor}`}>{isCurrent ? 'Current' : 'Past'}</span>
+                        </h3>
+                        <p className="text-slate-600 font-medium">{job.company}</p>
+                        <div className="flex items-center gap-4 text-sm text-slate-500 mt-1">
+                          <span className="flex items-center gap-1"><Calendar size={14} />
+                            {new Date(job.start_date).toLocaleDateString()} - {job.end_date ? new Date(job.end_date).toLocaleDateString() : 'Present'}
+                          </span>
+                          <span className="flex items-center gap-1"><MapPin size={14} />{job.location}</span>
+                        </div>
+                      </div>
+                      <button
+                        className="ml-4 p-2 rounded-full hover:bg-slate-100 text-slate-500"
+                        onClick={() => setExpandedJobId(expandedJobId === job.id ? null : job.id)}
+                        title={expandedJobId === job.id ? 'Collapse' : 'Expand'}
+                      >
+                        {expandedJobId === job.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                      </button>
+                    </div>
+                    {expandedJobId === job.id && (
+                      <div className="mt-4 space-y-3">
+                        {job.description && (
+                          <p className="text-slate-700 text-sm mb-2">{job.description}</p>
+                        )}
+                        {job.skills && job.skills.length > 0 && (
+                          <div>
+                            <h4 className="text-sm font-medium text-slate-700 mb-1">Skills:</h4>
+                            <div className="flex flex-wrap gap-2">
+                              {job.skills.map((skillId) => {
+                                const skill = skillCategories.flatMap(cat => cat.skills).find(s => s.id === skillId);
+                                return skill ? (
+                                  <span key={skillId} className="px-2 py-1 bg-slate-100 text-slate-700 rounded-full text-xs">{skill.name}</span>
+                                ) : null;
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        {/* References Section */}
+                        <div className="mt-2">
+                          <h4 className="text-sm font-medium text-slate-700 mb-1">References:</h4>
+                          <div className="flex gap-2">
+                            {[1, 2].map((refNum) => {
+                              const reference = references[job.id]?.find(r => r.reference_number === refNum);
+                              return reference ? (
+                                <button
+                                  key={reference.id}
+                                  onClick={() => {
+                                    setSelectedJob(job);
+                                    setSelectedReference(reference);
+                                    setSelectedReferenceNumber(refNum);
+                                    window.dispatchEvent(new CustomEvent('scroll-to-item', {
+                                      detail: { itemId: reference.id, itemType: 'reference' }
+                                    }));
+                                  }}
+                                  className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-colors flex items-center gap-2 border border-slate-200"
+                                  data-reference-id={reference.id}
+                                >
+                                  <Edit2 size={14} />
+                                  Reference {refNum}: {reference.full_name}
+                                </button>
+                              ) : (
+                                <button
+                                  key={refNum}
+                                  onClick={() => {
+                                    setSelectedJob(job);
+                                    setSelectedReference(null);
+                                    setSelectedReferenceNumber(refNum);
+                                  }}
+                                  className="px-3 py-1.5 text-sm font-medium text-teal-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors flex items-center gap-2 border border-teal-200"
+                                >
+                                  <Plus size={14} />
+                                  Add Reference {refNum}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="text-center py-8 text-slate-500">
+              <Briefcase size={24} className="mx-auto mb-2 text-slate-400" />
+              <p>No work experience added yet</p>
+              <p className="text-sm mt-1">Add jobs using the button above</p>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* References and Validators Toggle */}
       <div className="card" ref={referencesSectionRef}>

@@ -40,6 +40,28 @@ const Settings: React.FC = () => {
   const [mfaCode, setMfaCode] = useState('');
   const [mfaStatus, setMfaStatus] = useState<'idle' | 'enrolling' | 'verifying' | 'enabled' | 'error'>('idle');
   const [mfaError, setMfaError] = useState('');
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [showProModal, setShowProModal] = useState(false);
+  const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactCorporation, setContactCorporation] = useState('');
+  const [contactMessage, setContactMessage] = useState('');
+  const [contactLoading, setContactLoading] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
+  const [contactSuccess, setContactSuccess] = useState(false);
+  const [proName, setProName] = useState('');
+  const [proEmail, setProEmail] = useState('');
+  const [proMessage, setProMessage] = useState('');
+  const [proLoading, setProLoading] = useState(false);
+  const [proError, setProError] = useState<string | null>(null);
+  const [proSuccess, setProSuccess] = useState(false);
+  const [showDowngradeModal, setShowDowngradeModal] = useState(false);
+  const [downgradeName, setDowngradeName] = useState('');
+  const [downgradeEmail, setDowngradeEmail] = useState('');
+  const [downgradeMessage, setDowngradeMessage] = useState('');
+  const [downgradeLoading, setDowngradeLoading] = useState(false);
+  const [downgradeError, setDowngradeError] = useState<string | null>(null);
+  const [downgradeSuccess, setDowngradeSuccess] = useState(false);
 
   const {
     supervisorReviews,
@@ -454,10 +476,15 @@ const Settings: React.FC = () => {
                   <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> AI Features</li>
                 </ul>
                 {tier === 'pro' ? (
-                  <span className="inline-block bg-teal-100 text-teal-800 px-4 py-2 rounded-full font-semibold text-sm shadow">Current Plan</span>
+                  <button 
+                    onClick={() => setShowDowngradeModal(true)}
+                    className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-semibold text-sm shadow transition-colors"
+                  >
+                    Downgrade to Free
+                  </button>
                 ) : (
                   <button 
-                    onClick={() => window.location.href = 'mailto:contact@accreda.com?subject=Upgrade to Pro Plan'}
+                    onClick={() => setShowProModal(true)}
                     className="inline-block bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full font-semibold text-sm shadow transition-colors"
                   >
                     Upgrade to Pro
@@ -480,7 +507,7 @@ const Settings: React.FC = () => {
                   <span className="inline-block bg-purple-100 text-purple-800 px-4 py-2 rounded-full font-semibold text-sm shadow">Current Plan</span>
                 ) : (
                   <button 
-                    onClick={() => window.location.href = 'mailto:contact@accreda.com?subject=Enterprise Plan Inquiry'}
+                    onClick={() => setShowContactModal(true)}
                     className="inline-block bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-full font-semibold text-sm shadow transition-colors"
                   >
                     Contact Us
@@ -928,6 +955,384 @@ const Settings: React.FC = () => {
           )}
         </div>
       </div>
+      {/* Pro Upgrade Modal */}
+      {showProModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full relative">
+            <button
+              className="absolute top-2 right-2 text-slate-400 hover:text-slate-600"
+              onClick={() => {
+                setShowProModal(false);
+                setProSuccess(false);
+                setProError(null);
+              }}
+              aria-label="Close"
+            >
+              ×
+            </button>
+            <h2 className="text-xl font-bold mb-4 text-teal-800">Upgrade to Pro</h2>
+            {proSuccess ? (
+              <div className="p-3 bg-green-50 text-green-700 rounded-md text-sm mb-4">
+                Your request has been sent successfully. We'll get back to you soon!
+              </div>
+            ) : (
+              <form
+                onSubmit={async e => {
+                  e.preventDefault();
+                  setProLoading(true);
+                  setProError(null);
+                  setProSuccess(false);
+                  try {
+                    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-support-email`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                      },
+                      body: JSON.stringify({
+                        email: proEmail,
+                        subject: 'Pro Plan Upgrade Request',
+                        message: `Name: ${proName}\n\n${proMessage}`,
+                        issueType: 'pro',
+                        mode: 'help',
+                      }),
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                      throw new Error(data.error || 'Failed to send message');
+                    }
+                    setProSuccess(true);
+                    setProName('');
+                    setProEmail('');
+                    setProMessage('');
+                  } catch (err) {
+                    setProError(err instanceof Error ? err.message : 'Failed to send message. Please try again later.');
+                  } finally {
+                    setProLoading(false);
+                  }
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={proName}
+                    onChange={e => setProName(e.target.value)}
+                    required
+                    disabled={proLoading}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    className="input"
+                    value={proEmail}
+                    onChange={e => setProEmail(e.target.value)}
+                    required
+                    disabled={proLoading}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Message</label>
+                  <textarea
+                    className="input"
+                    rows={4}
+                    value={proMessage}
+                    onChange={e => setProMessage(e.target.value)}
+                    required
+                    disabled={proLoading}
+                  />
+                </div>
+                {proError && (
+                  <div className="p-3 bg-red-50 text-red-700 rounded-md text-sm">
+                    {proError}
+                  </div>
+                )}
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setShowProModal(false);
+                      setProSuccess(false);
+                      setProError(null);
+                    }}
+                    disabled={proLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={proLoading}
+                  >
+                    {proLoading ? 'Sending...' : 'Send Request'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+      {/* Contact Us Modal */}
+      {showContactModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full relative">
+            <button
+              className="absolute top-2 right-2 text-slate-400 hover:text-slate-600"
+              onClick={() => {
+                setShowContactModal(false);
+                setContactSuccess(false);
+                setContactError(null);
+              }}
+              aria-label="Close"
+            >
+              ×
+            </button>
+            <h2 className="text-xl font-bold mb-4 text-purple-800">Contact Us</h2>
+            {contactSuccess ? (
+              <div className="p-3 bg-green-50 text-green-700 rounded-md text-sm mb-4">
+                Your message has been sent successfully. We'll get back to you soon!
+              </div>
+            ) : (
+              <form
+                onSubmit={async e => {
+                  e.preventDefault();
+                  setContactLoading(true);
+                  setContactError(null);
+                  setContactSuccess(false);
+                  try {
+                    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-support-email`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                      },
+                      body: JSON.stringify({
+                        email: contactEmail,
+                        subject: 'Enterprise Plan Inquiry',
+                        message: `Name: ${contactName}\nCorporation: ${contactCorporation}\n\n${contactMessage}`,
+                        issueType: 'enterprise',
+                        mode: 'help',
+                      }),
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                      throw new Error(data.error || 'Failed to send message');
+                    }
+                    setContactSuccess(true);
+                    setContactName('');
+                    setContactEmail('');
+                    setContactCorporation('');
+                    setContactMessage('');
+                  } catch (err) {
+                    setContactError(err instanceof Error ? err.message : 'Failed to send message. Please try again later.');
+                  } finally {
+                    setContactLoading(false);
+                  }
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={contactName}
+                    onChange={e => setContactName(e.target.value)}
+                    required
+                    disabled={contactLoading}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    className="input"
+                    value={contactEmail}
+                    onChange={e => setContactEmail(e.target.value)}
+                    required
+                    disabled={contactLoading}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Corporation Name</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={contactCorporation}
+                    onChange={e => setContactCorporation(e.target.value)}
+                    required
+                    disabled={contactLoading}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Message</label>
+                  <textarea
+                    className="input"
+                    rows={4}
+                    value={contactMessage}
+                    onChange={e => setContactMessage(e.target.value)}
+                    required
+                    disabled={contactLoading}
+                  />
+                </div>
+                {contactError && (
+                  <div className="p-3 bg-red-50 text-red-700 rounded-md text-sm">
+                    {contactError}
+                  </div>
+                )}
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setShowContactModal(false);
+                      setContactSuccess(false);
+                      setContactError(null);
+                    }}
+                    disabled={contactLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={contactLoading}
+                  >
+                    {contactLoading ? 'Sending...' : 'Send Message'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+      {/* Downgrade to Free Modal */}
+      {showDowngradeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full relative">
+            <button
+              className="absolute top-2 right-2 text-slate-400 hover:text-slate-600"
+              onClick={() => {
+                setShowDowngradeModal(false);
+                setDowngradeSuccess(false);
+                setDowngradeError(null);
+              }}
+              aria-label="Close"
+            >
+              ×
+            </button>
+            <h2 className="text-xl font-bold mb-4 text-blue-800">Downgrade to Free</h2>
+            {downgradeSuccess ? (
+              <div className="p-3 bg-green-50 text-green-700 rounded-md text-sm mb-4">
+                Your downgrade request has been sent successfully. We'll get back to you soon!
+              </div>
+            ) : (
+              <form
+                onSubmit={async e => {
+                  e.preventDefault();
+                  setDowngradeLoading(true);
+                  setDowngradeError(null);
+                  setDowngradeSuccess(false);
+                  try {
+                    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-support-email`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                      },
+                      body: JSON.stringify({
+                        email: downgradeEmail,
+                        subject: 'Downgrade to Free Plan Request',
+                        message: `Name: ${downgradeName}\n\n${downgradeMessage}`,
+                        issueType: 'downgrade',
+                        mode: 'help',
+                      }),
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                      throw new Error(data.error || 'Failed to send message');
+                    }
+                    setDowngradeSuccess(true);
+                    setDowngradeName('');
+                    setDowngradeEmail('');
+                    setDowngradeMessage('');
+                  } catch (err) {
+                    setDowngradeError(err instanceof Error ? err.message : 'Failed to send message. Please try again later.');
+                  } finally {
+                    setDowngradeLoading(false);
+                  }
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={downgradeName}
+                    onChange={e => setDowngradeName(e.target.value)}
+                    required
+                    disabled={downgradeLoading}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    className="input"
+                    value={downgradeEmail}
+                    onChange={e => setDowngradeEmail(e.target.value)}
+                    required
+                    disabled={downgradeLoading}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Message</label>
+                  <textarea
+                    className="input"
+                    rows={4}
+                    value={downgradeMessage}
+                    onChange={e => setDowngradeMessage(e.target.value)}
+                    required
+                    disabled={downgradeLoading}
+                  />
+                </div>
+                {downgradeError && (
+                  <div className="p-3 bg-red-50 text-red-700 rounded-md text-sm">
+                    {downgradeError}
+                  </div>
+                )}
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setShowDowngradeModal(false);
+                      setDowngradeSuccess(false);
+                      setDowngradeError(null);
+                    }}
+                    disabled={downgradeLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={downgradeLoading}
+                  >
+                    {downgradeLoading ? 'Sending...' : 'Send Request'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
