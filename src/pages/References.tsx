@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bookmark, Users, CheckCircle2, Award, X, Edit2, Briefcase, Calendar, MapPin, Plus, ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { Bookmark, Users, CheckCircle2, Award, X, Edit2, Briefcase, Calendar, MapPin, Plus, ChevronDown, ChevronUp, Search, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import Timeline from '../components/references/Timeline';
 import { useSkillsStore } from '../store/skills';
 import { supabase } from '../lib/supabase';
 import SupervisorAutocomplete from '../components/references/SupervisorAutocomplete';
 import { sendValidationRequestNotification } from '../utils/notifications';
 import { toast } from 'react-hot-toast';
+import ReferenceAutocomplete from '../components/references/ReferenceAutocomplete';
 
 interface Validator {
   id: string;
@@ -20,6 +21,7 @@ interface Validator {
 
 interface Job {
   id: string;
+  eit_id: string;
   title: string;
   company: string;
   location: string;
@@ -36,6 +38,19 @@ interface Reference {
   email: string;
   description: string;
   reference_number: number;
+  validation_status: 'pending' | 'validated' | 'rejected';
+  validator_id: string | null;
+  validated_at: string | null;
+  validation_notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface EITConnection {
+  id: string;
+  eit_id: string;
+  connected_eit_id: string;
+  status: 'pending' | 'accepted' | 'rejected';
   created_at: string;
   updated_at: string;
 }
@@ -371,13 +386,9 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
             <label className="block text-sm font-medium text-slate-700 mb-1">
               Full Name
             </label>
-            <input
-              type="text"
+            <ReferenceAutocomplete
               value={formData.fullName}
-              onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-              placeholder="Enter reference's full name"
-              required
+              onChange={(name, email) => setFormData(prev => ({ ...prev, fullName: name }))}
             />
           </div>
 
@@ -449,6 +460,9 @@ const References: React.FC = () => {
   const [nudgeCooldowns, setNudgeCooldowns] = useState<Record<string, number>>({});
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [connections, setConnections] = useState<EITConnection[]>([]);
+  const [selectedReferenceForValidation, setSelectedReferenceForValidation] = useState<Reference | null>(null);
+  const [validationNotes, setValidationNotes] = useState('');
 
   // Get completed skills grouped by category
   const completedSkillsByCategory = skillCategories.map(category => ({
@@ -536,10 +550,29 @@ const References: React.FC = () => {
     }
   };
 
+  const loadConnections = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('eit_connections')
+        .select('*')
+        .or(`eit_id.eq.${user.id},connected_eit_id.eq.${user.id}`)
+        .eq('status', 'accepted');
+
+      if (error) throw error;
+      setConnections(data || []);
+    } catch (error) {
+      console.error('Error loading connections:', error);
+    }
+  };
+
   useEffect(() => {
     loadValidators();
     loadJobs();
     loadReferences();
+    loadConnections();
   }, []);
 
   useEffect(() => {
@@ -615,6 +648,33 @@ const References: React.FC = () => {
     loadReferences();
   };
 
+  const handleValidateReference = async (reference: Reference, status: 'validated' | 'rejected') => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+
+      const { error } = await supabase
+        .from('job_references')
+        .update({
+          validation_status: status,
+          validator_id: user.id,
+          validated_at: new Date().toISOString(),
+          validation_notes: validationNotes
+        })
+        .eq('id', reference.id);
+
+      if (error) throw error;
+
+      setSelectedReferenceForValidation(null);
+      setValidationNotes('');
+      loadReferences();
+      toast.success(`Reference ${status === 'validated' ? 'validated' : 'rejected'} successfully`);
+    } catch (error) {
+      console.error('Error validating reference:', error);
+      toast.error('Failed to validate reference');
+    }
+  };
+
   // Sort jobs by start_date descending (most recent first)
   const sortedJobs = [...jobs].sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime());
   // Filter jobs by search term
@@ -626,6 +686,28 @@ const References: React.FC = () => {
       return skill && skill.name.toLowerCase().includes(searchTerm.toLowerCase());
     }))
   );
+
+  const getValidationStatusColor = (status: string) => {
+    switch (status) {
+      case 'validated':
+        return 'bg-green-100 text-green-700';
+      case 'rejected':
+        return 'bg-red-100 text-red-700';
+      default:
+        return 'bg-yellow-100 text-yellow-700';
+    }
+  };
+
+  const getValidationStatusIcon = (status: string) => {
+    switch (status) {
+      case 'validated':
+        return <CheckCircle size={16} className="text-green-600" />;
+      case 'rejected':
+        return <XCircle size={16} className="text-red-600" />;
+      default:
+        return <AlertCircle size={16} className="text-yellow-600" />;
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -835,7 +917,7 @@ const References: React.FC = () => {
                                   detail: { itemId: reference.id, itemType: 'reference' }
                                 }));
                               }}
-                              className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-colors flex items-center gap-2"
+                              className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-colors flex items-center gap-2 border border-slate-200"
                               data-reference-id={reference.id}
                             >
                               <Edit2 size={14} />
@@ -849,7 +931,7 @@ const References: React.FC = () => {
                                 setSelectedReference(null);
                                 setSelectedReferenceNumber(refNum);
                               }}
-                              className="px-3 py-1.5 text-sm font-medium text-teal-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors flex items-center gap-2"
+                              className="px-3 py-1.5 text-sm font-medium text-teal-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors flex items-center gap-2 border border-teal-200"
                             >
                               <Plus size={14} />
                               Add Reference {refNum}
@@ -896,6 +978,72 @@ const References: React.FC = () => {
                         </div>
                       </div>
                     )}
+
+                    {/* References */}
+                    <div className="mt-4 space-y-4">
+                      <h4 className="text-sm font-medium text-slate-700">References</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {[1, 2].map((refNum) => {
+                          const reference = references[job.id]?.find(r => r.reference_number === refNum);
+                          return (
+                            <div key={refNum} className="border border-slate-200 rounded-lg p-4">
+                              {reference ? (
+                                <div>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h5 className="font-medium text-slate-900">{reference.full_name}</h5>
+                                    <div className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${getValidationStatusColor(reference.validation_status)}`}>
+                                      {getValidationStatusIcon(reference.validation_status)}
+                                      {reference.validation_status.charAt(0).toUpperCase() + reference.validation_status.slice(1)}
+                                    </div>
+                                  </div>
+                                  <p className="text-sm text-slate-600 mb-2">{reference.email}</p>
+                                  {reference.description && (
+                                    <p className="text-sm text-slate-700 mb-2">{reference.description}</p>
+                                  )}
+                                  {reference.validation_notes && (
+                                    <div className="mt-2 p-2 bg-slate-50 rounded text-sm text-slate-600">
+                                      <p className="font-medium">Validation Notes:</p>
+                                      <p>{reference.validation_notes}</p>
+                                    </div>
+                                  )}
+                                  {reference.validated_at && (
+                                    <p className="text-xs text-slate-500 mt-2">
+                                      Validated on {new Date(reference.validated_at).toLocaleDateString()}
+                                    </p>
+                                  )}
+                                  {/* Show validation buttons for connected EITs */}
+                                  {connections.some(c => c.connected_eit_id === job.eit_id) && reference.validation_status === 'pending' && (
+                                    <div className="mt-3 flex gap-2">
+                                      <button
+                                        onClick={() => {
+                                          setSelectedReferenceForValidation(reference);
+                                          setValidationNotes('');
+                                        }}
+                                        className="px-3 py-1.5 text-sm font-medium text-teal-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors flex items-center gap-2 border border-teal-200"
+                                      >
+                                        Validate Reference
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setSelectedJob(job);
+                                    setSelectedReference(null);
+                                    setSelectedReferenceNumber(refNum);
+                                  }}
+                                  className="w-full px-3 py-1.5 text-sm font-medium text-teal-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors flex items-center gap-2 border border-teal-200"
+                                >
+                                  <Plus size={14} />
+                                  Add Reference {refNum}
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 ))
               ) : (
@@ -1090,6 +1238,48 @@ const References: React.FC = () => {
         existingReference={selectedReference || undefined}
         onSave={handleReferenceSave}
       />
+
+      {/* Validation Modal */}
+      {selectedReferenceForValidation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Validate Reference</h3>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-700 mb-2">Validation Notes</label>
+              <textarea
+                value={validationNotes}
+                onChange={(e) => setValidationNotes(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                rows={4}
+                placeholder="Add any notes about the validation..."
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setSelectedReferenceForValidation(null);
+                  setValidationNotes('');
+                }}
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleValidateReference(selectedReferenceForValidation, 'rejected')}
+                className="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                Reject
+              </button>
+              <button
+                onClick={() => handleValidateReference(selectedReferenceForValidation, 'validated')}
+                className="px-4 py-2 text-sm font-medium text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"
+              >
+                Validate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

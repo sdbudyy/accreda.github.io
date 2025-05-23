@@ -16,6 +16,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { motion, useScroll, useTransform } from 'framer-motion';
+import accredaLogo from '../assets/accreda-logo.png';
 
 const Landing: React.FC = () => {
   const [waitlistEmail, setWaitlistEmail] = useState('');
@@ -84,6 +85,18 @@ const Landing: React.FC = () => {
 
         <div className="container mx-auto px-4 z-10">
           <div className="max-w-4xl mx-auto text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="mb-8"
+            >
+              <img 
+                src={accredaLogo} 
+                alt="Accreda Logo" 
+                className="h-24 mx-auto"
+              />
+            </motion.div>
             <motion.h1 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}

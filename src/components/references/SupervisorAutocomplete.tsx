@@ -7,6 +7,11 @@ interface Supervisor {
   email: string;
 }
 
+interface Connection {
+  eit_id: string;
+  connected_eit_id: string;
+}
+
 interface SupervisorAutocompleteProps {
   value: string;
   onChange: (name: string, email: string) => void;
@@ -21,7 +26,36 @@ const SupervisorAutocomplete: React.FC<SupervisorAutocompleteProps> = ({
   const [suggestions, setSuggestions] = useState<Supervisor[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [connections, setConnections] = useState<string[]>([]);
   const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Load connections when component mounts
+  useEffect(() => {
+    const loadConnections = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // Get supervisor relationships for this EIT
+        const { data, error } = await supabase
+          .from('supervisor_eit_relationships')
+          .select('supervisor_id')
+          .eq('eit_id', user.id)
+          .eq('status', 'active');
+
+        if (error) throw error;
+
+        // Only keep unique supervisor IDs
+        const supervisorIds = Array.from(new Set((data || []).map((rel: { supervisor_id: string }) => rel.supervisor_id)));
+        console.log('Supervisor connections:', supervisorIds); // Debug log
+        setConnections(supervisorIds);
+      } catch (error) {
+        console.error('Error loading supervisor connections:', error);
+      }
+    };
+
+    loadConnections();
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -34,9 +68,13 @@ const SupervisorAutocomplete: React.FC<SupervisorAutocompleteProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const searchSupervisors = async (query: string) => {
-    if (!query.trim()) {
+  const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    onChange(inputValue, ''); // Clear email when input changes
+
+    if (!inputValue.trim()) {
       setSuggestions([]);
+      setShowSuggestions(false);
       return;
     }
 
@@ -45,38 +83,39 @@ const SupervisorAutocomplete: React.FC<SupervisorAutocompleteProps> = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get connected supervisors
-      const { data: connections } = await supabase
-        .from('supervisor_eit_relationships')
-        .select('supervisor_id')
-        .eq('eit_id', user.id)
-        .eq('status', 'active');
+      // Wait until connections are loaded
+      if (connections === undefined) {
+        setSuggestions([]);
+        setShowSuggestions(true);
+        setLoading(false);
+        return;
+      }
 
-      if (!connections) return;
+      // Defensive: If no connections, show nothing
+      if (!connections.length) {
+        setSuggestions([]);
+        setShowSuggestions(true);
+        setLoading(false);
+        return;
+      }
 
-      const supervisorIds = connections.map(conn => conn.supervisor_id);
-
-      // Search supervisors by name
-      const { data: supervisors } = await supabase
+      // Only search among connected supervisors
+      const { data, error } = await supabase
         .from('supervisor_profiles')
         .select('id, full_name, email')
-        .in('id', supervisorIds)
-        .ilike('full_name', `%${query}%`)
+        .or(`full_name.ilike.%${inputValue}%,email.ilike.%${inputValue}%`)
+        .in('id', connections)
         .limit(5);
 
-      setSuggestions(supervisors || []);
+      if (error) throw error;
+      setSuggestions(data || []);
+      setShowSuggestions(true);
     } catch (error) {
-      console.error('Error searching supervisors:', error);
+      console.error('Error fetching supervisors:', error);
+      setSuggestions([]);
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    onChange(newValue, ''); // Clear email when name changes
-    searchSupervisors(newValue);
-    setShowSuggestions(true);
   };
 
   const handleSuggestionClick = (supervisor: Supervisor) => {
@@ -112,7 +151,7 @@ const SupervisorAutocomplete: React.FC<SupervisorAutocompleteProps> = ({
               </button>
             ))
           ) : (
-            <div className="p-2 text-sm text-slate-500">No matching supervisors found</div>
+            <div className="p-2 text-sm text-slate-500">No matching connected supervisors found</div>
           )}
         </div>
       )}

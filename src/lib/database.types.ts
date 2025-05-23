@@ -152,6 +152,10 @@ export interface Database {
           email: string
           description: string | null
           reference_number: number
+          validation_status: 'pending' | 'validated' | 'rejected'
+          validator_id: string | null
+          validated_at: string | null
+          validation_notes: string | null
           created_at: string
           updated_at: string
         }
@@ -163,6 +167,10 @@ export interface Database {
           email: string
           description?: string | null
           reference_number: number
+          validation_status?: 'pending' | 'validated' | 'rejected'
+          validator_id?: string | null
+          validated_at?: string | null
+          validation_notes?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -174,6 +182,10 @@ export interface Database {
           email?: string
           description?: string | null
           reference_number?: number
+          validation_status?: 'pending' | 'validated' | 'rejected'
+          validator_id?: string | null
+          validated_at?: string | null
+          validation_notes?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -236,6 +248,33 @@ export interface Database {
     }
     Enums: {
       [_ in never]: never
+    }
+  }
+
+  eit_connections: {
+    Row: {
+      id: string
+      eit_id: string
+      connected_eit_id: string
+      status: 'pending' | 'accepted' | 'rejected'
+      created_at: string
+      updated_at: string
+    }
+    Insert: {
+      id?: string
+      eit_id: string
+      connected_eit_id: string
+      status: 'pending' | 'accepted' | 'rejected'
+      created_at?: string
+      updated_at?: string
+    }
+    Update: {
+      id?: string
+      eit_id?: string
+      connected_eit_id?: string
+      status?: 'pending' | 'accepted' | 'rejected'
+      created_at?: string
+      updated_at?: string
     }
   }
 } 
