@@ -3,8 +3,8 @@ import { FileEdit, Plus, X, ChevronDown, Trash2, Edit2, Sparkles } from 'lucide-
 import { useSkillsStore, Category, Skill } from '../store/skills';
 import { useSAOsStore, SAO } from '../store/saos';
 import { useSearchParams } from 'react-router-dom';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { supabase } from '../lib/supabase';
+import { enhanceSAO } from '../lib/webllm';
 import SAOFeedbackComponent from '../components/saos/SAOFeedback';
 import Modal from '../components/common/Modal';
 import { useSubscriptionStore } from '../store/subscriptionStore';
@@ -161,61 +161,13 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
     }
   };
 
-  const enhanceWithGemini = async (text: string) => {
-    const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-    console.log('Making API call to Gemini...');
-    
-    const prompt = `You are an expert in writing professional Situation-Action-Outcome (SAO) statements. Please enhance the following SAO statement following these specific guidelines:
-
-1. Structure:
-   - Situation: Clearly describe the context, challenge, or problem faced
-   - Action: Detail the specific steps taken, emphasizing your personal involvement
-   - Outcome: Quantify results and highlight the impact of your actions
-
-2. Best Practices:
-   - Use active voice and strong action verbs
-   - Include specific metrics and numbers where possible
-   - Focus on your personal contributions and leadership
-   - Highlight problem-solving and decision-making skills
-   - Maintain a professional and confident tone
-   - Keep the statement concise but impactful
-
-3. Key Elements to Include:
-   - Clear problem statement
-   - Specific actions taken
-   - Measurable results
-   - Skills demonstrated
-   - Impact on the organization/team
-
-Please enhance the following SAO statement while maintaining its core message and following these guidelines:
-
-${text}
-
-Format the response as a clear SAO statement with Situation, Action, and Outcome sections clearly separated.`;
-
-    try {
-      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const enhancedText = response.text();
-      
-      console.log('API Response received:', enhancedText);
-      return enhancedText;
-    } catch (error) {
-      console.error('Error in enhanceWithGemini:', error);
-      throw error;
-    }
-  };
-
   const handleEnhanceWithAI = async () => {
     if (!sao.trim()) return;
     
     setIsEnhancing(true);
     try {
       console.log('Starting enhancement process...');
-      const enhanced = await enhanceWithGemini(sao);
+      const enhanced = await enhanceSAO(sao);
       console.log('Enhancement completed:', enhanced);
       setEnhancedText(enhanced);
     } catch (error) {

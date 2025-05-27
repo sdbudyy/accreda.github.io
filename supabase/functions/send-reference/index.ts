@@ -1,29 +1,32 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { corsHeaders } from '../_shared/cors.ts'
+// @ts-nocheck
+import { serve } from "std/http/server.ts";
+import { createClient } from "@supabase/supabase-js";
+import { Resend } from "resend";
 
-const FRONTEND_URL = Deno.env.get('FRONTEND_URL') || 'http://localhost:3000'
-const REFERENCE_URL = Deno.env.get('REFERENCE_URL') || 'http://localhost:3001'
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
 serve(async (req) => {
-  // Handle CORS
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    )
-
     const { reference_id, email } = await req.json()
 
-    if (!reference_id || !email) {
-      throw new Error('Missing required fields')
-    }
+    // Initialize Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
 
-    // Get reference details
+    // Initialize Resend
+    const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
+
+    // Get reference data
     const { data: reference, error: referenceError } = await supabaseClient
       .from('job_references')
       .select(`
@@ -42,47 +45,22 @@ serve(async (req) => {
 
     if (referenceError) throw referenceError
 
-    // Generate a unique token
-    const token = crypto.randomUUID()
+    // Generate a unique token using Web Crypto API
+    const array = new Uint8Array(16);
+    crypto.getRandomValues(array);
+    const token = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
 
-    // Store the token in the database
+    // Store token in reference_tokens table
     const { error: tokenError } = await supabaseClient
       .from('reference_tokens')
-      .insert([{
-        reference_id,
+      .insert({
         token,
-        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
-        email
-      }])
+        reference_id,
+        email,
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days expiry
+      })
 
     if (tokenError) throw tokenError
-
-    // Generate the magic link
-    const magicLink = `${REFERENCE_URL}/reference/${token}`
-
-    // Send email using your email service
-    // This is a placeholder - you'll need to implement your email sending logic
-    // For example, using SendGrid, AWS SES, etc.
-    const emailContent = `
-      Hello,
-
-      ${reference.jobs.eit_profiles.full_name} (${reference.jobs.eit_profiles.email}) has requested a reference for their work at ${reference.jobs.company} as ${reference.jobs.title}.
-
-      Please click the link below to provide your reference:
-      ${magicLink}
-
-      This link will expire in 7 days.
-
-      Best regards,
-      Accreda Team
-    `
-
-    // TODO: Implement email sending
-    console.log('Would send email:', {
-      to: email,
-      subject: `Reference Request from ${reference.jobs.eit_profiles.full_name}`,
-      content: emailContent
-    })
 
     // Update reference status
     const { error: updateError } = await supabaseClient
@@ -92,20 +70,42 @@ serve(async (req) => {
 
     if (updateError) throw updateError
 
+    // Construct the reference form URL
+    const referenceFormUrl = `${Deno.env.get('REFERENCE_FORM_URL')}/reference/${token}`
+
+    // Send email using Resend
+    const { error: emailError } = await resend.emails.send({
+      from: 'Accreda References <noreply@references.accreda.com>',
+      to: email,
+      subject: `Reference Request: ${reference.jobs.title} at ${reference.jobs.company}`,
+      html: `
+        <h2>Reference Request</h2>
+        <p>Hello ${reference.full_name},</p>
+        <p>${reference.jobs.eit_profiles.full_name} has requested a reference for their work at ${reference.jobs.company} as ${reference.jobs.title}.</p>
+        <p>Please click the button below to provide your reference:</p>
+        <a href="${referenceFormUrl}" style="display: inline-block; padding: 12px 24px; background-color: #1a365d; color: white; text-decoration: none; border-radius: 6px; margin: 16px 0;">Provide Reference</a>
+        <p>This link will expire in 7 days.</p>
+        <p>If you have any questions, please contact us at support@accreda.com</p>
+      `
+    })
+
+    if (emailError) throw emailError
+
     return new Response(
       JSON.stringify({ success: true }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
-      },
+      }
     )
   } catch (error) {
+    console.error('Error sending reference:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
-      },
+      }
     )
   }
 }) 

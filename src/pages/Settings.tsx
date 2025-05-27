@@ -7,6 +7,7 @@ import ConnectionStatus from '../components/common/ConnectionStatus';
 import { useNotificationPreferences } from '../store/notificationPreferences';
 import { Switch } from '@headlessui/react';
 import { useSubscriptionStore } from '../store/subscriptionStore';
+import { sendSupervisorRequestNotification } from '../utils/notifications';
 
 const defaultAvatar =
   'https://ui-avatars.com/api/?name=User&background=E0F2FE&color=0891B2&size=128';
@@ -294,6 +295,93 @@ const Settings: React.FC = () => {
           .map((rel: any) => rel.supervisor_profiles)
           .filter((sup: any) => sup)
       );
+    }
+  };
+
+  const handleSupervisorRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSupervisorRequestStatus('idle');
+    setSupervisorRequestMessage('');
+    if (!supervisorEmail) return;
+    setLoading(true);
+    try {
+      // Look up supervisor by email
+      const { data: supervisor } = await supabase
+        .from('supervisor_profiles')
+        .select('id, email, full_name')
+        .eq('email', supervisorEmail)
+        .single();
+      if (!supervisor) {
+        setSupervisorRequestStatus('notfound');
+        setSupervisorRequestMessage('No supervisor found with that email.');
+        setLoading(false);
+        return;
+      }
+      // Check for existing relationship
+      const { data: existing } = await supabase
+        .from('supervisor_eit_relationships')
+        .select('id, status')
+        .eq('supervisor_id', supervisor.id)
+        .eq('eit_id', user?.id)
+        .maybeSingle();
+      if (existing && existing.status === 'pending') {
+        setSupervisorRequestStatus('pending');
+        setSupervisorRequestMessage('A request is already pending for this supervisor.');
+        setLoading(false);
+        return;
+      }
+      if (existing && existing.status === 'active') {
+        setSupervisorRequestStatus('already');
+        setSupervisorRequestMessage('This supervisor is already connected.');
+        setLoading(false);
+        return;
+      }
+      // Check supervisor's current number of active EITs (limit enforcement)
+      const { count: activeEITCount, error: countError } = await supabase
+        .from('supervisor_eit_relationships')
+        .select('id', { count: 'exact', head: true })
+        .eq('supervisor_id', supervisor.id)
+        .eq('status', 'active');
+      if (countError) throw countError;
+      const countNum = typeof activeEITCount === 'number' ? activeEITCount : 0;
+      if (tier === 'free' && countNum >= supervisorLimit) {
+        setSupervisorRequestStatus('error');
+        setSupervisorRequestMessage('This supervisor has reached their free plan EIT limit and cannot accept more requests.');
+        setLoading(false);
+        return;
+      }
+      // Create relationship
+      const { error } = await supabase
+        .from('supervisor_eit_relationships')
+        .upsert({
+          supervisor_id: supervisor.id,
+          eit_id: user?.id,
+          status: 'pending',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+      if (error) throw error;
+      // Ensure user is not null before sending notification
+      if (!user) {
+        setSupervisorRequestStatus('error');
+        setSupervisorRequestMessage('User not found. Please re-login.');
+        setLoading(false);
+        return;
+      }
+      // Send notification to supervisor
+      await sendSupervisorRequestNotification(supervisor.id, user.user_metadata?.full_name || user.email);
+      setSupervisorRequestStatus('success');
+      setSupervisorRequestMessage('Request sent! Your supervisor will see it in their dashboard.');
+      setSupervisorEmail(''); // Clear the input after successful request
+      if (user) {
+        fetchSupervisors(user.id); // Refresh supervisor connections
+      }
+    } catch (err) {
+      console.error(err);
+      setSupervisorRequestStatus('error');
+      setSupervisorRequestMessage('Failed to send request. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -725,69 +813,7 @@ const Settings: React.FC = () => {
                   )}
                   <form
                     className="flex flex-col md:flex-row gap-4 items-start md:items-end"
-                    onSubmit={async (e) => {
-                      e.preventDefault();
-                      setSupervisorRequestStatus('idle');
-                      setSupervisorRequestMessage('');
-                      if (!supervisorEmail) return;
-                      setLoading(true);
-                      try {
-                        // Look up supervisor by email
-                        const { data: supervisor } = await supabase
-                          .from('supervisor_profiles')
-                          .select('id, email, full_name')
-                          .eq('email', supervisorEmail)
-                          .single();
-                        if (!supervisor) {
-                          setSupervisorRequestStatus('notfound');
-                          setSupervisorRequestMessage('No supervisor found with that email.');
-                          setLoading(false);
-                          return;
-                        }
-                        // Check for existing relationship
-                        const { data: existing } = await supabase
-                          .from('supervisor_eit_relationships')
-                          .select('id, status')
-                          .eq('supervisor_id', supervisor.id)
-                          .eq('eit_id', user?.id)
-                          .maybeSingle();
-                        if (existing && existing.status === 'pending') {
-                          setSupervisorRequestStatus('pending');
-                          setSupervisorRequestMessage('A request is already pending for this supervisor.');
-                          setLoading(false);
-                          return;
-                        }
-                        if (existing && existing.status === 'active') {
-                          setSupervisorRequestStatus('already');
-                          setSupervisorRequestMessage('This supervisor is already connected.');
-                          setLoading(false);
-                          return;
-                        }
-                        // Create relationship
-                        const { error } = await supabase
-                          .from('supervisor_eit_relationships')
-                          .upsert({
-                            supervisor_id: supervisor.id,
-                            eit_id: user?.id,
-                            status: 'pending',
-                            created_at: new Date().toISOString(),
-                            updated_at: new Date().toISOString(),
-                          });
-                        if (error) throw error;
-                        setSupervisorRequestStatus('success');
-                        setSupervisorRequestMessage('Request sent! Your supervisor will see it in their dashboard.');
-                        setSupervisorEmail(''); // Clear the input after successful request
-                        if (user) {
-                          fetchSupervisors(user.id); // Refresh supervisor connections
-                        }
-                      } catch (err) {
-                        console.error(err);
-                        setSupervisorRequestStatus('error');
-                        setSupervisorRequestMessage('Failed to send request. Please try again.');
-                      } finally {
-                        setLoading(false);
-                      }
-                    }}
+                    onSubmit={handleSupervisorRequest}
                   >
                     <div className="flex-1 w-full">
                       <label htmlFor="supervisorEmail" className="label">Supervisor Email</label>
