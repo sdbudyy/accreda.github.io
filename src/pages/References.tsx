@@ -360,18 +360,27 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
     setError(null);
 
     try {
-      const { error: updateError } = await supabase
-        .from('job_references')
-        .update({ validation_status: 'pending' })
-        .eq('id', existingReference.id);
+      // Call the Edge Function to send the magic link
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-reference`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({
+          reference_id: existingReference.id,
+          email: existingReference.email
+        })
+      });
 
-      if (updateError) throw updateError;
-
-      // TODO: Send email notification to reference
-      // This would be implemented in a separate function
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to send reference');
+      }
 
       onSave();
       onClose();
+      toast.success('Reference request sent successfully');
     } catch (err) {
       console.error('Error sending reference:', err);
       setError(err instanceof Error ? err.message : 'An error occurred while sending the reference');
