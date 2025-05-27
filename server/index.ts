@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction, RequestHandler } from 'express';
 import cors from 'cors';
 import { createClient } from '@supabase/supabase-js';
 import path from 'path';
@@ -31,23 +31,37 @@ app.use((err: Error, req: Request, res: Response, next: express.NextFunction) =>
   res.status(500).json({ error: 'Internal server error' });
 });
 
+interface WaitlistRequestBody {
+  email: string;
+  province: string;
+}
+
 // Waitlist endpoint
-app.post('/api/waitlist', async (req: Request, res: Response) => {
-  const { email, province } = req.body;
-  if (!email || !province) {
-    return res.status(400).json({ error: 'Email and province are required.' });
-  }
-  const { error } = await supabase.from('waitlist').insert([{ email, province }]);
-  if (error) {
-    console.error('Supabase insert error:', error);
-    console.error('Request body:', req.body);
-    if (error.code === '23505' || (error.message && error.message.includes('duplicate key value'))) {
-      return res.status(409).json({ error: 'This email is already on the waitlist.' });
+const waitlistHandler: RequestHandler = async (req: Request<{}, {}, WaitlistRequestBody>, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { email, province } = req.body;
+    if (!email || !province) {
+      res.status(400).json({ error: 'Email and province are required.' });
+      return;
     }
-    return res.status(500).json({ error: error.message });
+    const { error } = await supabase.from('waitlist').insert([{ email, province }]);
+    if (error) {
+      console.error('Supabase insert error:', error);
+      console.error('Request body:', req.body);
+      if (error.code === '23505' || (error.message && error.message.includes('duplicate key value'))) {
+        res.status(409).json({ error: 'This email is already on the waitlist.' });
+        return;
+      }
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
   }
-  res.json({ success: true });
-});
+};
+
+app.post('/api/waitlist', waitlistHandler);
 
 // Serve static files from the frontend build in production
 if (process.env.NODE_ENV === 'production') {

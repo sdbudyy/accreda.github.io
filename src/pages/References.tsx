@@ -38,7 +38,7 @@ interface Reference {
   email: string;
   description: string;
   reference_number: number;
-  validation_status: 'pending' | 'validated' | 'rejected';
+  validation_status: 'pending' | 'validated' | 'rejected' | 'unsent';
   validator_id: string | null;
   validated_at: string | null;
   validation_notes: string | null;
@@ -286,6 +286,7 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
 
   // Reset form data when popup opens/closes or when reference changes
   useEffect(() => {
@@ -321,9 +322,9 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
         email: formData.email,
         description: formData.referenceText,
         reference_number: referenceNumber,
-        eit_id: user.id
+        eit_id: user.id,
+        validation_status: existingReference?.validation_status || 'unsent'
       };
-      console.log('Reference data to insert/update:', referenceData);
 
       if (existingReference) {
         // Update existing reference
@@ -332,20 +333,14 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
           .update(referenceData)
           .eq('id', existingReference.id);
 
-        if (updateError) {
-          console.error('Update error:', updateError);
-          throw updateError;
-        }
+        if (updateError) throw updateError;
       } else {
         // Create new reference
         const { error: insertError } = await supabase
           .from('job_references')
           .insert([referenceData]);
 
-        if (insertError) {
-          console.error('Insert error:', insertError);
-          throw insertError;
-        }
+        if (insertError) throw insertError;
       }
 
       onSave();
@@ -353,6 +348,57 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
     } catch (err) {
       console.error('ReferencePopup error:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendReference = async () => {
+    if (!existingReference) return;
+    
+    setSending(true);
+    setError(null);
+
+    try {
+      const { error: updateError } = await supabase
+        .from('job_references')
+        .update({ validation_status: 'pending' })
+        .eq('id', existingReference.id);
+
+      if (updateError) throw updateError;
+
+      // TODO: Send email notification to reference
+      // This would be implemented in a separate function
+
+      onSave();
+      onClose();
+    } catch (err) {
+      console.error('Error sending reference:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred while sending the reference');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleCancelReference = async () => {
+    if (!existingReference) return;
+    
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { error: updateError } = await supabase
+        .from('job_references')
+        .update({ validation_status: 'unsent' })
+        .eq('id', existingReference.id);
+
+      if (updateError) throw updateError;
+
+      onSave();
+      onClose();
+    } catch (err) {
+      console.error('Error canceling reference:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred while canceling the reference');
     } finally {
       setLoading(false);
     }
@@ -388,7 +434,8 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
             </label>
             <ReferenceAutocomplete
               value={formData.fullName}
-              onChange={(name, email) => setFormData(prev => ({ ...prev, fullName: name }))}
+              onChange={(name, email) => setFormData(prev => ({ ...prev, fullName: name, email }))}
+              disabled={existingReference?.validation_status === 'validated'}
             />
           </div>
 
@@ -403,6 +450,7 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
               placeholder="Enter reference's email"
               required
+              disabled={existingReference?.validation_status === 'validated'}
             />
           </div>
 
@@ -417,25 +465,48 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
               placeholder="Enter reference text"
               rows={4}
               required
+              disabled={existingReference?.validation_status === 'validated'}
             />
           </div>
 
           <div className="flex justify-end gap-2 mt-6">
+            {existingReference && existingReference.validation_status === 'pending' && (
+              <button
+                type="button"
+                onClick={handleCancelReference}
+                className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg"
+                disabled={loading || sending}
+              >
+                Cancel Reference
+              </button>
+            )}
+            {existingReference && existingReference.validation_status === 'unsent' && (
+              <button
+                type="button"
+                onClick={handleSendReference}
+                className="px-4 py-2 text-sm font-medium text-teal-600 hover:bg-teal-50 rounded-lg"
+                disabled={loading || sending}
+              >
+                {sending ? 'Sending...' : 'Send Reference'}
+              </button>
+            )}
             <button
               type="button"
               onClick={onClose}
               className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg"
-              disabled={loading}
+              disabled={loading || sending}
             >
-              Cancel
+              Close
             </button>
-            <button
-              type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg disabled:opacity-50"
-              disabled={loading}
-            >
-              {loading ? 'Saving...' : existingReference ? 'Update Reference' : 'Add Reference'}
-            </button>
+            {existingReference?.validation_status !== 'validated' && (
+              <button
+                type="submit"
+                className="px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg disabled:opacity-50"
+                disabled={loading || sending}
+              >
+                {loading ? 'Saving...' : existingReference ? 'Update Reference' : 'Add Reference'}
+              </button>
+            )}
           </div>
         </form>
       </div>
@@ -672,6 +743,23 @@ const References: React.FC = () => {
     } catch (error) {
       console.error('Error validating reference:', error);
       toast.error('Failed to validate reference');
+    }
+  };
+
+  const handleUnsendReference = async (reference: Reference) => {
+    try {
+      const { error } = await supabase
+        .from('job_references')
+        .delete()
+        .eq('id', reference.id);
+
+      if (error) throw error;
+
+      loadReferences();
+      toast.success('Reference unsent successfully');
+    } catch (error) {
+      console.error('Error unsending reference:', error);
+      toast.error('Failed to unsend reference');
     }
   };
 
@@ -991,15 +1079,26 @@ const References: React.FC = () => {
                                 <div>
                                   <div className="flex items-center justify-between mb-2">
                                     <h5 className="font-medium text-slate-900">{reference.full_name}</h5>
-                                    <div className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${getValidationStatusColor(reference.validation_status)}`}>
-                                      {getValidationStatusIcon(reference.validation_status)}
-                                      {reference.validation_status.charAt(0).toUpperCase() + reference.validation_status.slice(1)}
-                                    </div>
                                   </div>
                                   <p className="text-sm text-slate-600 mb-2">{reference.email}</p>
                                   {reference.description && (
                                     <p className="text-sm text-slate-700 mb-2">{reference.description}</p>
                                   )}
+                                  {/* Move Unsend button here, only for pending references */}
+                                  {reference.validation_status === 'pending' && (
+                                    <div className="mb-2">
+                                      <button
+                                        onClick={() => handleUnsendReference(reference)}
+                                        className="px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                                      >
+                                        Unsend
+                                      </button>
+                                    </div>
+                                  )}
+                                  <div className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${getValidationStatusColor(reference.validation_status)}`}>
+                                    {getValidationStatusIcon(reference.validation_status)}
+                                    {reference.validation_status.charAt(0).toUpperCase() + reference.validation_status.slice(1)}
+                                  </div>
                                   {reference.validation_notes && (
                                     <div className="mt-2 p-2 bg-slate-50 rounded text-sm text-slate-600">
                                       <p className="font-medium">Validation Notes:</p>

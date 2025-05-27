@@ -6,6 +6,7 @@ import FileUpload from '../components/FileUpload';
 import ConnectionStatus from '../components/common/ConnectionStatus';
 import { useSupervisorNotificationPreferences } from '../store/supervisorNotificationPreferences';
 import { Switch } from '@headlessui/react';
+import { useSubscriptionStore } from '../store/subscriptionStore';
 
 const SupervisorSettings: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -40,6 +41,23 @@ const SupervisorSettings: React.FC = () => {
     toggleSkillValidationRequests,
     toggleSaoFeedback,
   } = useSupervisorNotificationPreferences();
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactCorporation, setContactCorporation] = useState('');
+  const [contactMessage, setContactMessage] = useState('');
+  const [contactLoading, setContactLoading] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
+  const [contactSuccess, setContactSuccess] = useState(false);
+
+  const { 
+    tier,
+    documentLimit,
+    saoLimit,
+    supervisorLimit,
+    hasAiAccess,
+    fetchSubscription,
+  } = useSubscriptionStore();
 
   useEffect(() => {
     const getUserProfile = async () => {
@@ -72,6 +90,7 @@ const SupervisorSettings: React.FC = () => {
       }
     };
     getUserProfile();
+    fetchSubscription();
   }, []);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -497,6 +516,11 @@ const SupervisorSettings: React.FC = () => {
           {/* Connect with EIT Form */}
           <div>
             <h3 className="text-sm font-medium text-slate-700 mb-3">Connect with a New EIT</h3>
+            {tier === 'free' && eits.length >= 1 && (
+              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-yellow-900 font-semibold text-center">
+                You have reached your EIT connection limit for the Free plan. Upgrade to Enterprise to connect with more EITs.
+              </div>
+            )}
             <form
               className="flex flex-col md:flex-row gap-4 items-start md:items-end"
               onSubmit={async (e) => {
@@ -504,6 +528,14 @@ const SupervisorSettings: React.FC = () => {
                 setEitRequestStatus('idle');
                 setEitRequestMessage('');
                 if (!eitEmail) return;
+
+                // Check subscription limit for free tier
+                if (tier === 'free' && eits.length >= 1) {
+                  setEitRequestStatus('error');
+                  setEitRequestMessage('You have reached your EIT connection limit for the Free plan. Please upgrade to Enterprise to connect with more EITs.');
+                  return;
+                }
+
                 setLoading(true);
                 try {
                   // Look up EIT by email
@@ -570,12 +602,13 @@ const SupervisorSettings: React.FC = () => {
                   className="input w-full"
                   placeholder="Enter EIT's email"
                   required
+                  disabled={tier === 'free' && eits.length >= 1}
                 />
               </div>
               <button 
                 type="submit" 
                 className="btn btn-primary whitespace-nowrap" 
-                disabled={loading}
+                disabled={loading || (tier === 'free' && eits.length >= 1)}
               >
                 {loading ? 'Sending...' : 'Send Request'}
               </button>
@@ -610,6 +643,208 @@ const SupervisorSettings: React.FC = () => {
         </h2>
         <p className="text-slate-500 text-sm">Coming soon: Switch between light and dark mode.</p>
       </section>
+
+      {/* Subscription Section */}
+      <div className="pt-8">
+        <div className="mb-6 text-center">
+          <h2 className="text-2xl font-bold text-blue-900 mb-2">Choose Your Plan</h2>
+          <p className="text-gray-600 text-md max-w-2xl mx-auto">
+            Select the plan that best fits your needs
+          </p>
+        </div>
+        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          {/* Free Plan */}
+          <div className={`border ${tier === 'free' ? 'border-blue-500' : 'border-gray-200'} rounded-2xl p-8 bg-gradient-to-br from-blue-50 to-white flex flex-col items-center shadow-sm`}>
+            <h3 className="text-2xl font-bold text-blue-900 mb-2">Free</h3>
+            <p className="text-5xl font-extrabold text-blue-800 mb-4">$0</p>
+            <ul className="mb-6 w-full space-y-3">
+              <li className="flex items-center text-gray-700">
+                <span className="text-green-500 mr-2">✓</span>
+                Up to 5 documents
+              </li>
+              <li className="flex items-center text-gray-700">
+                <span className="text-green-500 mr-2">✓</span>
+                Up to 5 SAOs
+              </li>
+              <li className="flex items-center text-gray-700">
+                <span className="text-green-500 mr-2">✓</span>
+                Connect with 1 EIT
+              </li>
+              <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Standard support</li>
+              <li className="flex items-center text-gray-700"><span className="text-red-500 mr-2">✗</span> AI Features</li>
+            </ul>
+            {tier === 'free' ? (
+              <span className="inline-block bg-blue-100 text-blue-800 px-4 py-2 rounded-full font-semibold text-sm shadow">Current Plan</span>
+            ) : (
+              <button 
+                onClick={() => window.location.href = 'mailto:contact@accreda.com?subject=Downgrade to Free Plan'}
+                className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-semibold text-sm shadow transition-colors"
+              >
+                Contact to Downgrade
+              </button>
+            )}
+          </div>
+
+          {/* Enterprise Plan */}
+          <div className={`border ${tier === 'enterprise' ? 'border-purple-500' : 'border-gray-200'} rounded-2xl p-8 bg-gradient-to-br from-purple-50 to-white flex flex-col items-center shadow-sm`}>
+            <h3 className="text-2xl font-bold text-purple-900 mb-2">Enterprise</h3>
+            <p className="text-base font-semibold text-purple-800 mb-4">Custom Pricing</p>
+            <ul className="mb-6 w-full space-y-3">
+              <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Unlimited documents</li>
+              <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Unlimited SAOs</li>
+              <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Unlimited EIT connections</li>
+              <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Priority support</li>
+              <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> AI Features</li>
+              <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Dedicated account manager</li>
+            </ul>
+            {tier === 'enterprise' ? (
+              <span className="inline-block bg-purple-100 text-purple-800 px-4 py-2 rounded-full font-semibold text-sm shadow">Current Plan</span>
+            ) : (
+              <button 
+                onClick={() => setShowContactModal(true)}
+                className="inline-block bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-full font-semibold text-sm shadow transition-colors"
+              >
+                Contact Us
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Contact Modal */}
+      {showContactModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full relative">
+            <button
+              className="absolute top-2 right-2 text-slate-400 hover:text-slate-600"
+              onClick={() => {
+                setShowContactModal(false);
+                setContactSuccess(false);
+                setContactError(null);
+              }}
+              aria-label="Close"
+            >
+              ×
+            </button>
+            <h2 className="text-xl font-bold mb-4 text-purple-800">Enterprise Plan Inquiry</h2>
+            {contactSuccess ? (
+              <div className="p-3 bg-green-50 text-green-700 rounded-md text-sm mb-4">
+                Your inquiry has been sent successfully. We'll get back to you soon!
+              </div>
+            ) : (
+              <form
+                onSubmit={async e => {
+                  e.preventDefault();
+                  setContactLoading(true);
+                  setContactError(null);
+                  setContactSuccess(false);
+                  try {
+                    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-support-email`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                      },
+                      body: JSON.stringify({
+                        email: contactEmail,
+                        subject: 'Enterprise Plan Inquiry',
+                        message: `Name: ${contactName}\nCorporation: ${contactCorporation}\n\n${contactMessage}`,
+                        issueType: 'enterprise',
+                        mode: 'help',
+                      }),
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                      throw new Error(data.error || 'Failed to send message');
+                    }
+                    setContactSuccess(true);
+                    setContactName('');
+                    setContactEmail('');
+                    setContactCorporation('');
+                    setContactMessage('');
+                  } catch (err) {
+                    setContactError(err instanceof Error ? err.message : 'Failed to send message. Please try again later.');
+                  } finally {
+                    setContactLoading(false);
+                  }
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <label htmlFor="contactName" className="label">Full Name</label>
+                  <input
+                    type="text"
+                    id="contactName"
+                    value={contactName}
+                    onChange={e => setContactName(e.target.value)}
+                    className="input"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="contactEmail" className="label">Email Address</label>
+                  <input
+                    type="email"
+                    id="contactEmail"
+                    value={contactEmail}
+                    onChange={e => setContactEmail(e.target.value)}
+                    className="input"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="contactCorporation" className="label">Organization</label>
+                  <input
+                    type="text"
+                    id="contactCorporation"
+                    value={contactCorporation}
+                    onChange={e => setContactCorporation(e.target.value)}
+                    className="input"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="contactMessage" className="label">Message</label>
+                  <textarea
+                    id="contactMessage"
+                    value={contactMessage}
+                    onChange={e => setContactMessage(e.target.value)}
+                    className="input h-32"
+                    required
+                    placeholder="Tell us about your needs and how we can help..."
+                  />
+                </div>
+                {contactError && (
+                  <div className="p-3 bg-red-50 text-red-700 rounded-md text-sm">
+                    {contactError}
+                  </div>
+                )}
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setShowContactModal(false);
+                      setContactSuccess(false);
+                      setContactError(null);
+                    }}
+                    disabled={contactLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={contactLoading}
+                  >
+                    {contactLoading ? 'Sending...' : 'Send Message'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Danger Zone */}
       <section className="card p-6 border-red-200">

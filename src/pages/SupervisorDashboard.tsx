@@ -5,6 +5,7 @@ import SupervisorProgressCard from '../components/supervisor/SupervisorProgressC
 import { useOutletContext } from 'react-router-dom';
 import { Clock } from 'lucide-react';
 import { supervisorService, SupervisorCategoryAverage } from '../services/supervisorService';
+import SupervisorRecentActivities from '../components/supervisor/SupervisorRecentActivities';
 
 interface EIT {
   id: string;
@@ -212,7 +213,7 @@ const SupervisorDashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-slate-800 flex items-center gap-2">
@@ -307,34 +308,10 @@ const SupervisorDashboard: React.FC = () => {
         </div>
       )}
       {/* Recent Activities */}
-      <div className="card">
+      <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300">
         <div className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Recent Activities</h2>
-          <div className="space-y-4">
-            {recentActivities.length === 0 && <div className="text-slate-400">No recent activities</div>}
-            {recentActivities.map((activity) => (
-              <div key={activity.id} className="border-b border-gray-200 pb-4 last:border-0">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-medium">{activity.title}</h3>
-                    <p className="text-sm text-gray-500">{activity.description}</p>
-                  </div>
-                  <span className="text-sm text-gray-500">
-                    {new Date(activity.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-                <div className="mt-2">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    activity.status === 'approved' ? 'bg-green-100 text-green-800' :
-                    activity.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {activity.status.charAt(0).toUpperCase() + activity.status.slice(1)}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <h2 className="text-xl font-semibold mb-4 text-[#2C3E50]">Recent Activities</h2>
+          <SupervisorRecentActivities />
         </div>
       </div>
     </div>
