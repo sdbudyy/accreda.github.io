@@ -1,3 +1,16 @@
+export interface SAOAnnotation {
+  id: string;
+  sao_id: string;
+  supervisor_id: string | null;
+  created_by: string;
+  author_name: string;
+  author_role: 'supervisor' | 'eit';
+  location: any; // JSON object, e.g., { start: number, end: number }
+  annotation: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface SAO {
   id: string;
   title: string;
@@ -16,4 +29,5 @@ export interface SAO {
     created_at: string;
     updated_at: string;
   }>;
+  annotations?: SAOAnnotation[];
 } 

@@ -11,7 +11,9 @@ export default function SignUp() {
     confirmPassword: '',
     fullName: '',
     organization: '',
-    accountType: 'eit' as 'eit' | 'supervisor'
+    accountType: 'eit' as 'eit' | 'supervisor',
+    startDate: '',
+    targetDate: ''
   })
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -44,6 +46,12 @@ export default function SignUp() {
         throw new Error('Organization is required for supervisors')
       }
 
+      if (formData.accountType === 'eit') {
+        if (!formData.startDate || !formData.targetDate) {
+          throw new Error('Please provide your program start and expected end date.');
+        }
+      }
+
       // Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
@@ -67,6 +75,10 @@ export default function SignUp() {
         account_type: formData.accountType,
         ...(formData.accountType === 'supervisor' && {
           organization: formData.organization
+        }),
+        ...(formData.accountType === 'eit' && {
+          start_date: formData.startDate,
+          target_date: formData.targetDate
         })
       }
 
@@ -86,7 +98,9 @@ export default function SignUp() {
         confirmPassword: '',
         fullName: '',
         organization: '',
-        accountType: 'eit'
+        accountType: 'eit',
+        startDate: '',
+        targetDate: ''
       })
 
       navigate('/login', { 
@@ -260,6 +274,37 @@ export default function SignUp() {
                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
               />
             </div>
+            {formData.accountType === 'eit' && (
+              <div className="card p-4 mb-2 bg-blue-50/50 border border-blue-100 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                  <span className="font-semibold text-blue-800">Program Timeline</span>
+                </div>
+                <p className="text-xs text-blue-700 mb-3">Set your program start and expected end date for personalized progress tracking.</p>
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-blue-900 mb-1">Start Date</label>
+                    <input
+                      type="date"
+                      className="w-full border border-blue-200 rounded px-3 py-2 text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      value={formData.startDate}
+                      onChange={e => setFormData({ ...formData, startDate: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-blue-900 mb-1">Expected End Date</label>
+                    <input
+                      type="date"
+                      className="w-full border border-blue-200 rounded px-3 py-2 text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      value={formData.targetDate}
+                      onChange={e => setFormData({ ...formData, targetDate: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div>

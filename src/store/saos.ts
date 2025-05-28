@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import { Skill } from './skills';
 import { sendSAOScoreNotification, sendSAOValidationRequestNotification } from '../utils/notifications';
+import { SAOAnnotation } from '../types/sao';
 
 export interface SAOFeedback {
   id: string;
@@ -37,6 +38,8 @@ interface SAOsState {
   requestFeedback: (saoId: string, supervisorId: string) => Promise<void>;
   submitFeedback: (saoId: string, feedback: string) => Promise<void>;
   resolveFeedback: (feedbackId: string) => Promise<void>;
+  fetchAnnotations: (saoId: string) => Promise<SAOAnnotation[]>;
+  addAnnotation: (saoId: string, location: any, annotation: string) => Promise<void>;
 }
 
 export const useSAOsStore = create<SAOsState>((set, get) => ({
@@ -414,6 +417,78 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
         hint: error.hint
       });
       set({ error: `Failed to load SAOs: ${error.message || 'Unknown error'}` });
+      throw error;
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  fetchAnnotations: async (saoId: string) => {
+    set({ loading: true, error: null });
+    try {
+      const { data, error } = await supabase
+        .from('sao_annotation')
+        .select('*')
+        .eq('sao_id', saoId)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return data as SAOAnnotation[];
+    } catch (error: any) {
+      set({ error: `Failed to fetch annotations: ${error.message || 'Unknown error'}` });
+      return [];
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  addAnnotation: async (saoId: string, location: any, annotation: string) => {
+    set({ loading: true, error: null });
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      if (!user) throw new Error('No authenticated user found');
+      // Try to get supervisor_id if user is a supervisor, else null
+      let supervisor_id: string | null = null;
+      let author_role: 'supervisor' | 'eit' = 'eit';
+      let author_name = user.user_metadata?.full_name || user.email || 'Unknown';
+      // Check if user is a supervisor
+      const { data: supervisorProfile } = await supabase
+        .from('supervisor_profiles')
+        .select('id, full_name')
+        .eq('id', user.id)
+        .single();
+      if (supervisorProfile) {
+        supervisor_id = supervisorProfile.id;
+        author_role = 'supervisor';
+        author_name = supervisorProfile.full_name || author_name;
+      } else {
+        // Try to get EIT name
+        const { data: eitProfile } = await supabase
+          .from('eit_profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .single();
+        if (eitProfile && eitProfile.full_name) {
+          author_name = eitProfile.full_name;
+        }
+      }
+      const { error } = await supabase
+        .from('sao_annotation')
+        .insert([
+          {
+            sao_id: saoId,
+            supervisor_id,
+            created_by: user.id,
+            author_name,
+            author_role,
+            location,
+            annotation,
+          }
+        ]);
+      if (error) throw error;
+      // Optionally, refresh annotations in state if you keep them there
+    } catch (error: any) {
+      set({ error: `Failed to add annotation: ${error.message || 'Unknown error'}` });
       throw error;
     } finally {
       set({ loading: false });

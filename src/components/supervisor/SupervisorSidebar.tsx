@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Users, FileText, ClipboardList, Settings, HelpCircle, Home, LogOut, BookOpen, CheckCircle2 } from 'lucide-react';
 import AccredaLogo from '../../assets/accreda-logo.png';
@@ -23,6 +23,31 @@ const supportNavItems = [
 
 const SupervisorSidebar: React.FC<SupervisorSidebarProps> = ({ onClose }) => {
   const navigate = useNavigate();
+  const [pendingReviews, setPendingReviews] = useState(0);
+  const [pendingSkills, setPendingSkills] = useState(0);
+
+  useEffect(() => {
+    const fetchPending = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      // Pending SAO feedback
+      const { count: saoCount } = await supabase
+        .from('sao_feedback')
+        .select('*', { count: 'exact', head: true })
+        .eq('supervisor_id', user.id)
+        .eq('status', 'pending');
+      setPendingReviews(saoCount || 0);
+      // Pending skill validations
+      const { count: skillCount } = await supabase
+        .from('validators')
+        .select('*', { count: 'exact', head: true })
+        .eq('email', user.email)
+        .eq('status', 'pending');
+      setPendingSkills(skillCount || 0);
+    };
+    fetchPending();
+  }, []);
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate('/login');
@@ -37,7 +62,7 @@ const SupervisorSidebar: React.FC<SupervisorSidebarProps> = ({ onClose }) => {
       <nav className="flex-1 py-6">
         <ul className="space-y-1 px-3">
           {navItems.map((item) => (
-            <li key={item.to}>
+            <li key={item.to} className="relative">
               <NavLink
                 to={item.to}
                 className={({ isActive }) =>
@@ -52,6 +77,13 @@ const SupervisorSidebar: React.FC<SupervisorSidebarProps> = ({ onClose }) => {
               >
                 <span className="mr-3">{item.icon}</span>
                 <span>{item.label}</span>
+                {/* Red dot for pending reviews/skills */}
+                {item.label === 'Reviews' && pendingReviews > 0 && (
+                  <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                )}
+                {item.label === 'Skills' && pendingSkills > 0 && (
+                  <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                )}
               </NavLink>
             </li>
           ))}

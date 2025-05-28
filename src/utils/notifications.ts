@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabase';
 
 export const sendNotification = async (
   userId: string,
-  type: 'request' | 'score' | 'approval' | 'validation_request',
+  type: 'request' | 'score' | 'approval' | 'validation_request' | 'nudge',
   title: string,
   message: string,
   data?: any

@@ -2,11 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import Modal from '../components/common/Modal';
+import { Mail } from 'lucide-react';
+import { sendNotification } from '../utils/notifications';
 
 interface EIT {
   id: string;
   full_name: string;
   email: string;
+  start_date?: string;
+  target_date?: string;
 }
 
 interface PendingRequest {
@@ -71,6 +75,11 @@ const SupervisorTeam: React.FC = () => {
   const [eitSkills, setEitSkills] = useState<any[]>([]);
   const [skillsLoading, setSkillsLoading] = useState(false);
   const [skillsByCategory, setSkillsByCategory] = useState<Record<string, any[]>>({});
+  const [nudgeModalEIT, setNudgeModalEIT] = useState<EIT | null>(null);
+  const [nudgeMessage, setNudgeMessage] = useState('');
+  const [nudgeSending, setNudgeSending] = useState(false);
+  const [nudgeSuccess, setNudgeSuccess] = useState<string | null>(null);
+  const [nudgeError, setNudgeError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTeam = async () => {
@@ -87,12 +96,12 @@ const SupervisorTeam: React.FC = () => {
         const [pendingReqsRes, relationshipsRes] = await Promise.all([
           supabase
             .from('supervisor_eit_relationships')
-            .select('id, eit_id, status, created_at, eit_profiles (id, full_name, email)')
+            .select('id, eit_id, status, created_at, eit_profiles (id, full_name, email, start_date, target_date)')
             .eq('supervisor_id', user.id)
             .eq('status', 'pending'),
           supabase
             .from('supervisor_eit_relationships')
-            .select('eit_id, eit_profiles (id, full_name, email)')
+            .select('eit_id, eit_profiles (id, full_name, email, start_date, target_date)')
             .eq('supervisor_id', user.id)
             .eq('status', 'active')
         ]);
@@ -195,6 +204,38 @@ const SupervisorTeam: React.FC = () => {
     setSkillsLoading(false);
   };
 
+  const handleSendNudge = async () => {
+    if (!nudgeModalEIT) return;
+    setNudgeSending(true);
+    setNudgeSuccess(null);
+    setNudgeError(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No supervisor user');
+      const { error } = await supabase
+        .from('nudge_messages')
+        .insert({
+          supervisor_id: user.id,
+          eit_id: nudgeModalEIT.id,
+          message: nudgeMessage || 'Keep going! Your supervisor believes in you!'
+        });
+      if (error) throw error;
+      await sendNotification(
+        nudgeModalEIT.id,
+        'nudge',
+        'Nudge from Supervisor',
+        nudgeMessage || 'Keep going! Your supervisor believes in you!'
+      );
+      setNudgeSuccess('Nudge sent!');
+      setNudgeMessage('');
+      setTimeout(() => setNudgeModalEIT(null), 1200);
+    } catch (err: any) {
+      setNudgeError(err.message || 'Failed to send nudge');
+    } finally {
+      setNudgeSending(false);
+    }
+  };
+
   // Calculate average team progress
   const teamProgress = eits.length > 0 ? Math.round(eits.reduce((sum, eit) => sum + (progressMap[eit.id]?.overallProgress || 0), 0) / eits.length) : 0;
 
@@ -243,6 +284,36 @@ const SupervisorTeam: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {eits.map((eit) => {
               const progress = progressMap[eit.id];
+              let expectedProgress = null;
+              let progressColor = 'teal';
+              let progressDescription = '';
+              let showNudge = false;
+
+              if (eit.start_date && eit.target_date) {
+                const now = new Date();
+                const start = new Date(eit.start_date);
+                const end = new Date(eit.target_date);
+                const total = end.getTime() - start.getTime();
+                const elapsed = now.getTime() - start.getTime();
+                let percent = Math.max(0, Math.min(100, Math.round((elapsed / total) * 100)));
+                expectedProgress = percent;
+
+                if (progress) {
+                  const delta = progress.overallProgress - percent;
+                  if (delta > 0) {
+                    progressColor = 'teal';
+                    progressDescription = 'Ahead of schedule';
+                  } else if (delta >= -5) {
+                    progressColor = 'blue';
+                    progressDescription = 'On track';
+                  } else {
+                    progressColor = 'purple';
+                    progressDescription = 'Behind schedule';
+                    showNudge = true;
+                  }
+                }
+              }
+
               return (
                 <div key={eit.id} className="border-b border-gray-200 pb-4 last:border-0">
                   <div>
@@ -260,12 +331,34 @@ const SupervisorTeam: React.FC = () => {
                         <span className="text-sm font-semibold text-teal-600">{progress.overallProgress}%</span>
                       </div>
                       <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-teal-500 rounded-full transition-all duration-300" style={{ width: `${progress.overallProgress}%` }}></div>
+                        <div 
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            progressColor === 'teal' ? 'bg-teal-500' :
+                            progressColor === 'blue' ? 'bg-blue-500' :
+                            'bg-purple-500'
+                          }`} 
+                          style={{ width: `${progress.overallProgress}%` }}
+                        ></div>
                       </div>
-                      <div className="flex gap-4 mt-2 text-xs text-slate-500">
-                        <span>Skills: {progress.completedSkills}/22</span>
-                        <span>Experiences: {progress.documentedExperiences}/24</span>
-                        <span>Approvals: {progress.supervisorApprovals}/24</span>
+                      <div className="flex flex-col gap-1 mt-2">
+                        <div className="flex gap-4 text-xs text-slate-500">
+                          <span>Skills: {progress.completedSkills}/22</span>
+                          <span>Experiences: {progress.documentedExperiences}/24</span>
+                          <span>Approvals: {progress.supervisorApprovals}/24</span>
+                        </div>
+                        {expectedProgress !== null && (
+                          <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                            {progressDescription} (Expected: {expectedProgress}%)
+                            {showNudge && (
+                              <button
+                                className="ml-2 px-2 py-0.5 rounded bg-red-100 text-red-700 text-xs font-semibold flex items-center gap-1 hover:bg-red-200 transition"
+                                onClick={() => { setNudgeModalEIT(eit); setNudgeMessage(''); }}
+                              >
+                                <Mail size={14} className="mr-1" /> Nudge
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -348,6 +441,30 @@ const SupervisorTeam: React.FC = () => {
                 </div>
               )
             )}
+          </div>
+        </Modal>
+      )}
+      {/* Nudge Modal */}
+      {nudgeModalEIT && (
+        <Modal isOpen={!!nudgeModalEIT} onClose={() => setNudgeModalEIT(null)}>
+          <div className="w-full max-w-md p-6 bg-white rounded-lg">
+            <h2 className="text-lg font-semibold mb-4">Send a Nudge to {nudgeModalEIT.full_name}</h2>
+            <textarea
+              className="w-full border rounded p-2 mb-3"
+              rows={3}
+              placeholder="Type your message (or leave blank for a default nudge)"
+              value={nudgeMessage}
+              onChange={e => setNudgeMessage(e.target.value)}
+              disabled={nudgeSending}
+            />
+            {nudgeError && <div className="text-red-600 text-sm mb-2">{nudgeError}</div>}
+            {nudgeSuccess && <div className="text-green-600 text-sm mb-2">{nudgeSuccess}</div>}
+            <div className="flex gap-2 justify-end">
+              <button className="btn btn-secondary" onClick={() => setNudgeModalEIT(null)} disabled={nudgeSending}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSendNudge} disabled={nudgeSending}>
+                {nudgeSending ? 'Sending...' : 'Send Nudge'}
+              </button>
+            </div>
           </div>
         </Modal>
       )}

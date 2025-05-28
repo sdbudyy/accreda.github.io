@@ -222,6 +222,38 @@ export interface Database {
           updated_at?: string
         }
       }
+      eit_profiles: {
+        Row: {
+          id: string;
+          email: string;
+          full_name: string;
+          account_type: string;
+          created_at: string;
+          updated_at: string;
+          start_date: string | null;
+          target_date: string | null;
+        }
+        Insert: {
+          id?: string;
+          email: string;
+          full_name: string;
+          account_type: string;
+          created_at?: string;
+          updated_at?: string;
+          start_date?: string | null;
+          target_date?: string | null;
+        }
+        Update: {
+          id?: string;
+          email?: string;
+          full_name?: string;
+          account_type?: string;
+          created_at?: string;
+          updated_at?: string;
+          start_date?: string | null;
+          target_date?: string | null;
+        }
+      }
     }
     Views: {
       [_ in never]: never

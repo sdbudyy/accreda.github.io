@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FileEdit, Plus, X, ChevronDown, Trash2, Edit2, Sparkles } from 'lucide-react';
+import { FileEdit, Plus, X, ChevronDown, Trash2, Edit2, Sparkles, Clock } from 'lucide-react';
 import { useSkillsStore, Category, Skill } from '../store/skills';
 import { useSAOsStore, SAO } from '../store/saos';
 import { useSearchParams } from 'react-router-dom';
@@ -8,6 +8,7 @@ import { enhanceSAO } from '../lib/webllm';
 import SAOFeedbackComponent from '../components/saos/SAOFeedback';
 import Modal from '../components/common/Modal';
 import { useSubscriptionStore } from '../store/subscriptionStore';
+import SAOAnnotation from '../components/saos/SAOAnnotation';
 
 interface SAOModalProps {
   isOpen: boolean;
@@ -41,6 +42,7 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
   const { checkSaoLimit, tier, fetchSubscription } = useSubscriptionStore();
   const [limitError, setLimitError] = useState<string | null>(null);
   const [saoCreatedCount, setSaoCreatedCount] = useState<number>(0);
+  const [showHistory, setShowHistory] = useState(false);
 
   const mostRecentFeedback = editSAO && editSAO.feedback ? getMostRecentFeedback(editSAO.feedback) : null;
 
@@ -206,22 +208,16 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
       setRuleModalOpen(true);
       return;
     }
-    // 2. Count unique supervisors for this EIT
-    const { data: allValidations } = await supabase
-      .from('skill_validations')
-      .select('validator_id')
-      .eq('eit_id', user.id);
-    const uniqueSupervisors = new Set((allValidations || []).map((v: any) => v.validator_id));
-    // If this is a new supervisor, add to the set
-    uniqueSupervisors.add(selectedSupervisor);
-    if (uniqueSupervisors.size < 3) {
-      setRuleModalMessage('You must use at least 3 different supervisors for your validations. Please select a different supervisor.');
-      setRuleModalOpen(true);
-      return;
-    }
     // If all rules pass, proceed
     await requestFeedback(editSAO.id, selectedSupervisor);
   };
+
+  // Utility to get feedback to show
+  const feedbackToShow = showHistory
+    ? editSAO?.feedback || []
+    : editSAO?.feedback && editSAO.feedback.length > 0
+      ? [editSAO.feedback[editSAO.feedback.length - 1]]
+      : [];
 
   if (!isOpen) return null;
 
@@ -255,6 +251,36 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
         {error && (
           <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-md text-sm">
             {error}
+          </div>
+        )}
+
+        {/* Show annotation UI for EITs if editing an existing SAO */}
+        {editSAO && (
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="font-semibold text-slate-700">Comments & Feedback</span>
+              <button
+                type="button"
+                className="p-1 rounded hover:bg-slate-200"
+                title={showHistory ? 'Hide Feedback History' : 'Show Feedback History'}
+                onClick={() => setShowHistory(h => !h)}
+              >
+                <Clock size={18} className={showHistory ? 'text-blue-600' : 'text-slate-400'} />
+              </button>
+            </div>
+            <SAOAnnotation saoId={editSAO.id} content={editSAO.content} />
+            {/* Feedback history (toggle) */}
+            {showHistory && feedbackToShow.length > 1 && (
+              <div className="mt-4">
+                <div className="font-semibold text-xs text-slate-500 mb-1">Feedback History</div>
+                {feedbackToShow.slice(0, -1).map((item, idx) => (
+                  <div key={item.id} className="bg-slate-100 rounded p-2 mb-2 text-xs text-slate-700">
+                    <div className="mb-1">{item.feedback}</div>
+                    <div className="text-slate-400">{new Date(item.updated_at).toLocaleDateString()}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

@@ -67,6 +67,8 @@ const NotificationsDropdown: React.FC = () => {
         return '🔍';
       case 'sao_feedback':
         return '📝';
+      case 'nudge':
+        return '📣';
       default:
         return '📬';
     }

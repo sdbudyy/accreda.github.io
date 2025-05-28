@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 
 export interface Notification {
   id: string;
-  type: 'request' | 'score' | 'approval' | 'validation_request' | 'sao_feedback';
+  type: 'request' | 'score' | 'approval' | 'validation_request' | 'sao_feedback' | 'nudge';
   title: string;
   message: string;
   read: boolean;

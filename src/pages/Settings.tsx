@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
-import { Check, Lock, Bell, Sun, Trash2, User as UserIcon, Mail } from 'lucide-react';
+import { Check, Lock, Bell, Sun, Trash2, User as UserIcon, Mail, Calendar } from 'lucide-react';
 import FileUpload from '../components/FileUpload';
 import ConnectionStatus from '../components/common/ConnectionStatus';
 import { useNotificationPreferences } from '../store/notificationPreferences';
@@ -63,6 +63,8 @@ const Settings: React.FC = () => {
   const [downgradeLoading, setDowngradeLoading] = useState(false);
   const [downgradeError, setDowngradeError] = useState<string | null>(null);
   const [downgradeSuccess, setDowngradeSuccess] = useState(false);
+  const [start_date, setStartDate] = useState('');
+  const [target_date, setTargetDate] = useState('');
 
   const {
     supervisorReviews,
@@ -97,12 +99,17 @@ const Settings: React.FC = () => {
         setNewEmail(user.email || '');
         setAvatarUrl(user.user_metadata?.avatar_url || '');
 
-        // Check user role
+        // Check user role and load EIT program dates if EIT
         const { data: eitProfile } = await supabase
           .from('eit_profiles')
-          .select('id')
+          .select('id, start_date, target_date')
           .eq('id', user.id)
           .single();
+        if (eitProfile) {
+          setUserRole('eit');
+          setStartDate(eitProfile.start_date || '');
+          setTargetDate(eitProfile.target_date || '');
+        }
 
         const { data: supervisorProfile } = await supabase
           .from('supervisor_profiles')
@@ -112,8 +119,6 @@ const Settings: React.FC = () => {
 
         if (supervisorProfile) {
           setUserRole('supervisor');
-        } else if (eitProfile) {
-          setUserRole('eit');
         }
       }
     };
@@ -503,6 +508,107 @@ const Settings: React.FC = () => {
               </form>
             </section>
           </div>
+
+          {/* EIT Start/Target Date Section */}
+          {userRole === 'eit' && (
+            <section className="card p-6">
+              <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
+                <Calendar /> Program Timeline
+              </h2>
+              <form
+                className="flex flex-col gap-6"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setLoading(true);
+                  setMessage({ type: '', text: '' });
+                  if (start_date && target_date && new Date(target_date) <= new Date(start_date)) {
+                    setMessage({ type: 'error', text: 'End date must be after start date.' });
+                    setLoading(false);
+                    return;
+                  }
+                  try {
+                    const { error } = await supabase
+                      .from('eit_profiles')
+                      .update({ start_date, target_date })
+                      .eq('id', user?.id);
+                    if (error) throw error;
+                    setMessage({ type: 'success', text: 'Timeline updated!' });
+                  } catch (err) {
+                    setMessage({ type: 'error', text: 'Failed to update timeline.' });
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+              >
+                <div className="flex flex-col md:flex-row gap-8 items-center w-full">
+                  <div className="flex flex-col items-center">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
+                    <input
+                      type="date"
+                      value={start_date || ''}
+                      onChange={e => setStartDate(e.target.value)}
+                      className="input"
+                    />
+                    {start_date && (
+                      <span className="text-xs text-slate-500 mt-1">{new Date(start_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                    )}
+                  </div>
+                  <div className="flex-1 flex flex-col items-center">
+                    {/* Timeline bar */}
+                    <div className="w-full max-w-xs flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-teal-500" />
+                      <div className="flex-1 h-1 bg-slate-200 rounded-full relative">
+                        {start_date && target_date && (
+                          <div
+                            className="h-1 bg-teal-400 rounded-full absolute top-0 left-0"
+                            style={{
+                              width: (() => {
+                                const now = new Date().getTime();
+                                const start = new Date(start_date).getTime();
+                                const end = new Date(target_date).getTime();
+                                if (end <= start) return '0%';
+                                const percent = Math.max(0, Math.min(100, ((now - start) / (end - start)) * 100));
+                                return `${percent}%`;
+                              })(),
+                              transition: 'width 0.5s',
+                            }}
+                          />
+                        )}
+                      </div>
+                      <span className="w-2 h-2 rounded-full bg-teal-500" />
+                    </div>
+                    <div className="flex justify-between w-full max-w-xs text-xs text-slate-400 mt-1">
+                      <span>{start_date ? new Date(start_date).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : ''}</span>
+                      <span>{target_date ? new Date(target_date).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : ''}</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Expected End Date</label>
+                    <input
+                      type="date"
+                      value={target_date || ''}
+                      onChange={e => setTargetDate(e.target.value)}
+                      className="input"
+                    />
+                    {target_date && (
+                      <span className="text-xs text-slate-500 mt-1">{new Date(target_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 mt-4">
+                  <button type="submit" className="btn btn-primary" disabled={loading}>
+                    {loading ? 'Saving...' : 'Save Dates'}
+                  </button>
+                  {message.type === 'success' && (
+                    <span className="text-green-600 flex items-center gap-1 font-medium"><Check size={18} /> Saved!</span>
+                  )}
+                  {message.type === 'error' && (
+                    <span className="text-red-600 text-sm">{message.text}</span>
+                  )}
+                </div>
+              </form>
+            </section>
+          )}
 
           {/* Subscription Section */}
           <div className="pt-8">

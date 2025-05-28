@@ -4,6 +4,7 @@ import { SAO } from '../../types/sao';
 import SAOFeedbackComponent from './SAOFeedback';
 import { useSAOsStore } from '../../store/saos';
 import { supabase } from '../../lib/supabase';
+import SAOAnnotation from './SAOAnnotation';
 
 interface SAOCardProps {
   sao: SAO;
@@ -85,6 +86,9 @@ const SAOCard: React.FC<SAOCardProps> = ({ sao, onEdit, onDelete }) => {
       
       <p className="text-sm text-slate-600 mt-2">{sao.description}</p>
       <p className="text-sm text-slate-600 mt-2 whitespace-pre-wrap">{sao.content}</p>
+
+      {/* Annotation UI for both EIT and Supervisor */}
+      <SAOAnnotation saoId={sao.id} content={sao.content} />
 
       {sao.feedback && (
         <SAOFeedbackComponent

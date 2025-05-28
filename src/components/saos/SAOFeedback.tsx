@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { MessageSquare, CheckCircle2, XCircle } from 'lucide-react';
 import { SAOFeedback } from '../../store/saos';
 import { supabase } from '../../lib/supabase';
@@ -18,11 +18,25 @@ const SAOFeedbackComponent: React.FC<SAOFeedbackProps> = ({
 }) => {
   const [newFeedback, setNewFeedback] = useState('');
   const [loading, setLoading] = useState(false);
+  const [annotationCount, setAnnotationCount] = useState(0);
+
+  useEffect(() => {
+    // Fetch annotation count for this SAO
+    const fetchCount = async () => {
+      if (feedback.length > 0) {
+        const { count } = await supabase
+          .from('sao_annotation')
+          .select('id', { count: 'exact', head: true })
+          .eq('sao_id', feedback[0].sao_id);
+        setAnnotationCount(count || 0);
+      }
+    };
+    fetchCount();
+  }, [feedback]);
 
   const handleSubmitFeedback = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newFeedback.trim()) return;
-
+    if (!newFeedback.trim() && annotationCount === 0) return;
     setLoading(true);
     try {
       await onSubmitFeedback(feedback[0].sao_id, newFeedback);
@@ -117,7 +131,7 @@ const SAOFeedbackComponent: React.FC<SAOFeedbackProps> = ({
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={loading || !newFeedback.trim()}
+              disabled={loading || (!newFeedback.trim() && annotationCount === 0)}
             >
               {loading ? 'Submitting...' : 'Submit Feedback'}
             </button>

@@ -2,7 +2,6 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { Clock, Calendar, Award, BarChart3, ArrowRight } from 'lucide-react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 import { useProgressStore } from '../store/progress';
 import { useEssayStore } from '../store/essays';
 import { useSkillsStore } from '../store/skills';
@@ -76,7 +75,7 @@ const Dashboard: React.FC = () => {
           progressData,
           saosData
         ] = await Promise.all([
-          supabase.from('eit_profiles').select('id').eq('id', user.id).single(),
+          supabase.from('eit_profiles').select('id, start_date, target_date').eq('id', user.id).single(),
           supabase.from('supervisor_profiles').select('id').eq('id', user.id).single(),
           loadUserSkills(),
           initialize(),
@@ -150,21 +149,38 @@ const Dashboard: React.FC = () => {
     },
   ];
 
+  // Calculate expected progress for EITs
+  let expectedProgress = null;
+  let expectedProgressColor: 'teal' | 'blue' | 'indigo' | 'purple' = 'teal';
+  let expectedProgressDescription = '';
+  if (userRole === 'eit' && userProfileCache?.eitProfile) {
+    const { start_date, target_date } = userProfileCache.eitProfile;
+    if (start_date && target_date) {
+      const now = new Date();
+      const start = new Date(start_date);
+      const end = new Date(target_date);
+      const total = end.getTime() - start.getTime();
+      const elapsed = now.getTime() - start.getTime();
+      let percent = Math.max(0, Math.min(100, Math.round((elapsed / total) * 100)));
+      expectedProgress = percent;
+      // Compare to actual progress
+      const delta = overallProgress - percent;
+      if (delta > 0) {
+        expectedProgressColor = 'teal'; // Green for ahead
+        expectedProgressDescription = 'You are ahead of schedule!';
+      } else if (delta >= -5) {
+        expectedProgressColor = 'blue'; // Blue for on track
+        expectedProgressDescription = 'You are on track!';
+      } else {
+        expectedProgressColor = 'purple'; // Red for behind
+        expectedProgressDescription = 'You are behind schedule.';
+      }
+    }
+  }
+
   const formatLastUpdated = (date: string) => {
     return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
-
-  // Use useGoogleLogin for one-click auth
-  const login = useGoogleLogin({
-    onSuccess: (tokenResponse) => {
-      setGoogleToken(tokenResponse.access_token);
-    },
-    onError: () => {
-      alert('Google Login Failed');
-    },
-    scope: 'https://www.googleapis.com/auth/calendar.readonly',
-    flow: 'implicit',
-  });
 
   if (roleLoading && appLoaded) {
     return <LoadingSpinner />;
@@ -219,18 +235,23 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Warn if client ID is missing */}
-      {!GOOGLE_CLIENT_ID && (
-        <div className="bg-red-100 text-red-700 p-2 rounded mb-4">
-          Google Client ID is not set. Please configure VITE_GOOGLE_CLIENT_ID in your .env file.<br />
-          <span className="text-xs">Current value: {String(GOOGLE_CLIENT_ID)}</span>
-        </div>
-      )}
-
       {/* Progress Cards */}
       <Suspense fallback={<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{[...Array(3)].map((_, i) => <div key={i} className="card animate-pulse h-32" />)}</div>}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {progressStats.map((stat, index) => (
+          <ProgressCard
+            title="Overall Progress"
+            value={overallProgress}
+            total={100}
+            description={
+              userRole === 'eit' && expectedProgress !== null
+                ? `${expectedProgressDescription} (Expected: ${expectedProgress}%)`
+                : overallProgress >= 75 ? 'Excellent progress!' : 
+                  overallProgress >= 50 ? 'Good progress!' : 
+                  overallProgress >= 25 ? 'Keep going!' : 'Just getting started!'
+            }
+            color={userRole === 'eit' && expectedProgress !== null ? expectedProgressColor : 'teal'}
+          />
+          {progressStats.slice(1).map((stat, index) => (
             <ProgressCard key={index} {...stat} />
           ))}
         </div>
@@ -257,38 +278,7 @@ const Dashboard: React.FC = () => {
                 <Award size={18} className="mr-2 text-teal-600" />
                 Upcoming Deadlines
               </h2>
-              <div className="flex items-center space-x-2">
-                <button className="text-sm text-teal-600 hover:text-teal-700 flex items-center">
-                  View All <ArrowRight size={14} className="ml-1" />
-                </button>
-                {/* One-click Connect Calendar Button */}
-                {!googleToken && (
-                  <button
-                    className="text-sm text-blue-600 hover:text-blue-700 flex items-center border border-blue-200 rounded px-2 py-1 ml-2"
-                    onClick={() => login()}
-                    type="button"
-                  >
-                    Connect Calendar
-                  </button>
-                )}
-              </div>
             </div>
-            {/* Show Google Calendar iframe if connected, else show UpcomingDeadlines */}
-            {googleToken ? (
-              <div className="flex justify-center py-4">
-                <iframe
-                  src="https://calendar.google.com/calendar/embed?mode=AGENDA"
-                  style={{ border: 0, width: '100%', height: '400px', minHeight: '300px' }}
-                  frameBorder="0"
-                  scrolling="no"
-                  title="Google Calendar"
-                ></iframe>
-              </div>
-            ) : (
-              <Suspense fallback={<div className="p-6 text-center text-slate-400">Loading deadlines...</div>}>
-                <UpcomingDeadlines />
-              </Suspense>
-            )}
           </div>
         </div>
 
@@ -321,9 +311,7 @@ const Dashboard: React.FC = () => {
 export default function DashboardWithBoundary() {
   return (
     <ErrorBoundary>
-      <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}>
-        <Dashboard />
-      </GoogleOAuthProvider>
+      <Dashboard />
     </ErrorBoundary>
   );
 }

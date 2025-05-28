@@ -22,7 +22,6 @@ import References from './pages/References'
 import { useProgressStore } from './store/progress'
 import { useSkillsStore } from './store/skills'
 import { useEssayStore } from './store/essays'
-import { GoogleOAuthProvider } from '@react-oauth/google'
 import SupervisorLayout from './components/supervisor/SupervisorLayout'
 import SupervisorTeam from './pages/SupervisorTeam'
 import SupervisorReviews from './pages/SupervisorReviews'
@@ -44,7 +43,6 @@ function App() {
   const setupRealtimeSubscriptions = useProgressStore(state => state.setupRealtimeSubscriptions)
   const loadUserSkills = useSkillsStore(state => state.loadUserSkills)
   const initializeNotifications = useNotificationsStore(state => state.initialize)
-  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
   const initializeApp = async () => {
     try {
@@ -127,7 +125,7 @@ function App() {
   }
 
   return (
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+    <>
       {session && <RealtimeNotifications userId={session.user.id} />}
       <Toaster position="top-right" />
       <Routes>
@@ -183,7 +181,7 @@ function App() {
         {/* Catch all route */}
         <Route path="*" element={<NotFound />} />
       </Routes>
-    </GoogleOAuthProvider>
+    </>
   )
 }
 

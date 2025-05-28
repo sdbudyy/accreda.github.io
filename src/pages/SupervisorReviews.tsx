@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { sendScoreNotification } from '../utils/notifications';
 import SAOFeedbackComponent from '../components/saos/SAOFeedback';
 import { X, Info, Clock } from 'lucide-react';
+import SAOAnnotation from '../components/saos/SAOAnnotation';
 
 // --- Skill Validation Types ---
 interface Validator {
@@ -759,7 +760,10 @@ const SupervisorReviews: React.FC = () => {
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-slate-800 mb-2">SAO Content</h3>
                 <div className="bg-slate-50 rounded-lg p-4">
-                  <p className="text-slate-700 whitespace-pre-wrap">{selectedSAO.sao?.content}</p>
+                  {/* Annotation UI for supervisors */}
+                  {selectedSAO.sao_id && selectedSAO.sao?.content && (
+                    <SAOAnnotation saoId={selectedSAO.sao_id} content={selectedSAO.sao.content} />
+                  )}
                 </div>
               </div>
 
