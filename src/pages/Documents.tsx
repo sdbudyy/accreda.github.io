@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { FileText, Download, Trash2, AlertCircle, Upload, Search, Filter, X, Edit2 } from 'lucide-react';
+import { FileText, Download, Trash2, AlertCircle, Upload, Search, Filter, X, Edit2, Eye } from 'lucide-react';
 import { useDocumentsStore, Document } from '../store/documents';
 import { supabase } from '../lib/supabase';
 import { useSubscriptionStore } from '../store/subscriptionStore';
+import DocumentPreview from '../components/documents/DocumentPreview';
 
 const Documents: React.FC = () => {
   const {
@@ -27,6 +28,7 @@ const Documents: React.FC = () => {
   const [editingDocument, setEditingDocument] = useState<{ id: string; title: string } | null>(null);
   const [newTitle, setNewTitle] = useState('');
   const documentRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
+  const [previewDocument, setPreviewDocument] = useState<Document | null>(null);
 
   useEffect(() => {
     console.log('Documents component mounted');
@@ -151,6 +153,11 @@ const Documents: React.FC = () => {
       console.error('Update failed:', err);
       alert('Failed to update document title');
     }
+  };
+
+  // Add this function to handle preview
+  const handlePreview = (doc: Document) => {
+    setPreviewDocument(doc);
   };
 
   // Filter and sort documents
@@ -337,6 +344,12 @@ const Documents: React.FC = () => {
                 </button>
                 <button 
                   className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                  onClick={() => handlePreview(doc)}
+                >
+                  <Eye size={16} />
+                </button>
+                <button 
+                  className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700"
                   onClick={() => handleDownload(doc)}
                 >
                   <Download size={16} />
@@ -354,7 +367,7 @@ const Documents: React.FC = () => {
             {doc.file_type && doc.file_type.startsWith('text/') ? (
               <p className="text-sm text-slate-600 mt-2 line-clamp-2">{doc.content}</p>
             ) : (
-              <p className="text-sm text-slate-400 mt-2 italic">Content not viewable here. Download to see full content.</p>
+              <p className="text-sm text-slate-400 mt-2 italic">Content not viewable here. Click the eye icon to preview.</p>
             )}
             
             <div className="flex justify-between items-center mt-4 pt-3 border-t border-slate-100">
@@ -371,6 +384,14 @@ const Documents: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {/* Document Preview Modal */}
+      {previewDocument && (
+        <DocumentPreview
+          document={previewDocument}
+          onClose={() => setPreviewDocument(null)}
+        />
+      )}
 
       {/* Empty State */}
       {filteredDocuments.length === 0 && (

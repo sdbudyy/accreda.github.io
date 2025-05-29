@@ -37,7 +37,8 @@ const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 const SITE_URL = "https://accreda.com"; // Replace with your production URL
 const SITE_NAME = "Accreda";
 
-const OPENROUTER_API_KEY = "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";
+// Use environment variable for the API key
+const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
 
 export const enhanceSAO = async (text: string): Promise<string> => {
   if (!OPENROUTER_API_KEY) {

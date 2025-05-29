@@ -11,6 +11,14 @@ const categories = [
   'Other'
 ];
 
+const acceptedFileTypes = {
+  'application/pdf': ['.pdf'],
+  'application/msword': ['.doc'],
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+  'text/plain': ['.txt'],
+  'text/markdown': ['.md']
+};
+
 const UploadDocument: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState('');
@@ -73,12 +81,27 @@ const UploadDocument: React.FC = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      if (selectedFile.size > 10 * 1024 * 1024) { // 10MB limit
+      // Check file size (10MB limit)
+      if (selectedFile.size > 10 * 1024 * 1024) {
         setError('File size must be less than 10MB');
         setFile(null);
-      } else {
-        setFile(selectedFile);
-        setError(null);
+        return;
+      }
+
+      // Check file type
+      const fileType = selectedFile.type;
+      if (!Object.keys(acceptedFileTypes).includes(fileType)) {
+        setError('Unsupported file type. Please upload PDF, DOC, DOCX, TXT, or MD files.');
+        setFile(null);
+        return;
+      }
+
+      setFile(selectedFile);
+      setError(null);
+
+      // Set title from filename if not already set
+      if (!title.trim()) {
+        setTitle(selectedFile.name.replace(/\.[^/.]+$/, '')); // Remove file extension
       }
     }
   };
@@ -189,12 +212,15 @@ const UploadDocument: React.FC = () => {
                               type="file"
                               className="sr-only"
                               onChange={handleFileChange}
+                              accept={Object.entries(acceptedFileTypes)
+                                .map(([type, exts]) => `${type}${exts.join(',')}`)
+                                .join(',')}
                             />
                           </label>
                           <p className="pl-1">or drag and drop</p>
                         </div>
                         <p className="text-xs text-slate-500">
-                          Up to 10MB
+                          PDF, DOC, DOCX, TXT, or MD files up to 10MB
                         </p>
                       </>
                     )}
