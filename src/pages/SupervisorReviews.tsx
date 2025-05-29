@@ -4,6 +4,7 @@ import { sendScoreNotification } from '../utils/notifications';
 import SAOFeedbackComponent from '../components/saos/SAOFeedback';
 import { X, Info, Clock } from 'lucide-react';
 import SAOAnnotation from '../components/saos/SAOAnnotation';
+import toast from 'react-hot-toast';
 
 // --- Skill Validation Types ---
 interface Validator {
@@ -443,6 +444,9 @@ const SupervisorReviews: React.FC = () => {
     setPendingSAOs((prev) =>
       prev.filter((f) => !(f.sao_id === saoId && f.status !== 'pending'))
     );
+    setIsSAOModalOpen(false);
+    setSelectedSAO(null);
+    toast.success('Feedback submitted successfully!');
   };
 
   // --- UI ---
@@ -772,6 +776,7 @@ const SupervisorReviews: React.FC = () => {
                 onResolve={handleResolve}
                 onSubmitFeedback={handleSubmitFeedback}
                 isSupervisor={true}
+                saoContent={selectedSAO.sao?.content}
               />
             </div>
           </div>

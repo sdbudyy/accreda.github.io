@@ -40,6 +40,11 @@ interface SAOsState {
   resolveFeedback: (feedbackId: string) => Promise<void>;
   fetchAnnotations: (saoId: string) => Promise<SAOAnnotation[]>;
   addAnnotation: (saoId: string, location: any, annotation: string) => Promise<void>;
+  fetchReplies: (annotationId: string) => Promise<any[]>;
+  addReply: (annotationId: string, content: string) => Promise<void>;
+  resolveAnnotation: (annotationId: string) => Promise<void>;
+  deleteAnnotation: (annotationId: string) => Promise<void>;
+  updateAnnotationStatus: (annotationId: string, status: string) => Promise<void>;
 }
 
 export const useSAOsStore = create<SAOsState>((set, get) => ({
@@ -279,6 +284,11 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No authenticated user found');
       const { data: sao } = await supabase.from('saos').select('title').eq('id', saoId).single();
+      // Remove any existing feedback for this SAO
+      await supabase
+        .from('sao_feedback')
+        .delete()
+        .eq('sao_id', saoId);
       // Update SAO status to 'in-review' when requesting feedback
       await supabase
         .from('saos')
@@ -483,12 +493,103 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
             author_role,
             location,
             annotation,
+            status: 'active',
           }
         ]);
       if (error) throw error;
       // Optionally, refresh annotations in state if you keep them there
     } catch (error: any) {
       set({ error: `Failed to add annotation: ${error.message || 'Unknown error'}` });
+      throw error;
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  fetchReplies: async (annotationId: string) => {
+    set({ loading: true, error: null });
+    try {
+      const { data, error } = await supabase
+        .from('sao_annotation_replies')
+        .select('*')
+        .eq('annotation_id', annotationId)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return data || [];
+    } catch (error: any) {
+      set({ error: `Failed to fetch replies: ${error.message || 'Unknown error'}` });
+      return [];
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  addReply: async (annotationId: string, content: string) => {
+    set({ loading: true, error: null });
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      if (!user) throw new Error('No authenticated user found');
+      const { error } = await supabase
+        .from('sao_annotation_replies')
+        .insert([
+          {
+            annotation_id: annotationId,
+            content,
+            author_id: user.id,
+          }
+        ]);
+      if (error) throw error;
+    } catch (error: any) {
+      set({ error: `Failed to add reply: ${error.message || 'Unknown error'}` });
+      throw error;
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  resolveAnnotation: async (annotationId: string) => {
+    set({ loading: true, error: null });
+    try {
+      const { error } = await supabase
+        .from('sao_annotation')
+        .update({ resolved: true })
+        .eq('id', annotationId);
+      if (error) throw error;
+    } catch (error: any) {
+      set({ error: `Failed to resolve annotation: ${error.message || 'Unknown error'}` });
+      throw error;
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  deleteAnnotation: async (annotationId: string) => {
+    set({ loading: true, error: null });
+    try {
+      const { error } = await supabase
+        .from('sao_annotation')
+        .delete()
+        .eq('id', annotationId);
+      if (error) throw error;
+    } catch (error: any) {
+      set({ error: `Failed to delete annotation: ${error.message || 'Unknown error'}` });
+      throw error;
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  updateAnnotationStatus: async (annotationId: string, status: string) => {
+    set({ loading: true, error: null });
+    try {
+      const { error } = await supabase
+        .from('sao_annotation')
+        .update({ status })
+        .eq('id', annotationId);
+      if (error) throw error;
+    } catch (error: any) {
+      set({ error: `Failed to update annotation status: ${error.message || 'Unknown error'}` });
       throw error;
     } finally {
       set({ loading: false });

@@ -9,6 +9,7 @@ import SAOFeedbackComponent from '../components/saos/SAOFeedback';
 import Modal from '../components/common/Modal';
 import { useSubscriptionStore } from '../store/subscriptionStore';
 import SAOAnnotation from '../components/saos/SAOAnnotation';
+import toast from 'react-hot-toast';
 
 interface SAOModalProps {
   isOpen: boolean;
@@ -114,6 +115,25 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
     fetchCount();
   }, [isOpen]);
 
+  const handleSendForValidation = async () => {
+    try {
+      if (editSAO) {
+        await updateSAO(editSAO.id, title, sao, selectedSkills, status);
+        await requestFeedback(editSAO.id, selectedSupervisor);
+      } else {
+        // If creating, first create the SAO, then send for validation
+        await createSAO(title, sao, selectedSkills, status);
+        // Optionally, you may want to reload SAOs and get the new ID, but for now just call requestFeedback with a placeholder or skip
+      }
+      toast.success('SAO sent to supervisor for validation!');
+      onClose();
+      loadUserSAOs();
+      onCreated && onCreated();
+    } catch (error) {
+      console.error('Error sending for validation:', error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLimitError(null);
@@ -126,31 +146,10 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
         }
       }
       if (editSAO) {
-        console.log('Calling updateSAO with:', { id: editSAO.id, title, sao, selectedSkills, status });
         await updateSAO(editSAO.id, title, sao, selectedSkills, status);
       } else {
-        console.log('Calling createSAO with:', { title, sao, selectedSkills, status });
         await createSAO(title, sao, selectedSkills, status);
       }
-
-      // If a supervisor is selected, request feedback
-      if (selectedSupervisor) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: saos } = await supabase
-            .from('saos')
-            .select('id')
-            .eq('eit_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
-
-          if (saos) {
-            await requestFeedback(saos.id, selectedSupervisor);
-          }
-        }
-      }
-
       setTitle('');
       setSao('');
       setSelectedSkills([]);
@@ -288,7 +287,7 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
         {editSAO && editSAO.feedback && editSAO.feedback.length > 0 && (
           <div className="mb-6">
             <SAOFeedbackComponent
-              feedback={editSAO.feedback}
+              feedback={feedbackToShow}
               onResolve={async () => Promise.resolve()}
               onSubmitFeedback={async () => Promise.resolve()}
               isSupervisor={false}
@@ -646,6 +645,7 @@ const SAOs: React.FC = () => {
   const [searchParams] = useSearchParams();
   const saoId = searchParams.get('saoId');
   const [saoCreatedCount, setSaoCreatedCount] = useState<number>(0);
+  const [userRole, setUserRole] = useState<'eit' | 'supervisor' | null>(null);
 
   // Fetch the user's subscription to get sao_created_count
   useEffect(() => {
@@ -681,6 +681,17 @@ const SAOs: React.FC = () => {
     }
   }, [saoId, saos]);
 
+  useEffect(() => {
+    const fetchRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: supervisorProfile } = await supabase.from('supervisor_profiles').select('id').eq('id', user.id).single();
+      if (supervisorProfile) setUserRole('supervisor');
+      else setUserRole('eit');
+    };
+    fetchRole();
+  }, []);
+
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this SAO?')) {
       await deleteSAO(id);
@@ -708,23 +719,34 @@ const SAOs: React.FC = () => {
             : 'You have reached your SAO limit for the Free plan. Upgrade to add more.'}
         </div>
       )}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Situation-Action-Outcome (SAO)</h1>
           <p className="text-slate-500 mt-1">Write and manage your SAO essays.</p>
         </div>
-        <button
-          onClick={() => {
-            if (saoCreatedCount < saoLimit) setIsModalOpen(true);
-          }}
-          className={`btn flex items-center gap-2 ${saoCreatedCount >= saoLimit ? 'bg-gray-300 text-gray-500 border-gray-300 cursor-not-allowed' : 'btn-primary'}`}
-          disabled={saoCreatedCount >= saoLimit}
-          aria-disabled={saoCreatedCount >= saoLimit}
-          title={saoCreatedCount >= saoLimit ? 'You have reached your SAO limit for the Free plan.' : 'Start a new SAO'}
-        >
-          <Plus size={18} />
-          Start New SAO
-        </button>
+        <div className="flex gap-2 items-center">
+          {userRole === 'eit' && (
+            <button
+              className={`btn btn-primary ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
+              onClick={() => loadUserSAOs(true)}
+              disabled={loading}
+            >
+              {loading ? 'Refreshing...' : 'Refresh'}
+            </button>
+          )}
+          <button
+            onClick={() => {
+              if (saoCreatedCount < saoLimit) setIsModalOpen(true);
+            }}
+            className={`btn flex items-center gap-2 ${saoCreatedCount >= saoLimit ? 'bg-gray-300 text-gray-500 border-gray-300 cursor-not-allowed' : 'btn-primary'}`}
+            disabled={saoCreatedCount >= saoLimit}
+            aria-disabled={saoCreatedCount >= saoLimit}
+            title={saoCreatedCount >= saoLimit ? 'You have reached your SAO limit for the Free plan.' : 'Start a new SAO'}
+          >
+            <Plus size={18} />
+            Start New SAO
+          </button>
+        </div>
       </div>
 
       {error && (

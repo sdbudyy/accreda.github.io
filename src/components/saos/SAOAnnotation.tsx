@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useSAOsStore } from '../../store/saos';
 import type { SAOAnnotation } from '../../types/sao';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, X, CheckCircle, Trash2, CornerDownRight } from 'lucide-react';
 
 interface SAOAnnotationProps {
   saoId: string;
@@ -20,8 +20,16 @@ const HIGHLIGHT_COLOR = '#fff3bf';
 const HIGHLIGHT_ACTIVE = '#ffe066';
 
 const SAOAnnotation: React.FC<SAOAnnotationProps> = ({ saoId, content, readOnly }) => {
-  const { fetchAnnotations, addAnnotation } = useSAOsStore();
+  const {
+    fetchAnnotations,
+    addAnnotation,
+    fetchReplies,
+    addReply,
+    resolveAnnotation,
+    deleteAnnotation,
+  } = useSAOsStore();
   const [annotations, setAnnotations] = useState<SAOAnnotation[]>([]);
+  const [replies, setReplies] = useState<Record<string, any[]>>({});
   const [selected, setSelected] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
   const [comment, setComment] = useState('');
@@ -30,17 +38,29 @@ const SAOAnnotation: React.FC<SAOAnnotationProps> = ({ saoId, content, readOnly 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAddBtn, setShowAddBtn] = useState<{ x: number; y: number } | null>(null);
+  const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
+  const [popover, setPopover] = useState<string | null>(null);
+  const [resolved, setResolved] = useState<Record<string, boolean>>({});
   const contentRef = useRef<HTMLDivElement>(null);
   const highlightRefs = useRef<Record<string, HTMLSpanElement | null>>({});
   const sidebarRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
+  // Fetch annotations and their replies
   useEffect(() => {
     const loadAnnotations = async () => {
       const anns = await fetchAnnotations(saoId);
       setAnnotations(anns);
+      // Fetch replies for each annotation
+      const repliesObj: Record<string, any[]> = {};
+      const resolvedObj: Record<string, boolean> = {};
+      for (const ann of anns) {
+        repliesObj[ann.id] = await fetchReplies(ann.id);
+      }
+      setReplies(repliesObj);
+      setResolved(resolvedObj);
     };
     loadAnnotations();
-  }, [saoId, fetchAnnotations]);
+  }, [saoId, fetchAnnotations, fetchReplies]);
 
   // Convert SAOAnnotation to Highlight
   const highlights: (Highlight & { author_role?: string; author_name?: string })[] = annotations.map(a => ({
@@ -51,6 +71,9 @@ const SAOAnnotation: React.FC<SAOAnnotationProps> = ({ saoId, content, readOnly 
     author_role: a.author_role,
     author_name: a.author_name,
   }));
+
+  // Filter out resolved annotations
+  const visibleAnnotations = annotations.filter(a => !a.resolved);
 
   // Get absolute character offset of a node within a parent
   function getOffsetWithin(parent: Node, node: Node, offset: number): number {
@@ -105,42 +128,47 @@ const SAOAnnotation: React.FC<SAOAnnotationProps> = ({ saoId, content, readOnly 
     }
   };
 
-  // Render content with highlights and comment icons
+  // Render content with highlights and popover
   const renderContent = () => {
-    if (!highlights.length) return content;
+    if (!visibleAnnotations.length) return content;
     let parts: React.ReactNode[] = [];
     let last = 0;
-    // Sort highlights by start
-    const sorted = [...highlights].sort((a, b) => a.start - b.start);
-    sorted.forEach((h, i) => {
-      const isSupervisor = h.author_role === 'supervisor';
-      const highlightColor = isSupervisor ? (selected === h.id || hovered === h.id ? '#ffe066' : '#fff3bf') : (selected === h.id || hovered === h.id ? '#d0ebff' : '#e7f5ff');
+    const sorted = [...visibleAnnotations].sort((a, b) => a.location.start - b.location.start);
+    sorted.forEach((a, i) => {
+      const isSupervisor = a.author_role === 'supervisor';
+      const isResolved = a.resolved;
+      const highlightColor = isResolved
+        ? '#e9ecef'
+        : isSupervisor
+        ? (selected === a.id || hovered === a.id ? '#ffe066' : '#fff3bf')
+        : (selected === a.id || hovered === a.id ? '#d0ebff' : '#e7f5ff');
       const borderColor = isSupervisor ? '#ffd43b' : '#228be6';
-      parts.push(content.slice(last, h.start));
+      parts.push(content.slice(last, a.location.start));
       parts.push(
         <span
-          key={h.id}
-          ref={el => (highlightRefs.current[h.id] = el)}
+          key={a.id}
+          ref={el => (highlightRefs.current[a.id] = el)}
           style={{
             background: highlightColor,
             borderRadius: 3,
-            boxShadow: selected === h.id || hovered === h.id ? `0 0 0 2px ${borderColor}` : undefined,
+            boxShadow: selected === a.id || hovered === a.id ? `0 0 0 2px ${borderColor}` : undefined,
             cursor: 'pointer',
             position: 'relative',
             transition: 'background 0.2s, box-shadow 0.2s',
             padding: '0 2px',
+            opacity: isResolved ? 0.6 : 1,
           }}
-          onClick={() => {
-            setSelected(h.id);
+          onClick={e => {
+            setSelected(a.id);
+            setPopover(a.id);
             setTimeout(() => {
-              sidebarRefs.current[h.id]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              sidebarRefs.current[a.id]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 100);
           }}
-          onMouseEnter={() => setHovered(h.id)}
+          onMouseEnter={() => setHovered(a.id)}
           onMouseLeave={() => setHovered(null)}
         >
-          {content.slice(h.start, h.end)}
-          {/* Comment icon at end of highlight */}
+          {content.slice(a.location.start, a.location.end)}
           <span
             style={{
               display: 'inline-block',
@@ -154,15 +182,114 @@ const SAOAnnotation: React.FC<SAOAnnotationProps> = ({ saoId, content, readOnly 
             title="View comment"
             onClick={e => {
               e.stopPropagation();
-              setSelected(h.id);
-              sidebarRefs.current[h.id]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              setSelected(a.id);
+              setPopover(a.id);
+              sidebarRefs.current[a.id]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }}
           >
             <MessageSquare size={14} />
           </span>
+          {/* Popover for comment */}
+          {popover === a.id && selected === a.id && (
+            <div
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: '100%',
+                zIndex: 100,
+                background: 'white',
+                border: '1px solid #ddd',
+                borderRadius: 6,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                minWidth: 280,
+                padding: 12,
+                marginTop: 4,
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-xs text-slate-500">
+                  {a.author_name} ({isSupervisor ? 'Supervisor' : 'EIT'})
+                  {isResolved && <span className="ml-2 text-green-600 font-semibold">[Resolved]</span>}
+                </span>
+                <button onClick={() => setPopover(null)} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
+              </div>
+              <div className="text-slate-800 text-sm mb-2">{a.annotation}</div>
+              {/* Replies */}
+              {replies[a.id] && replies[a.id].length > 0 && (
+                <div className="mb-2">
+                  {replies[a.id].map((r: any) => (
+                    <div key={r.id} className="flex items-start gap-2 mb-1">
+                      <CornerDownRight size={14} className="mt-1 text-slate-400" />
+                      <div>
+                        <span className="text-xs text-slate-500">{r.content}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Reply input */}
+              {!isResolved && (
+                <div className="flex gap-2 mt-2">
+                  <input
+                    type="text"
+                    className="input input-sm flex-1"
+                    placeholder="Reply..."
+                    value={replyInputs[a.id] || ''}
+                    onChange={e => setReplyInputs({ ...replyInputs, [a.id]: e.target.value })}
+                  />
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={async () => {
+                      if (!a.id) {
+                        console.error('Tried to fetch replies for undefined annotation id');
+                        return;
+                      }
+                      if (!replyInputs[a.id]?.trim()) return;
+                      await addReply(a.id, replyInputs[a.id]);
+                      setReplyInputs({ ...replyInputs, [a.id]: '' });
+                      // Refresh replies
+                      const newReplies = await fetchReplies(a.id);
+                      setReplies(r => ({ ...r, [a.id]: newReplies }));
+                    }}
+                  >Reply</button>
+                </div>
+              )}
+              {/* Actions */}
+              <div className="flex gap-2 mt-2">
+                {!isResolved && (
+                  <button className="btn btn-success btn-xs" onClick={async () => {
+                    if (!a.id) {
+                      console.error('Tried to resolve annotation with undefined id');
+                      return;
+                    }
+                    await resolveAnnotation(a.id);
+                    const anns = await fetchAnnotations(saoId);
+                    setAnnotations(anns);
+                    setResolved(r => ({ ...r, [a.id]: true }));
+                    if (selected === a.id) setSelected(null);
+                    if (popover === a.id) setPopover(null);
+                  }}><CheckCircle size={14} className="mr-1" />Resolve</button>
+                )}
+                {isResolved && (
+                  <button className="btn btn-danger btn-xs" onClick={async () => {
+                    if (!a.id) {
+                      console.error('Tried to delete annotation with undefined id');
+                      return;
+                    }
+                    await deleteAnnotation(a.id);
+                    const anns = await fetchAnnotations(saoId);
+                    setAnnotations(anns);
+                    if (popover === a.id) setPopover(null);
+                    if (selected === a.id) setSelected(null);
+                  }}><Trash2 size={14} className="mr-1" />Delete</button>
+                )}
+              </div>
+            </div>
+          )}
         </span>
       );
-      last = h.end;
+      last = a.location.end;
     });
     parts.push(content.slice(last));
     return parts;
@@ -193,6 +320,15 @@ const SAOAnnotation: React.FC<SAOAnnotationProps> = ({ saoId, content, readOnly 
     setSelected(h.id);
     highlightRefs.current[h.id]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
+
+  // In the sidebar, use visibleAnnotations.map(...)
+  // If the selected annotation is not in visibleAnnotations, hide the popover
+  useEffect(() => {
+    if (selected && !visibleAnnotations.some(a => a.id === selected)) {
+      setPopover(null);
+      setSelected(null);
+    }
+  }, [visibleAnnotations, selected]);
 
   return (
     <div className="flex gap-6">
@@ -249,27 +385,99 @@ const SAOAnnotation: React.FC<SAOAnnotationProps> = ({ saoId, content, readOnly 
           </div>
         )}
       </div>
-      {/* Sidebar with comments */}
+      {/* Sidebar with comments and replies */}
       <div className="w-72 border-l pl-4 flex flex-col gap-3 bg-slate-50 max-h-[400px] overflow-y-auto">
         <h4 className="font-semibold text-slate-700 mb-2">Comments</h4>
-        {highlights.length === 0 && <div className="text-slate-400 text-sm">No comments yet.</div>}
-        {highlights.map(h => {
-          const isSupervisor = h.author_role === 'supervisor';
+        {visibleAnnotations.length === 0 && <div className="text-slate-400 text-sm">No comments yet.</div>}
+        {visibleAnnotations.map(a => {
+          const isSupervisor = a.author_role === 'supervisor';
+          const isResolved = a.resolved;
           return (
             <div
-              key={h.id}
-              ref={el => (sidebarRefs.current[h.id] = el)}
-              className={`p-2 rounded cursor-pointer transition-all ${selected === h.id ? (isSupervisor ? 'bg-yellow-100' : 'bg-blue-100') : hovered === h.id ? (isSupervisor ? 'bg-yellow-50' : 'bg-blue-50') : 'hover:bg-slate-100'}`}
-              onClick={() => handleSidebarClick(h)}
-              onMouseEnter={() => setHovered(h.id)}
+              key={a.id}
+              ref={el => (sidebarRefs.current[a.id] = el)}
+              className={`p-2 rounded cursor-pointer transition-all ${selected === a.id ? (isSupervisor ? 'bg-yellow-100' : 'bg-blue-100') : hovered === a.id ? (isSupervisor ? 'bg-yellow-50' : 'bg-blue-50') : 'hover:bg-slate-100'}`}
+              onClick={() => setSelected(a.id)}
+              onMouseEnter={() => setHovered(a.id)}
               onMouseLeave={() => setHovered(null)}
-              style={{ borderLeft: selected === h.id ? (isSupervisor ? '3px solid #fab005' : '3px solid #228be6') : '3px solid transparent' }}
+              style={{ borderLeft: selected === a.id ? (isSupervisor ? '3px solid #fab005' : '3px solid #228be6') : '3px solid transparent', opacity: isResolved ? 0.6 : 1 }}
             >
-              <div className="text-xs text-slate-500 mb-1 italic max-w-full truncate">
-                {h.author_name ? `${h.author_name} (${isSupervisor ? 'Supervisor' : 'EIT'})` : ''}
-                <span className="ml-2">{content.slice(h.start, h.end)}</span>
+              <div className="flex items-center gap-2 text-xs text-slate-500 mb-1 italic max-w-full truncate">
+                {a.author_name ? `${a.author_name} (${isSupervisor ? 'Supervisor' : 'EIT'})` : ''}
+                {isResolved && <span className="ml-2 text-green-600 font-semibold">[Resolved]</span>}
+                <span className="ml-2">{content.slice(a.location.start, a.location.end)}</span>
               </div>
-              <div className="text-slate-800 text-sm">{h.comment}</div>
+              <div className="text-slate-800 text-sm mb-1">{a.annotation}</div>
+              {/* Replies */}
+              {replies[a.id] && replies[a.id].length > 0 && (
+                <div className="mb-1 ml-4">
+                  {replies[a.id].map((r: any) => (
+                    <div key={r.id} className="flex items-start gap-2 mb-1">
+                      <CornerDownRight size={14} className="mt-1 text-slate-400" />
+                      <div>
+                        <span className="text-xs text-slate-500">{r.content}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Reply input */}
+              {!isResolved && (
+                <div className="flex gap-2 mt-1 ml-4">
+                  <input
+                    type="text"
+                    className="input input-xs flex-1"
+                    placeholder="Reply..."
+                    value={replyInputs[a.id] || ''}
+                    onChange={e => setReplyInputs({ ...replyInputs, [a.id]: e.target.value })}
+                  />
+                  <button
+                    className="btn btn-primary btn-xs"
+                    onClick={async () => {
+                      if (!a.id) {
+                        console.error('Tried to fetch replies for undefined annotation id');
+                        return;
+                      }
+                      if (!replyInputs[a.id]?.trim()) return;
+                      await addReply(a.id, replyInputs[a.id]);
+                      setReplyInputs({ ...replyInputs, [a.id]: '' });
+                      // Refresh replies
+                      const newReplies = await fetchReplies(a.id);
+                      setReplies(r => ({ ...r, [a.id]: newReplies }));
+                    }}
+                  >Reply</button>
+                </div>
+              )}
+              {/* Actions */}
+              <div className="flex gap-2 mt-2 ml-4">
+                {!isResolved && (
+                  <button className="btn btn-success btn-xs" onClick={async () => {
+                    if (!a.id) {
+                      console.error('Tried to resolve annotation with undefined id');
+                      return;
+                    }
+                    await resolveAnnotation(a.id);
+                    const anns = await fetchAnnotations(saoId);
+                    setAnnotations(anns);
+                    setResolved(r => ({ ...r, [a.id]: true }));
+                    if (selected === a.id) setSelected(null);
+                    if (popover === a.id) setPopover(null);
+                  }}><CheckCircle size={14} className="mr-1" />Resolve</button>
+                )}
+                {isResolved && (
+                  <button className="btn btn-danger btn-xs" onClick={async () => {
+                    if (!a.id) {
+                      console.error('Tried to delete annotation with undefined id');
+                      return;
+                    }
+                    await deleteAnnotation(a.id);
+                    const anns = await fetchAnnotations(saoId);
+                    setAnnotations(anns);
+                    if (popover === a.id) setPopover(null);
+                    if (selected === a.id) setSelected(null);
+                  }}><Trash2 size={14} className="mr-1" />Delete</button>
+                )}
+              </div>
             </div>
           );
         })}

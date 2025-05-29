@@ -33,12 +33,16 @@ export const initializeWebLLM = async () => {
   return chat;
 };
 
-const OPENROUTER_API_KEY = "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";
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 const SITE_URL = "https://accreda.com"; // Replace with your production URL
 const SITE_NAME = "Accreda";
 
+const OPENROUTER_API_KEY = "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";
+
 export const enhanceSAO = async (text: string): Promise<string> => {
+  if (!OPENROUTER_API_KEY) {
+    throw new Error("OpenRouter API key is missing. Please set VITE_OPENROUTER_API_KEY in your .env file.");
+  }
   const prompt = `You are an expert in writing professional Situation-Action-Outcome (SAO) statements. Please enhance the following SAO statement following these specific guidelines:
 
 1. Structure:
@@ -93,5 +97,52 @@ Format the response as a clear SAO statement with Situation, Action, and Outcome
 
   const data = await response.json();
   // The response format: { choices: [{ message: { content: "..." } }] }
+  return data.choices?.[0]?.message?.content || "";
+};
+
+export const enhanceSAOClarity = async (text: string): Promise<string> => {
+  if (!OPENROUTER_API_KEY) {
+    throw new Error("OpenRouter API key is missing. Please set VITE_OPENROUTER_API_KEY in your .env file.");
+  }
+  const prompt = `You are an expert in improving the clarity and grammar of professional writing. Please enhance the following text by:
+
+1. Fixing any grammatical errors
+2. Improving sentence structure and flow
+3. Enhancing clarity while maintaining the original meaning
+4. Using more precise and professional language
+5. Maintaining the original tone and style
+6. Preserving all specific details, numbers, and technical terms
+
+Please provide the enhanced version with clear markdown formatting to show the changes:
+
+${text}
+
+Format the response as a markdown diff, showing the original text with strikethrough and the improved text in bold.`;
+
+  const response = await fetch(OPENROUTER_API_URL, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+      "HTTP-Referer": SITE_URL,
+      "X-Title": SITE_NAME,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: "meta-llama/llama-3.1-8b-instruct:free",
+      messages: [
+        {
+          role: "user",
+          content: prompt
+        }
+      ]
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
   return data.choices?.[0]?.message?.content || "";
 }; 

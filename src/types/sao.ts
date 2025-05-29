@@ -9,6 +9,8 @@ export interface SAOAnnotation {
   annotation: string;
   created_at: string;
   updated_at: string;
+  status?: string;
+  resolved?: boolean;
 }
 
 export interface SAO {
