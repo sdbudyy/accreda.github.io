@@ -318,7 +318,10 @@ const SupervisorReviews: React.FC = () => {
         };
       });
       setValidators(latestValidators);
-      setPendingValidators(pending || []);
+      setPendingValidators((pending || []).map(v => ({
+        ...v,
+        id: v.id // This should be the UUID from the DB
+      })));
       // Set up history for each (eit_id, skill_id)
       setHistory(grouped);
       setLoadingSkills(false);
@@ -370,39 +373,22 @@ const SupervisorReviews: React.FC = () => {
       if (!score || score < 1 || score > 5) return;
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      // Save new validation record
-      const [eit_id, skill_id] = validator.id.split('_');
-      const { data: validation, error: validationError } = await supabase
-        .from('skill_validations')
-        .insert({
-          eit_id,
-          skill_id,
-          validator_id: user.id,
+      // Update the validator row with the score and feedback
+      const { error: updateError } = await supabase
+        .from('validators')
+        .update({
           score: score,
-          validated_at: new Date().toISOString(),
-          feedback: validator.description // Store the description as feedback
+          description: validator.description, // feedback
+          status: 'scored',
+          updated_at: new Date().toISOString()
         })
-        .select()
-        .single();
-      if (validationError) throw validationError;
-      // Update local state: add new validation to history and update latest score
-      setHistory(prev => {
-        const key = `${eit_id}_${skill_id}`;
-        return {
-          ...prev,
-          [key]: [
-            {
-              ...validation,
-              full_name: user.user_metadata?.full_name || '',
-              email: user.email
-            },
-            ...(prev[key] || [])
-          ]
-        };
-      });
+        .eq('id', validator.id);
+      if (updateError) throw updateError;
+      // Update local state
       setValidators(prev => prev.map(v => v.id === validator.id ? {
         ...v,
         score,
+        status: 'scored',
         updated_at: new Date().toISOString()
       } : v));
       setScoreInputs(prev => {
@@ -411,12 +397,11 @@ const SupervisorReviews: React.FC = () => {
         return next;
       });
       // Send notification
-      const eit = eitProfiles[eit_id];
-      if (eit) {
-        await sendScoreNotification(eit.email, skill_id, score);
-      }
-    } catch (error) {
+      const skill = skills[validator.skill_id];
+      await sendScoreNotification(validator.eit_id, skill ? skill.name : validator.skill_id, score);
+    } catch (error: any) {
       console.error('Error submitting score:', error);
+      toast.error(error.message || 'Error submitting score');
     }
   };
   const handleResolve = async (feedbackId: string) => {

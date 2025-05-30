@@ -37,9 +37,11 @@ const SupervisorSettings: React.FC = () => {
     eitRequests,
     skillValidationRequests,
     saoFeedback,
+    weeklyDigest,
     toggleEitRequests,
     toggleSkillValidationRequests,
     toggleSaoFeedback,
+    toggleWeeklyDigest,
   } = useSupervisorNotificationPreferences();
   const [showContactModal, setShowContactModal] = useState(false);
   const [contactName, setContactName] = useState('');
@@ -485,6 +487,21 @@ const SupervisorSettings: React.FC = () => {
             >
               <span
                 className={`${saoFeedback ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+              />
+            </Switch>
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium text-gray-900">Weekly Digest</h3>
+              <p className="text-sm text-gray-500">Receive a weekly report on your EITs' progress and activities ({email})</p>
+            </div>
+            <Switch
+              checked={weeklyDigest}
+              onChange={toggleWeeklyDigest}
+              className={`${weeklyDigest ? 'bg-teal-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2`}
+            >
+              <span
+                className={`${weeklyDigest ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
               />
             </Switch>
           </div>

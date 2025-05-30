@@ -24,6 +24,31 @@ const SupervisorRecentActivities: React.FC = () => {
       console.log('🔄 Starting fetchActivities for supervisor:', supervisorId);
       setLoading(true);
 
+      // Fetch recent skill approvals
+      const { data: recentApprovals, error: approvalsError } = await supabase
+        .from('skill_approvals')
+        .select(`
+          id,
+          approved_at,
+          feedback,
+          eit_id,
+          supervisor_id,
+          skill_id,
+          eit_profiles (
+            id,
+            full_name
+          ),
+          skills (
+            id,
+            name
+          )
+        `)
+        .eq('supervisor_id', supervisorId)
+        .order('approved_at', { ascending: false })
+        .limit(limit);
+
+      if (approvalsError) throw approvalsError;
+
       // Fetch recent SAO feedback
       const { data: recentSAOs, error: saosError } = await supabase
         .from('saos')
@@ -75,6 +100,19 @@ const SupervisorRecentActivities: React.FC = () => {
 
       // Combine and sort all activities
       const allActivities: Activity[] = [
+        ...(recentApprovals || []).map(approval => {
+          const skill = Array.isArray(approval.skills) ? approval.skills[0] : approval.skills;
+          const eitProfile = Array.isArray(approval.eit_profiles) ? approval.eit_profiles[0] : approval.eit_profiles;
+          return {
+            id: approval.id,
+            type: 'approval' as const,
+            title: `Approved "${skill?.name || approval.skill_id}" for ${eitProfile?.full_name || approval.eit_id}`,
+            timestamp: approval.approved_at,
+            eitName: eitProfile?.full_name,
+            eitId: eitProfile?.id,
+            status: undefined
+          };
+        }),
         ...(recentSAOs || []).map(sao => ({
           id: sao.id,
           type: 'feedback' as const,

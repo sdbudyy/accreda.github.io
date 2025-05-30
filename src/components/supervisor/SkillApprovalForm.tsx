@@ -28,18 +28,56 @@ const SkillApprovalForm: React.FC<SkillApprovalFormProps> = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No authenticated user');
 
-      // Create approval record
-      const { error: approvalError } = await supabase
+      // Check if an approval already exists for this supervisor/EIT/skill
+      const { data: existingApproval, error: fetchError } = await supabase
         .from('skill_approvals')
-        .insert({
-          eit_id: eitId,
-          skill_id: skillId,
-          supervisor_id: user.id,
-          feedback,
-          approved_at: new Date().toISOString()
-        });
+        .select('*')
+        .eq('eit_id', eitId)
+        .eq('skill_id', skillId)
+        .eq('supervisor_id', user.id)
+        .single();
 
-      if (approvalError) throw approvalError;
+      if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
+
+      if (existingApproval) {
+        // Update the existing approval (does not count as a new marking)
+        const { error: updateError } = await supabase
+          .from('skill_approvals')
+          .update({
+            feedback,
+            approved_at: new Date().toISOString()
+          })
+          .eq('id', existingApproval.id);
+
+        if (updateError) throw updateError;
+      } else {
+        // Count how many unique skills this supervisor has approved for this EIT
+        const { count: approvalCount, error: countError } = await supabase
+          .from('skill_approvals')
+          .select('id', { count: 'exact', head: true })
+          .eq('eit_id', eitId)
+          .eq('supervisor_id', user.id);
+
+        if (countError) throw countError;
+        if ((approvalCount || 0) >= 20) {
+          toast.error('You have reached the maximum of 20 approvals for this EIT.');
+          setLoading(false);
+          return;
+        }
+
+        // Insert new approval
+        const { error: approvalError } = await supabase
+          .from('skill_approvals')
+          .insert({
+            eit_id: eitId,
+            skill_id: skillId,
+            supervisor_id: user.id,
+            feedback,
+            approved_at: new Date().toISOString()
+          });
+
+        if (approvalError) throw approvalError;
+      }
 
       // Update skill status
       const { error: skillError } = await supabase

@@ -6,6 +6,7 @@ import { useOutletContext } from 'react-router-dom';
 import { Clock } from 'lucide-react';
 import { supervisorService, SupervisorCategoryAverage } from '../services/supervisorService';
 import SupervisorRecentActivities from '../components/supervisor/SupervisorRecentActivities';
+import WeeklyDigest from '../components/dashboard/WeeklyDigest';
 
 interface EIT {
   id: string;
@@ -214,6 +215,7 @@ const SupervisorDashboard: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <WeeklyDigest />
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-slate-800 flex items-center gap-2">

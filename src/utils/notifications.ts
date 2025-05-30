@@ -1,89 +1,107 @@
 import { supabase } from '../lib/supabase';
 
-export const sendNotification = async (
-  userId: string,
-  type: 'request' | 'score' | 'approval' | 'validation_request' | 'nudge',
-  title: string,
-  message: string,
-  data?: any
-) => {
-  try {
-    const { error } = await supabase
-      .from('notifications')
-      .insert({
-        user_id: userId,
-        type,
-        title,
-        message,
-        data,
-        read: false
-      });
+export async function sendNotification({
+  userId,
+  type,
+  title,
+  message = '',
+  data = {}
+}: {
+  userId: string;
+  type: string;
+  title: string;
+  message?: string;
+  data?: Record<string, any>;
+}) {
+  const { error } = await supabase
+    .from('notifications')
+    .insert({
+      user_id: userId,
+      type,
+      title,
+      message,
+      data,
+      read: false,
+      created_at: new Date().toISOString()
+    });
+  if (error) throw error;
+}
 
-    if (error) throw error;
-    return true;
-  } catch (error) {
-    console.error('Error sending notification:', error);
-    return false;
-  }
-};
+export async function fetchNotifications(userId: string) {
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+export async function markNotificationRead(notificationId: string) {
+  const { error } = await supabase
+    .from('notifications')
+    .update({ read: true })
+    .eq('id', notificationId);
+  if (error) throw error;
+}
 
 // Helper functions for common notification types
 export const sendSupervisorRequestNotification = async (supervisorId: string, eitName: string) => {
-  return sendNotification(
-    supervisorId,
-    'request',
-    'New EIT Connection Request',
-    `${eitName} has requested to connect with you as their supervisor.`,
-    { type: 'supervisor_request' }
-  );
+  return sendNotification({
+    userId: supervisorId,
+    type: 'request',
+    title: 'New EIT Connection Request',
+    message: `${eitName} has requested to connect with you as their supervisor.`,
+    data: { type: 'supervisor_request' }
+  });
 };
 
 export const sendScoreNotification = async (eitId: string, skillName: string, score: number) => {
-  return sendNotification(
-    eitId,
-    'score',
-    'New Skill Score',
-    `You received a score of ${score} for ${skillName}.`,
-    { type: 'skill_score', skillName, score }
-  );
+  return sendNotification({
+    userId: eitId,
+    type: 'score',
+    title: 'New Skill Score',
+    message: `You received a score of ${score} for ${skillName}.`,
+    data: { type: 'skill_score', skillName, score }
+  });
 };
 
 export const sendApprovalNotification = async (eitId: string, skillName: string) => {
-  return sendNotification(
-    eitId,
-    'approval',
-    'Skill Approved',
-    `Your ${skillName} has been approved by your supervisor.`,
-    { type: 'skill_approval', skillName }
-  );
+  return sendNotification({
+    userId: eitId,
+    type: 'approval',
+    title: 'Skill Approved',
+    message: `Your ${skillName} has been approved by your supervisor.`,
+    data: { type: 'skill_approval', skillName }
+  });
 };
 
 export const sendValidationRequestNotification = async (supervisorId: string, eitName: string, skillName: string) => {
-  return sendNotification(
-    supervisorId,
-    'validation_request',
-    'New Skill Validation Request',
-    `${eitName} has requested your validation for ${skillName}.`,
-    { type: 'validation_request', skillName }
-  );
+  return sendNotification({
+    userId: supervisorId,
+    type: 'validation_request',
+    title: 'New Skill Validation Request',
+    message: `${eitName} has requested your validation for ${skillName}.`,
+    data: { type: 'validation_request', skillName }
+  });
 };
 
 export const sendSAOScoreNotification = async (eitId: string, saoTitle: string, score: number) => {
-  return sendNotification(
-    eitId,
-    'score',
-    'New SAO Score',
-    `You received a score of ${score} for your SAO: "${saoTitle}".`,
-    { type: 'sao_score', saoTitle, score }
-  );
+  return sendNotification({
+    userId: eitId,
+    type: 'score',
+    title: 'New SAO Score',
+    message: `You received a score of ${score} for your SAO: "${saoTitle}".`,
+    data: { type: 'sao_score', saoTitle, score }
+  });
 };
 
 export const sendSAOValidationRequestNotification = async (supervisorId: string, eitName: string, saoTitle: string) => {
-  return sendNotification(
-    supervisorId,
-    'validation_request',
-    'New SAO Validation Request',
-    `${eitName} has requested your validation for SAO: "${saoTitle}".`,
-    { type: 'sao_validation_request', saoTitle }
-  );
+  return sendNotification({
+    userId: supervisorId,
+    type: 'validation_request',
+    title: 'New SAO Validation Request',
+    message: `${eitName} has requested your validation for SAO: "${saoTitle}".`,
+    data: { type: 'sao_validation_request', saoTitle }
+  });
 }; 

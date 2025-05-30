@@ -22,6 +22,9 @@ export default defineConfig(({ mode }) => {
     define: {
       __SUPABASE_URL_EXISTS__: JSON.stringify(!!env.VITE_SUPABASE_URL),
       __SUPABASE_ANON_KEY_EXISTS__: JSON.stringify(!!env.VITE_SUPABASE_ANON_KEY),
-    }
+    },
+    optimizeDeps: {
+      include: [], // add plugins you use
+    },
   };
 });

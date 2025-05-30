@@ -14,6 +14,7 @@ export interface Document {
   file_type?: string;
   file_size?: number;
   category?: string;
+  supervisor_id?: string;
 }
 
 interface DocumentsState {

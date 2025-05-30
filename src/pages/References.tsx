@@ -159,7 +159,8 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
             skill_id: skillId,
             full_name: formData.fullName,
             email: formData.email,
-            description: formData.description
+            description: formData.description,
+            status: 'pending'
           }]);
 
         if (insertError) throw insertError;
@@ -178,6 +179,7 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
     } catch (err) {
       console.error('Validator insert error:', err);
       setError(err instanceof Error ? err.message : JSON.stringify(err));
+      toast.error(err instanceof Error ? err.message : 'Error submitting validator');
     } finally {
       setLoading(false);
     }
@@ -348,6 +350,7 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
     } catch (err) {
       console.error('ReferencePopup error:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
+      toast.error(err instanceof Error ? err.message : 'Error submitting reference');
     } finally {
       setLoading(false);
     }
@@ -384,6 +387,7 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
     } catch (err) {
       console.error('Error sending reference:', err);
       setError(err instanceof Error ? err.message : 'An error occurred while sending the reference');
+      toast.error(err instanceof Error ? err.message : 'Error sending reference');
     } finally {
       setSending(false);
     }
@@ -408,6 +412,7 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
     } catch (err) {
       console.error('Error canceling reference:', err);
       setError(err instanceof Error ? err.message : 'An error occurred while canceling the reference');
+      toast.error(err instanceof Error ? err.message : 'Error canceling reference');
     } finally {
       setLoading(false);
     }
@@ -1214,25 +1219,34 @@ const References: React.FC = () => {
                                       onClick={async () => {
                                         // Set cooldown
                                         setNudgeCooldowns((prev: any) => ({ ...prev, [validator.id]: Date.now() }));
-                                        // Get EIT profile for notification
-                                        const { data: { user } } = await supabase.auth.getUser();
-                                        if (!user) return;
-                                        const { data: eitProfile } = await supabase
-                                          .from('eit_profiles')
-                                          .select('full_name')
-                                          .eq('id', user.id)
-                                          .single();
-                                        // Send notification to supervisor
-                                        await sendValidationRequestNotification(
-                                          validator.id, // supervisorId (assuming validator.id is supervisorId, adjust if needed)
-                                          eitProfile?.full_name || user.email,
-                                          skill.name
-                                        );
-                                        // Set status back to pending in DB
-                                        await supabase.from('validators').update({ status: 'pending' }).eq('id', validator.id);
-                                        // Reload validators to update UI
-                                        await loadValidators();
-                                        toast.success('Nudge sent!');
+                                        try {
+                                          // Get EIT profile for notification
+                                          const { data: { user } } = await supabase.auth.getUser();
+                                          if (!user) return;
+                                          const { data: eitProfile } = await supabase
+                                            .from('eit_profiles')
+                                            .select('full_name')
+                                            .eq('id', user.id)
+                                            .single();
+                                          // Get supervisor profile for notification
+                                          const { data: supervisorProfile } = await supabase
+                                            .from('supervisor_profiles')
+                                            .select('id')
+                                            .eq('email', validator.email)
+                                            .single();
+                                          // Send notification to supervisor
+                                          await sendValidationRequestNotification(
+                                            supervisorProfile?.id || validator.email, // fallback to email if id not found
+                                            eitProfile?.full_name || user.email,
+                                            skill.name
+                                          );
+                                          // Set status back to pending in DB and clear score
+                                          await supabase.from('validators').update({ status: 'pending', score: null }).eq('id', validator.id);
+                                          await loadValidators();
+                                          toast.success('Nudge sent!');
+                                        } catch (err) {
+                                          toast.error('Failed to send nudge.');
+                                        }
                                       }}
                                     >
                                       {nudgeCooldowns[validator.id] && Date.now() - nudgeCooldowns[validator.id] < 5 * 60 * 1000
@@ -1246,25 +1260,34 @@ const References: React.FC = () => {
                                       disabled={!!(nudgeCooldowns[validator.id] && Date.now() - nudgeCooldowns[validator.id] < 5 * 60 * 1000)}
                                       onClick={async () => {
                                         setNudgeCooldowns((prev: any) => ({ ...prev, [validator.id]: Date.now() }));
-                                        // Get EIT profile for notification
-                                        const { data: { user } } = await supabase.auth.getUser();
-                                        if (!user) return;
-                                        const { data: eitProfile } = await supabase
-                                          .from('eit_profiles')
-                                          .select('full_name')
-                                          .eq('id', user.id)
-                                          .single();
-                                        // Send notification to supervisor
-                                        await sendValidationRequestNotification(
-                                          validator.id, // supervisorId (assuming validator.id is supervisorId, adjust if needed)
-                                          eitProfile?.full_name || user.email,
-                                          skill.name
-                                        );
-                                        // Set status back to pending in DB
-                                        await supabase.from('validators').update({ status: 'pending' }).eq('id', validator.id);
-                                        // Reload validators to update UI
-                                        await loadValidators();
-                                        toast.success('Rescore request sent!');
+                                        try {
+                                          // Get EIT profile for notification
+                                          const { data: { user } } = await supabase.auth.getUser();
+                                          if (!user) return;
+                                          const { data: eitProfile } = await supabase
+                                            .from('eit_profiles')
+                                            .select('full_name')
+                                            .eq('id', user.id)
+                                            .single();
+                                          // Get supervisor profile for notification
+                                          const { data: supervisorProfile } = await supabase
+                                            .from('supervisor_profiles')
+                                            .select('id')
+                                            .eq('email', validator.email)
+                                            .single();
+                                          // Send notification to supervisor
+                                          await sendValidationRequestNotification(
+                                            supervisorProfile?.id || validator.email, // fallback to email if id not found
+                                            eitProfile?.full_name || user.email,
+                                            skill.name
+                                          );
+                                          // Set status back to pending in DB and clear score
+                                          await supabase.from('validators').update({ status: 'pending', score: null }).eq('id', validator.id);
+                                          await loadValidators();
+                                          toast.success('Rescore request sent!');
+                                        } catch (err) {
+                                          toast.error('Failed to request rescore.');
+                                        }
                                       }}
                                     >
                                       {nudgeCooldowns[validator.id] && Date.now() - nudgeCooldowns[validator.id] < 5 * 60 * 1000

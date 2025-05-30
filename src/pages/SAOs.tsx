@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FileEdit, Plus, X, ChevronDown, Trash2, Edit2, Sparkles, Clock } from 'lucide-react';
+import { FileEdit, Plus, X, ChevronDown, Trash2, Edit2, Sparkles, Clock, Upload } from 'lucide-react';
 import { useSkillsStore, Category, Skill } from '../store/skills';
 import { useSAOsStore, SAO } from '../store/saos';
 import { useSearchParams } from 'react-router-dom';
@@ -10,12 +10,26 @@ import Modal from '../components/common/Modal';
 import { useSubscriptionStore } from '../store/subscriptionStore';
 import SAOAnnotation from '../components/saos/SAOAnnotation';
 import toast from 'react-hot-toast';
+import RichTextEditor from '../components/documents/RichTextEditor';
+import mammoth from 'mammoth';
+import * as pdfjsLib from 'pdfjs-dist';
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker?worker';
+
+// @ts-ignore
+declare global {
+  interface Window {
+    gapi?: any;
+    OneDrive?: any;
+  }
+}
 
 interface SAOModalProps {
   isOpen: boolean;
   onClose: () => void;
   editSAO?: SAO;
   onCreated?: () => void;
+  initialContent?: string | null;
+  onInitialContentUsed?: () => void;
 }
 
 // Utility to get the most recent feedback
@@ -26,7 +40,7 @@ function getMostRecentFeedback(feedbackArr: { updated_at: string; status: string
   );
 }
 
-const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated }) => {
+const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated, initialContent, onInitialContentUsed }) => {
   const [title, setTitle] = useState('');
   const [sao, setSao] = useState('');
   const [selectedSkills, setSelectedSkills] = useState<Skill[]>([]);
@@ -94,6 +108,14 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
       setStatus('draft');
     }
   }, [isOpen, editSAO]);
+
+  // Set initial content if provided
+  useEffect(() => {
+    if (isOpen && initialContent) {
+      setSao(initialContent);
+      if (onInitialContentUsed) onInitialContentUsed();
+    }
+  }, [isOpen, initialContent, onInitialContentUsed]);
 
   // Fetch the user's subscription to get sao_created_count
   useEffect(() => {
@@ -317,18 +339,13 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
               Situation-Action-Outcome
             </label>
             <div className="relative">
-              <textarea
-                id="sao"
-                value={enhancedText || sao}
-                onChange={(e) => {
-                  if (!enhancedText) {
-                    setSao(e.target.value);
-                  }
+              <RichTextEditor
+                content={enhancedText || sao}
+                onChange={val => {
+                  if (!enhancedText) setSao(val);
                 }}
-                className="w-full px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 min-h-[400px] text-lg"
-                placeholder="Describe your situation, actions, and outcomes..."
-                required
-                disabled={loading || isEnhancing}
+                onSave={() => {}}
+                onCancel={() => {}}
               />
               {tier !== 'free' && (
                 <button
@@ -646,6 +663,71 @@ const SAOs: React.FC = () => {
   const saoId = searchParams.get('saoId');
   const [saoCreatedCount, setSaoCreatedCount] = useState<number>(0);
   const [userRole, setUserRole] = useState<'eit' | 'supervisor' | null>(null);
+  const [importMenuOpen, setImportMenuOpen] = useState(false);
+  const [importedContent, setImportedContent] = useState<string | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [uploadInputRef] = useState(() => React.createRef<HTMLInputElement>());
+  const [pendingSAOContent, setPendingSAOContent] = useState<string | null>(null);
+
+  // --- GOOGLE DRIVE IMPORT SCAFFOLD ---
+  // TODO: Replace with your credentials when you have a domain
+  const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID';
+  const GOOGLE_API_KEY = 'YOUR_GOOGLE_API_KEY';
+  const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
+  const GOOGLE_DISCOVERY_DOCS = [
+    'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
+  ];
+
+  // Loads the Google API script
+  const loadGoogleApi = () => {
+    if (window.gapi) return Promise.resolve();
+    return new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://apis.google.com/js/api.js';
+      script.onload = resolve;
+      document.body.appendChild(script);
+    });
+  };
+
+  // Authenticate and open the Google Picker
+  const handleImportGoogleDrive = async () => {
+    setImportMenuOpen(false);
+    await loadGoogleApi();
+    // TODO: Implement OAuth and Picker logic here
+    // See: https://developers.google.com/picker/docs/
+    alert('Google Drive picker scaffolded. Add credentials and logic when ready.');
+    // Simulate import for now
+    setImportedContent('Imported content from Google Drive (simulated).');
+    setShowImportModal(true);
+  };
+
+  // --- ONEDRIVE IMPORT SCAFFOLD ---
+  // TODO: Replace with your credentials when you have a domain
+  const ONEDRIVE_CLIENT_ID = 'YOUR_ONEDRIVE_CLIENT_ID';
+  const ONEDRIVE_SCOPES = 'files.read';
+
+  // Loads the OneDrive Picker script
+  const loadOneDriveApi = () => {
+    if (window.OneDrive) return Promise.resolve();
+    return new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://js.live.net/v7.2/OneDrive.js';
+      script.onload = resolve;
+      document.body.appendChild(script);
+    });
+  };
+
+  // Authenticate and open the OneDrive Picker
+  const handleImportOneDrive = async () => {
+    setImportMenuOpen(false);
+    await loadOneDriveApi();
+    // TODO: Implement Picker logic here
+    // See: https://learn.microsoft.com/en-us/onedrive/developer/controls/file-pickers/js-v72/open-file?view=odsp-graph-online
+    alert('OneDrive picker scaffolded. Add credentials and logic when ready.');
+    // Simulate import for now
+    setImportedContent('Imported content from OneDrive (simulated).');
+    setShowImportModal(true);
+  };
 
   // Fetch the user's subscription to get sao_created_count
   useEffect(() => {
@@ -709,6 +791,44 @@ const SAOs: React.FC = () => {
     loadUserSAOs();
   };
 
+  // File extraction logic
+  const handleUploadFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    let extracted = '';
+    let isDocx = false;
+    try {
+      if (file.type === 'text/plain') {
+        extracted = await file.text();
+      } else if (file.name.endsWith('.docx')) {
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.convertToHtml({ arrayBuffer });
+        extracted = result.value;
+        isDocx = true;
+      } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+        pdfjsLib.GlobalWorkerOptions.workerPort = new pdfjsWorker();
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let text = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          text += content.items.map((item: any) => item.str).join(' ') + '\n';
+        }
+        extracted = text;
+        toast('PDF formatting is not preserved. Only plain text is extracted.', { icon: '⚠️' });
+      } else {
+        extracted = 'Unsupported file type.';
+      }
+    } catch (err) {
+      extracted = 'Failed to extract content: ' + (err instanceof Error ? err.message : String(err));
+    }
+    setPendingSAOContent(extracted);
+    setIsModalOpen(true);
+    setImportMenuOpen(false);
+    if (uploadInputRef.current) uploadInputRef.current.value = '';
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       {/* SAO Limit Banner */}
@@ -724,7 +844,50 @@ const SAOs: React.FC = () => {
           <h1 className="text-2xl font-bold text-slate-800">Situation-Action-Outcome (SAO)</h1>
           <p className="text-slate-500 mt-1">Write and manage your SAO essays.</p>
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center relative">
+          {/* Combined Import/Upload Button */}
+          <button
+            className="btn flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
+            onClick={() => setImportMenuOpen((v) => !v)}
+            type="button"
+          >
+            <Upload size={18} />
+            Import / Upload
+          </button>
+          {importMenuOpen && (
+            <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-lg shadow-lg z-10">
+              <button
+                className="w-full text-left px-4 py-2 hover:bg-slate-100"
+                onClick={() => {
+                  setImportMenuOpen(false);
+                  uploadInputRef.current?.click();
+                }}
+              >
+                Upload from Device
+              </button>
+              <button
+                className="w-full text-left px-4 py-2 hover:bg-slate-100"
+                onClick={handleImportGoogleDrive}
+              >
+                Import from Google Drive
+              </button>
+              <button
+                className="w-full text-left px-4 py-2 hover:bg-slate-100"
+                onClick={handleImportOneDrive}
+              >
+                Import from OneDrive
+              </button>
+            </div>
+          )}
+          {/* Hidden file input for upload */}
+          <input
+            type="file"
+            className="hidden"
+            ref={uploadInputRef}
+            onChange={handleUploadFile}
+            accept=".txt,.docx,.pdf"
+          />
+          {/* Existing buttons */}
           {userRole === 'eit' && (
             <button
               className={`btn btn-primary ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
@@ -799,7 +962,25 @@ const SAOs: React.FC = () => {
           loadUserSAOs();
           setIsModalOpen(false);
         }}
+        initialContent={pendingSAOContent}
+        onInitialContentUsed={() => setPendingSAOContent(null)}
       />
+
+      {/* Import Modal for previewing imported content */}
+      <Modal isOpen={showImportModal} onClose={() => setShowImportModal(false)}>
+        <div className="p-6">
+          <h2 className="text-lg font-semibold mb-4">Imported Content Preview</h2>
+          <div className="bg-slate-50 p-4 rounded mb-4 whitespace-pre-wrap text-slate-800 min-h-[120px]">
+            {importedContent}
+          </div>
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowImportModal(false)}
+          >
+            Close
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 };

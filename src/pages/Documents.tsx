@@ -1,9 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { FileText, Download, Trash2, AlertCircle, Upload, Search, Filter, X, Edit2, Eye } from 'lucide-react';
+import { FileText, Download, Trash2, AlertCircle, Upload, Search, Filter, X, Edit2, Eye, Share2 } from 'lucide-react';
 import { useDocumentsStore, Document } from '../store/documents';
 import { supabase } from '../lib/supabase';
 import { useSubscriptionStore } from '../store/subscriptionStore';
 import DocumentPreview from '../components/documents/DocumentPreview';
+import Modal from '../components/common/Modal';
+
+// @ts-ignore
+declare global {
+  interface Window {
+    gapi?: any;
+    OneDrive?: any;
+  }
+}
 
 const Documents: React.FC = () => {
   const {
@@ -29,6 +38,75 @@ const Documents: React.FC = () => {
   const [newTitle, setNewTitle] = useState('');
   const documentRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   const [previewDocument, setPreviewDocument] = useState<Document | null>(null);
+  const [shareModalDoc, setShareModalDoc] = useState<Document | null>(null);
+  const [supervisors, setSupervisors] = useState<{ id: string; full_name: string; email: string }[]>([]);
+  const [selectedSupervisor, setSelectedSupervisor] = useState<string>('');
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [importMenuOpen, setImportMenuOpen] = useState(false);
+  const [importedContent, setImportedContent] = useState<string | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [uploadInputRef] = useState(() => React.createRef<HTMLInputElement>());
+
+  // --- GOOGLE DRIVE IMPORT SCAFFOLD ---
+  // TODO: Replace with your credentials when you have a domain
+  const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID';
+  const GOOGLE_API_KEY = 'YOUR_GOOGLE_API_KEY';
+  const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
+  const GOOGLE_DISCOVERY_DOCS = [
+    'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
+  ];
+
+  // Loads the Google API script
+  const loadGoogleApi = () => {
+    if (window.gapi) return Promise.resolve();
+    return new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://apis.google.com/js/api.js';
+      script.onload = resolve;
+      document.body.appendChild(script);
+    });
+  };
+
+  // Authenticate and open the Google Picker
+  const handleImportGoogleDrive = async () => {
+    setImportMenuOpen(false);
+    await loadGoogleApi();
+    // TODO: Implement OAuth and Picker logic here
+    // See: https://developers.google.com/picker/docs/
+    alert('Google Drive picker scaffolded. Add credentials and logic when ready.');
+    // Simulate import for now
+    setImportedContent('Imported content from Google Drive (simulated).');
+    setShowImportModal(true);
+  };
+
+  // --- ONEDRIVE IMPORT SCAFFOLD ---
+  // TODO: Replace with your credentials when you have a domain
+  const ONEDRIVE_CLIENT_ID = 'YOUR_ONEDRIVE_CLIENT_ID';
+  const ONEDRIVE_SCOPES = 'files.read';
+
+  // Loads the OneDrive Picker script
+  const loadOneDriveApi = () => {
+    if (window.OneDrive) return Promise.resolve();
+    return new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://js.live.net/v7.2/OneDrive.js';
+      script.onload = resolve;
+      document.body.appendChild(script);
+    });
+  };
+
+  // Authenticate and open the OneDrive Picker
+  const handleImportOneDrive = async () => {
+    setImportMenuOpen(false);
+    await loadOneDriveApi();
+    // TODO: Implement Picker logic here
+    // See: https://learn.microsoft.com/en-us/onedrive/developer/controls/file-pickers/js-v72/open-file?view=odsp-graph-online
+    alert('OneDrive picker scaffolded. Add credentials and logic when ready.');
+    // Simulate import for now
+    setImportedContent('Imported content from OneDrive (simulated).');
+    setShowImportModal(true);
+  };
 
   useEffect(() => {
     console.log('Documents component mounted');
@@ -76,6 +154,33 @@ const Documents: React.FC = () => {
     };
     fetchCount();
   }, []);
+
+  // Fetch connected supervisors when share modal opens
+  useEffect(() => {
+    if (shareModalDoc) {
+      (async () => {
+        setShareError(null);
+        setShareLoading(true);
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+          const { data, error } = await supabase
+            .from('supervisor_eit_relationships')
+            .select('supervisor_id, supervisor_profiles (id, full_name, email)')
+            .eq('eit_id', user.id)
+            .eq('status', 'active');
+          if (error) throw error;
+          const supervisorsList = (data || []).map((rel: any) => rel.supervisor_profiles).filter(Boolean);
+          setSupervisors(supervisorsList);
+          setSelectedSupervisor(supervisorsList[0]?.id || '');
+        } catch (err) {
+          setShareError('Failed to load supervisors.');
+        } finally {
+          setShareLoading(false);
+        }
+      })();
+    }
+  }, [shareModalDoc]);
 
   // Handle document creation
   const handleCreateDocument = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -147,7 +252,7 @@ const Documents: React.FC = () => {
     try {
       const doc = documents.find(d => d.id === editingDocument.id);
       if (!doc) throw new Error('Document not found');
-      await updateDocument(editingDocument.id, newTitle, doc.content);
+      await updateDocument(editingDocument.id, { title: newTitle });
       setEditingDocument(null);
     } catch (err) {
       console.error('Update failed:', err);
@@ -184,8 +289,87 @@ const Documents: React.FC = () => {
   // Get unique types from documents
   const types = ['all', ...new Set(documents.map(doc => doc.type))];
 
+  const handleShare = async () => {
+    if (!shareModalDoc || !selectedSupervisor) return;
+    setShareLoading(true);
+    setShareError(null);
+    try {
+      await updateDocument(shareModalDoc.id, { supervisor_id: selectedSupervisor });
+      setShareModalDoc(null);
+    } catch (err) {
+      setShareError('Failed to share document.');
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="max-w-6xl mx-auto p-6 space-y-6">
+      {/* Import Modal for previewing imported content */}
+      <Modal isOpen={showImportModal} onClose={() => setShowImportModal(false)}>
+        <div className="p-6">
+          <h2 className="text-lg font-semibold mb-4">Imported Content Preview</h2>
+          <div className="bg-slate-50 p-4 rounded mb-4 whitespace-pre-wrap text-slate-800 min-h-[120px]">
+            {importedContent}
+          </div>
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowImportModal(false)}
+          >
+            Close
+          </button>
+        </div>
+      </Modal>
+      <div className="flex justify-between items-center mb-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Documents</h1>
+          <p className="text-slate-500 mt-1">Upload, manage, and share your documents.</p>
+        </div>
+        <div className="flex gap-2 items-center relative">
+          {/* Combined Upload/Import Button */}
+          <button
+            className="btn flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
+            onClick={() => setImportMenuOpen((v) => !v)}
+            type="button"
+          >
+            <Upload size={18} />
+            Upload / Import
+          </button>
+          {importMenuOpen && (
+            <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-lg shadow-lg z-10">
+              <button
+                className="w-full text-left px-4 py-2 hover:bg-slate-100"
+                onClick={() => {
+                  setImportMenuOpen(false);
+                  uploadInputRef.current?.click();
+                }}
+              >
+                Upload from Device
+              </button>
+              <button
+                className="w-full text-left px-4 py-2 hover:bg-slate-100"
+                onClick={handleImportGoogleDrive}
+              >
+                Import from Google Drive
+              </button>
+              <button
+                className="w-full text-left px-4 py-2 hover:bg-slate-100"
+                onClick={handleImportOneDrive}
+              >
+                Import from OneDrive
+              </button>
+            </div>
+          )}
+          {/* Hidden file input for upload */}
+          <input
+            type="file"
+            className="hidden"
+            ref={uploadInputRef}
+            onChange={handleCreateDocument}
+            disabled={tier === 'free' && documentCreatedCount >= documentLimit}
+          />
+        </div>
+      </div>
       {/* Document Limit Banner */}
       {tier === 'free' && (
         <div className="p-4 mb-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-900 text-center font-semibold">
@@ -196,16 +380,6 @@ const Documents: React.FC = () => {
       )}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl md:text-3xl font-bold text-slate-800">Documents</h1>
-        <label className={`btn flex items-center cursor-pointer ${tier === 'free' && documentCreatedCount >= documentLimit ? 'bg-gray-300 text-gray-500 border-gray-300 cursor-not-allowed' : 'btn-primary'}`}>
-          <Upload size={16} className="mr-1.5" />
-          Upload Document
-          <input
-            type="file"
-            className="hidden"
-            onChange={handleCreateDocument}
-            disabled={tier === 'free' && documentCreatedCount >= documentLimit}
-          />
-        </label>
       </div>
 
       {/* Search and Filter Bar */}
@@ -367,7 +541,7 @@ const Documents: React.FC = () => {
             {doc.file_type && doc.file_type.startsWith('text/') ? (
               <p className="text-sm text-slate-600 mt-2 line-clamp-2">{doc.content}</p>
             ) : (
-              <p className="text-sm text-slate-400 mt-2 italic">Content not viewable here. Click the eye icon to preview.</p>
+              null
             )}
             
             <div className="flex justify-between items-center mt-4 pt-3 border-t border-slate-100">
@@ -376,10 +550,19 @@ const Documents: React.FC = () => {
                 <span className="mx-2">•</span>
                 <span className="capitalize">{doc.status}</span>
               </div>
-              
-              <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600">
-                {doc.type}
-              </span>
+              {doc.type === 'other' ? (
+                <button
+                  className="text-xs px-2 py-1 rounded-full bg-teal-100 text-teal-700 flex items-center gap-1 hover:bg-teal-200 transition"
+                  onClick={() => setShareModalDoc(doc)}
+                  title="Share with Supervisor"
+                >
+                  <Share2 size={16} /> Share
+                </button>
+              ) : (
+                <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600">
+                  {doc.type}
+                </span>
+              )}
             </div>
           </div>
         ))}
@@ -391,6 +574,63 @@ const Documents: React.FC = () => {
           document={previewDocument}
           onClose={() => setPreviewDocument(null)}
         />
+      )}
+
+      {/* Share Modal */}
+      {shareModalDoc && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Share Document</h2>
+              <button
+                onClick={() => setShareModalDoc(null)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="mb-4">
+              <p className="text-slate-700 mb-2">Share <span className="font-semibold">{shareModalDoc.title}</span> with your supervisor.</p>
+              {shareLoading ? (
+                <div className="text-slate-500 text-sm">Loading supervisors...</div>
+              ) : supervisors.length === 0 ? (
+                <div className="text-slate-500 text-sm">No active supervisors found. Connect with a supervisor first.</div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Select Supervisor</label>
+                  <select
+                    value={selectedSupervisor}
+                    onChange={e => setSelectedSupervisor(e.target.value)}
+                    className="input w-full mb-2"
+                  >
+                    {supervisors.map(sup => (
+                      <option key={sup.id} value={sup.id}>{sup.full_name} ({sup.email})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {shareError && <div className="text-red-600 text-sm mt-2">{shareError}</div>}
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setShareModalDoc(null)}
+                className="btn btn-secondary"
+                disabled={shareLoading}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={`btn btn-primary ${(!selectedSupervisor || shareLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={!selectedSupervisor || shareLoading}
+                onClick={handleShare}
+              >
+                {shareLoading ? 'Sending...' : 'Send'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Empty State */}

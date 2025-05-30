@@ -81,61 +81,55 @@ const SupervisorTeam: React.FC = () => {
   const [nudgeSuccess, setNudgeSuccess] = useState<string | null>(null);
   const [nudgeError, setNudgeError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchTeam = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setError('No user found');
-          return;
-        }
-
-        // Fetch all data in parallel
-        const [pendingReqsRes, relationshipsRes] = await Promise.all([
-          supabase
-            .from('supervisor_eit_relationships')
-            .select('id, eit_id, status, created_at, eit_profiles (id, full_name, email, start_date, target_date)')
-            .eq('supervisor_id', user.id)
-            .eq('status', 'pending'),
-          supabase
-            .from('supervisor_eit_relationships')
-            .select('eit_id, eit_profiles (id, full_name, email, start_date, target_date)')
-            .eq('supervisor_id', user.id)
-            .eq('status', 'active')
-        ]);
-
-        if (pendingReqsRes.error) throw pendingReqsRes.error;
-        if (relationshipsRes.error) throw relationshipsRes.error;
-
-        // Process pending requests
-        const pendingReqs: PendingRequest[] = (pendingReqsRes.data || []).map((req: any) => ({
-          ...req,
-          eit_profiles: Array.isArray(req.eit_profiles) ? req.eit_profiles[0] : req.eit_profiles
-        }));
-        setPending(pendingReqs);
-
-        // Process active EITs
-        const eitList: EIT[] = (relationshipsRes.data || []).map((rel: any) => 
-          Array.isArray(rel.eit_profiles) ? rel.eit_profiles[0] : rel.eit_profiles
-        );
-        setEITs(eitList);
-
-        // Fetch progress for all EITs in parallel
-        const progressPromises = eitList.map(eit => fetchEITProgress(eit.id));
-        const progressResults = await Promise.all(progressPromises);
-        const progressEntries = eitList.map((eit, index) => [eit.id, progressResults[index]]);
-        setProgressMap(Object.fromEntries(progressEntries));
-
-      } catch (err) {
-        console.error('Error fetching team data:', err);
-        setError('Failed to load team data. Please try again.');
-      } finally {
-        setLoading(false);
+  const fetchTeam = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setError('No user found');
+        return;
       }
-    };
+      // Fetch all data in parallel
+      const [pendingReqsRes, relationshipsRes] = await Promise.all([
+        supabase
+          .from('supervisor_eit_relationships')
+          .select('id, eit_id, status, created_at, eit_profiles (id, full_name, email, start_date, target_date)')
+          .eq('supervisor_id', user.id)
+          .eq('status', 'pending'),
+        supabase
+          .from('supervisor_eit_relationships')
+          .select('eit_id, eit_profiles (id, full_name, email, start_date, target_date)')
+          .eq('supervisor_id', user.id)
+          .eq('status', 'active')
+      ]);
+      if (pendingReqsRes.error) throw pendingReqsRes.error;
+      if (relationshipsRes.error) throw relationshipsRes.error;
+      // Process pending requests
+      const pendingReqs: PendingRequest[] = (pendingReqsRes.data || []).map((req: any) => ({
+        ...req,
+        eit_profiles: Array.isArray(req.eit_profiles) ? req.eit_profiles[0] : req.eit_profiles
+      }));
+      setPending(pendingReqs);
+      // Process active EITs
+      const eitList: EIT[] = (relationshipsRes.data || []).map((rel: any) =>
+        Array.isArray(rel.eit_profiles) ? rel.eit_profiles[0] : rel.eit_profiles
+      );
+      setEITs(eitList);
+      // Fetch progress for all EITs in parallel
+      const progressPromises = eitList.map(eit => fetchEITProgress(eit.id));
+      const progressResults = await Promise.all(progressPromises);
+      const progressEntries = eitList.map((eit, index) => [eit.id, progressResults[index]]);
+      setProgressMap(Object.fromEntries(progressEntries));
+    } catch (err) {
+      console.error('Error fetching team data:', err);
+      setError('Failed to load team data. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchTeam();
   }, []);
 
@@ -182,24 +176,18 @@ const SupervisorTeam: React.FC = () => {
   const handleEITClick = async (eit: EIT) => {
     setSelectedEIT(eit);
     setSkillsLoading(true);
-    // Log the current supervisor's auth user
-    const userResult = await supabase.auth.getUser();
-    console.log('Supervisor auth user:', userResult);
-    console.log('SupervisorTeam: Fetching skills for EIT', eit.id);
     // Fetch all skills for the EIT (no supervisor_score filter)
     const { data: skills, error } = await supabase
       .from('eit_skills')
       .select('skill_id, rank, supervisor_score, category_name, skill_name, status, eit_id')
       .eq('eit_id', eit.id);
     if (error) console.error('Supabase error:', error);
-    console.log('Fetched skills:', skills); // DEBUG: See actual data and field names
     // Organize by category
     const byCategory: Record<string, any[]> = {};
     (skills || []).forEach((skill: any) => {
       if (!byCategory[skill.category_name]) byCategory[skill.category_name] = [];
       byCategory[skill.category_name].push(skill);
     });
-    console.log('Grouped by category:', byCategory);
     setSkillsByCategory(byCategory);
     setSkillsLoading(false);
   };
@@ -212,20 +200,12 @@ const SupervisorTeam: React.FC = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No supervisor user');
-      const { error } = await supabase
-        .from('nudge_messages')
-        .insert({
-          supervisor_id: user.id,
-          eit_id: nudgeModalEIT.id,
-          message: nudgeMessage || 'Keep going! Your supervisor believes in you!'
-        });
-      if (error) throw error;
-      await sendNotification(
-        nudgeModalEIT.id,
-        'nudge',
-        'Nudge from Supervisor',
-        nudgeMessage || 'Keep going! Your supervisor believes in you!'
-      );
+      await sendNotification({
+        userId: nudgeModalEIT.id,
+        type: 'nudge',
+        title: 'Nudge from Supervisor',
+        message: nudgeMessage || 'Keep going! Your supervisor believes in you!'
+      });
       setNudgeSuccess('Nudge sent!');
       setNudgeMessage('');
       setTimeout(() => setNudgeModalEIT(null), 1200);
@@ -245,6 +225,9 @@ const SupervisorTeam: React.FC = () => {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">Team</h1>
+      <button className="btn btn-primary mb-4" onClick={fetchTeam} disabled={loading}>
+        {loading ? 'Reloading...' : 'Reload Team'}
+      </button>
       {/* Team Progress Bar */}
       <div className="mb-8">
         <h2 className="text-lg font-semibold mb-2 text-slate-800">Team Progress</h2>
@@ -261,6 +244,20 @@ const SupervisorTeam: React.FC = () => {
       {pending.length > 0 && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8">
           <h2 className="text-lg font-semibold mb-2 text-yellow-800">Pending Requests</h2>
+          <button
+            className="btn btn-primary btn-sm mb-4"
+            onClick={async () => {
+              setLoading(true);
+              try {
+                await Promise.all(pending.map(req => handleRequest(req.id, true)));
+              } finally {
+                setLoading(false);
+              }
+            }}
+            disabled={loading}
+          >
+            Approve All
+          </button>
           <div className="space-y-3">
             {pending.map((req) => (
               <div key={req.id} className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 border-b border-yellow-100 pb-2 last:border-0">

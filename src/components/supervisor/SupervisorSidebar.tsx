@@ -78,10 +78,7 @@ const SupervisorSidebar: React.FC<SupervisorSidebarProps> = ({ onClose }) => {
                 <span className="mr-3">{item.icon}</span>
                 <span>{item.label}</span>
                 {/* Red dot for pending reviews/skills */}
-                {item.label === 'Reviews' && pendingReviews > 0 && (
-                  <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                )}
-                {item.label === 'Skills' && pendingSkills > 0 && (
+                {item.label === 'Reviews' && (pendingReviews > 0 || pendingSkills > 0) && (
                   <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
                 )}
               </NavLink>
