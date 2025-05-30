@@ -127,12 +127,13 @@ const SkillValidationForm: React.FC<SkillValidationFormProps> = ({
 
       if (validationError) throw validationError;
 
-      // Update skill status
+      // Always update supervisor_score in eit_skills after validation
       const { error: skillError } = await supabase
         .from('eit_skills')
         .update({
           status: 'validated',
-          validated_at: new Date().toISOString()
+          validated_at: new Date().toISOString(),
+          supervisor_score: scoreToSubmit
         })
         .eq('eit_id', eitId)
         .eq('skill_id', skillId);

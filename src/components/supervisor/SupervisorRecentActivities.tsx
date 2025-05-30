@@ -19,127 +19,86 @@ const SupervisorRecentActivities: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const navigate = useNavigate();
 
-  const fetchActivities = async (supervisorId: string, limit: number = 5) => {
+  const fetchActivities = async (supervisorId: string, supervisorEmail: string, limit: number = 5) => {
     try {
       console.log('🔄 Starting fetchActivities for supervisor:', supervisorId);
       setLoading(true);
 
-      // Fetch recent skill approvals
-      const { data: recentApprovals, error: approvalsError } = await supabase
-        .from('skill_approvals')
-        .select(`
-          id,
-          approved_at,
-          feedback,
-          eit_id,
-          supervisor_id,
-          skill_id,
-          eit_profiles (
-            id,
-            full_name
-          ),
-          skills (
-            id,
-            name
-          )
-        `)
-        .eq('supervisor_id', supervisorId)
-        .order('approved_at', { ascending: false })
+      // Fetch recent skill validations (actions taken by this supervisor)
+      const { data: skillValidations, error: skillValidationsError } = await supabase
+        .from('skill_validations')
+        .select(`id, validated_at, feedback, eit_id, skill_id, score, eit_profiles (full_name), skills (name)`)
+        .eq('validator_id', supervisorId)
+        .order('validated_at', { ascending: false })
         .limit(limit);
+      if (skillValidationsError) throw skillValidationsError;
 
-      if (approvalsError) throw approvalsError;
-
-      // Fetch recent SAO feedback
-      const { data: recentSAOs, error: saosError } = await supabase
-        .from('saos')
-        .select(`
-          *,
-          eit_profiles (
-            id,
-            full_name
-          )
-        `)
+      // Fetch recent SAO feedback (actions taken by this supervisor)
+      const { data: saoFeedback, error: saoFeedbackError } = await supabase
+        .from('sao_feedback')
+        .select(`id, sao_id, feedback, status, updated_at, sao:saos (title), eit_profiles (full_name)`)
         .eq('supervisor_id', supervisorId)
         .order('updated_at', { ascending: false })
         .limit(limit);
+      if (saoFeedbackError) throw saoFeedbackError;
 
-      if (saosError) throw saosError;
-
-      // Fetch recent validations
-      const { data: recentValidations, error: validationsError } = await supabase
-        .from('validations')
-        .select(`
-          *,
-          eit_profiles (
-            id,
-            full_name
-          )
-        `)
-        .eq('supervisor_id', supervisorId)
+      // Fetch recent validator actions (where supervisor is assigned as validator and status is not pending)
+      const { data: validatorActions, error: validatorActionsError } = await supabase
+        .from('validators')
+        .select('id, updated_at, status, skill_id, eit_id, description, score, skills (name), eit_profiles (full_name)')
+        .eq('email', supervisorEmail)
+        .neq('status', 'pending')
         .order('updated_at', { ascending: false })
         .limit(limit);
-
-      if (validationsError) throw validationsError;
-
-      // Fetch recent experiences that need review
-      const { data: recentExperiences, error: experiencesError } = await supabase
-        .from('experiences')
-        .select(`
-          *,
-          eit_profiles (
-            id,
-            full_name
-          )
-        `)
-        .eq('needs_supervisor_review', true)
-        .eq('supervisor_id', supervisorId)
-        .order('updated_at', { ascending: false })
-        .limit(limit);
-
-      if (experiencesError) throw experiencesError;
+      if (validatorActionsError) throw validatorActionsError;
 
       // Combine and sort all activities
+      const getFirstString = (val: any, key: string, fallback: string) => {
+        if (Array.isArray(val) && val.length > 0 && typeof val[0][key] === 'string') return val[0][key];
+        if (val && typeof val[key] === 'string') return val[key];
+        return fallback;
+      };
+
       const allActivities: Activity[] = [
-        ...(recentApprovals || []).map(approval => {
-          const skill = Array.isArray(approval.skills) ? approval.skills[0] : approval.skills;
-          const eitProfile = Array.isArray(approval.eit_profiles) ? approval.eit_profiles[0] : approval.eit_profiles;
+        ...(skillValidations || []).map(v => {
+          const skillName = getFirstString(v.skills, 'name', v.skill_id);
+          const eitName = getFirstString(v.eit_profiles, 'full_name', v.eit_id);
           return {
-            id: approval.id,
-            type: 'approval' as const,
-            title: `Approved "${skill?.name || approval.skill_id}" for ${eitProfile?.full_name || approval.eit_id}`,
-            timestamp: approval.approved_at,
-            eitName: eitProfile?.full_name,
-            eitId: eitProfile?.id,
-            status: undefined
+            id: v.id,
+            type: 'validation' as const,
+            title: `Validated "${skillName}" for ${eitName}`,
+            timestamp: v.validated_at ? String(v.validated_at) : '',
+            eitName: eitName,
+            eitId: v.eit_id,
+            status: v.score ? `Score: ${v.score}` : undefined
           };
         }),
-        ...(recentSAOs || []).map(sao => ({
-          id: sao.id,
-          type: 'feedback' as const,
-          title: `Provided feedback on "${sao.title}" SAO`,
-          timestamp: sao.updated_at,
-          eitName: sao.eit_profiles?.full_name,
-          eitId: sao.eit_profiles?.id,
-          status: sao.status
-        })),
-        ...(recentValidations || []).map(validation => ({
-          id: validation.id,
-          type: 'validation' as const,
-          title: `Validated "${validation.title}"`,
-          timestamp: validation.updated_at,
-          eitName: validation.eit_profiles?.full_name,
-          eitId: validation.eit_profiles?.id,
-          status: validation.status
-        })),
-        ...(recentExperiences || []).map(exp => ({
-          id: exp.id,
-          type: 'review' as const,
-          title: `Review needed for "${exp.title}"`,
-          timestamp: exp.updated_at,
-          eitName: exp.eit_profiles?.full_name,
-          eitId: exp.eit_profiles?.id,
-          status: exp.status
-        }))
+        ...(saoFeedback || []).map(fb => {
+          const saoTitle = getFirstString(fb.sao, 'title', fb.sao_id);
+          const eitName = getFirstString(fb.eit_profiles, 'full_name', '');
+          return {
+            id: fb.id,
+            type: 'feedback' as const,
+            title: `Provided SAO feedback for "${saoTitle}"`,
+            timestamp: fb.updated_at ? String(fb.updated_at) : '',
+            eitName: eitName,
+            eitId: undefined,
+            status: fb.status
+          };
+        }),
+        ...(validatorActions || []).map(v => {
+          const skillName = getFirstString(v.skills, 'name', v.skill_id);
+          const eitName = getFirstString(v.eit_profiles, 'full_name', v.eit_id);
+          return {
+            id: v.id,
+            type: 'validation' as const,
+            title: `Scored "${skillName}" for ${eitName}`,
+            timestamp: v.updated_at ? String(v.updated_at) : '',
+            eitName: eitName,
+            eitId: v.eit_id,
+            status: v.score ? `Score: ${v.score}` : v.status
+          };
+        }),
       ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
        .slice(0, limit);
 
@@ -163,84 +122,15 @@ const SupervisorRecentActivities: React.FC = () => {
           console.error('❌ No authenticated user found');
           return;
         }
-
         // Initial fetch
-        await fetchActivities(user.id);
-
-        // Set up real-time subscriptions
-        const saosSubscription = supabase
-          .channel('supervisor-saos-changes')
-          .on('postgres_changes', 
-            { 
-              event: '*', 
-              schema: 'public', 
-              table: 'saos',
-              filter: `supervisor_id=eq.${user.id}`
-            }, 
-            () => {
-              if (mounted) {
-                fetchActivities(user.id);
-              }
-            }
-          )
-          .subscribe();
-
-        const validationsSubscription = supabase
-          .channel('supervisor-validations-changes')
-          .on('postgres_changes', 
-            { 
-              event: '*', 
-              schema: 'public', 
-              table: 'validations',
-              filter: `supervisor_id=eq.${user.id}`
-            }, 
-            () => {
-              if (mounted) {
-                fetchActivities(user.id);
-              }
-            }
-          )
-          .subscribe();
-
-        const experiencesSubscription = supabase
-          .channel('supervisor-experiences-changes')
-          .on('postgres_changes', 
-            { 
-              event: '*', 
-              schema: 'public', 
-              table: 'experiences',
-              filter: `supervisor_id=eq.${user.id}`
-            }, 
-            () => {
-              if (mounted) {
-                fetchActivities(user.id);
-              }
-            }
-          )
-          .subscribe();
-
-        subscriptions = [
-          saosSubscription,
-          validationsSubscription,
-          experiencesSubscription
-        ];
+        await fetchActivities(user.id, user.email || '');
+        // (Optional) Set up real-time subscriptions for these tables if needed
       } catch (error) {
         console.error('❌ Error setting up subscriptions:', error);
       }
     };
-
     setupSubscriptions();
-
-    return () => {
-      mounted = false;
-      subscriptions.forEach(sub => {
-        try {
-          sub.unsubscribe();
-        } catch (error) {
-          console.error('❌ Error unsubscribing:', error);
-        }
-      });
-    };
+    return () => { mounted = false; };
   }, []);
 
   const typeIcons = {

@@ -661,6 +661,34 @@ const References: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    let subscription: any;
+    let mounted = true;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      subscription = supabase
+        .channel('validators-realtime')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'validators',
+          filter: `eit_id=eq.${user.id}`
+        }, (payload) => {
+          if (mounted) {
+            loadValidators();
+          }
+        })
+        .subscribe();
+    })();
+    return () => {
+      mounted = false;
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const handleScrollToItem = (event: any) => {
       const { itemId, itemType } = event.detail || {};
       

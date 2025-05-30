@@ -112,15 +112,29 @@ const SupervisorTeam: React.FC = () => {
       }));
       setPending(pendingReqs);
       // Process active EITs
-      const eitList: EIT[] = (relationshipsRes.data || []).map((rel: any) =>
-        Array.isArray(rel.eit_profiles) ? rel.eit_profiles[0] : rel.eit_profiles
-      );
+      const eitList: EIT[] = (relationshipsRes.data || []).map((rel: any) => {
+        const profile = Array.isArray(rel.eit_profiles) ? rel.eit_profiles[0] : rel.eit_profiles;
+        return {
+          id: String(profile?.id || ''),
+          full_name: String(profile?.full_name || ''),
+          email: String(profile?.email || ''),
+          start_date: profile?.start_date || undefined,
+          target_date: profile?.target_date || undefined
+        };
+      });
       setEITs(eitList);
       // Fetch progress for all EITs in parallel
       const progressPromises = eitList.map(eit => fetchEITProgress(eit.id));
       const progressResults = await Promise.all(progressPromises);
       const progressEntries = eitList.map((eit, index) => [eit.id, progressResults[index]]);
       setProgressMap(Object.fromEntries(progressEntries));
+      // If modal is open, refresh the selected EIT's skills
+      if (selectedEIT) {
+        const updatedEIT = eitList.find(e => e.id === selectedEIT.id);
+        if (updatedEIT) {
+          await handleEITClick(updatedEIT);
+        }
+      }
     } catch (err) {
       console.error('Error fetching team data:', err);
       setError('Failed to load team data. Please try again.');
@@ -131,6 +145,14 @@ const SupervisorTeam: React.FC = () => {
 
   useEffect(() => {
     fetchTeam();
+    // Add event listener for tab/window focus to auto-refresh team data
+    const handleFocus = () => {
+      fetchTeam();
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   useEffect(() => {
@@ -148,6 +170,7 @@ const SupervisorTeam: React.FC = () => {
   }, [eits]);
 
   const handleRequest = async (id: string, accept: boolean) => {
+    if (!id) return;
     setLoading(true);
     try {
       const { error } = await supabase
@@ -161,7 +184,7 @@ const SupervisorTeam: React.FC = () => {
       setPending(prev => prev.filter(req => req.id !== id));
       if (accept) {
         const updatedReq = pending.find(req => req.id === id);
-        if (updatedReq) {
+        if (updatedReq && updatedReq.eit_profiles) {
           setEITs(prev => [...prev, updatedReq.eit_profiles]);
         }
       }
@@ -174,20 +197,39 @@ const SupervisorTeam: React.FC = () => {
   };
 
   const handleEITClick = async (eit: EIT) => {
+    if (!eit || !eit.id) return;
     setSelectedEIT(eit);
     setSkillsLoading(true);
-    // Fetch all skills for the EIT (no supervisor_score filter)
+
+    // Fetch all skills for the EIT
     const { data: skills, error } = await supabase
       .from('eit_skills')
       .select('skill_id, rank, supervisor_score, category_name, skill_name, status, eit_id')
       .eq('eit_id', eit.id);
-    if (error) console.error('Supabase error:', error);
-    // Organize by category
+
+    // Fetch all validators for the EIT
+    const { data: validators, error: validatorsError } = await supabase
+      .from('validators')
+      .select('*')
+      .eq('eit_id', eit.id);
+
+    // Group validators by skill_id
+    const validatorsBySkill: Record<string, any[]> = {};
+    (validators || []).forEach((validator: any) => {
+      if (!validatorsBySkill[validator.skill_id]) validatorsBySkill[validator.skill_id] = [];
+      validatorsBySkill[validator.skill_id].push(validator);
+    });
+
+    // Organize skills by category, and attach validators
     const byCategory: Record<string, any[]> = {};
     (skills || []).forEach((skill: any) => {
       if (!byCategory[skill.category_name]) byCategory[skill.category_name] = [];
-      byCategory[skill.category_name].push(skill);
+      byCategory[skill.category_name].push({
+        ...skill,
+        validators: validatorsBySkill[skill.skill_id] || []
+      });
     });
+
     setSkillsByCategory(byCategory);
     setSkillsLoading(false);
   };

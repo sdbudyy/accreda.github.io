@@ -32,7 +32,9 @@ const SupervisorHeader: React.FC<SupervisorHeaderProps> = ({ onMenuClick }) => {
         <div className="hidden md:block">
           <SearchBar />
         </div>
-        <NotificationsDropdown />
+        <div className="relative inline-block">
+          <NotificationsDropdown />
+        </div>
         <UserMenu />
       </div>
     </header>

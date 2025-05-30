@@ -5,6 +5,7 @@ import SAOFeedbackComponent from '../components/saos/SAOFeedback';
 import { X, Info, Clock } from 'lucide-react';
 import SAOAnnotation from '../components/saos/SAOAnnotation';
 import toast from 'react-hot-toast';
+import { useNotificationsStore } from '../store/notifications';
 
 // --- Skill Validation Types ---
 interface Validator {
@@ -240,6 +241,10 @@ const SupervisorReviews: React.FC = () => {
   const [pendingValidators, setPendingValidators] = useState<Validator[]>([]);
   const [pendingSAOs, setPendingSAOs] = useState<SAOFeedback[]>([]);
   const [allSAOs, setAllSAOs] = useState<SAOFeedback[]>([]);
+  const [submitLoading, setSubmitLoading] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const { notifications, markAsRead } = useNotificationsStore();
 
   // Filter validators and SAOs based on selected EIT
   const filteredValidators = selectedEIT === 'all' 
@@ -369,6 +374,8 @@ const SupervisorReviews: React.FC = () => {
   };
   const handleSubmit = async (validator: Validator) => {
     try {
+      setSubmitLoading(validator.id);
+      setSuccessMessage(null);
       const score = scoreInputs[validator.id];
       if (!score || score < 1 || score > 5) return;
       const { data: { user } } = await supabase.auth.getUser();
@@ -384,13 +391,8 @@ const SupervisorReviews: React.FC = () => {
         })
         .eq('id', validator.id);
       if (updateError) throw updateError;
-      // Update local state
-      setValidators(prev => prev.map(v => v.id === validator.id ? {
-        ...v,
-        score,
-        status: 'scored',
-        updated_at: new Date().toISOString()
-      } : v));
+      // Remove from pendingValidators
+      setPendingValidators(prev => prev.filter(v => v.id !== validator.id));
       setScoreInputs(prev => {
         const next = { ...prev };
         delete next[validator.id];
@@ -399,9 +401,26 @@ const SupervisorReviews: React.FC = () => {
       // Send notification
       const skill = skills[validator.skill_id];
       await sendScoreNotification(validator.eit_id, skill ? skill.name : validator.skill_id, score);
+      // Update eit_skills table
+      await supabase
+        .from('eit_skills')
+        .update({ supervisor_score: score })
+        .eq('eit_id', validator.eit_id)
+        .eq('skill_id', validator.skill_id);
+      // Mark related validation_request notification as read
+      const skillName = skill ? skill.name : validator.skill_id;
+      notifications.filter(n =>
+        n.type === 'validation_request' &&
+        !n.read &&
+        n.data && n.data.skillName === skillName
+      ).forEach(n => markAsRead(n.id));
+      setSuccessMessage('Score submitted successfully!');
+      setTimeout(() => setSuccessMessage(null), 2000);
     } catch (error: any) {
       console.error('Error submitting score:', error);
       toast.error(error.message || 'Error submitting score');
+    } finally {
+      setSubmitLoading(null);
     }
   };
   const handleResolve = async (feedbackId: string) => {
@@ -414,24 +433,40 @@ const SupervisorReviews: React.FC = () => {
     );
   };
   const handleSubmitFeedback = async (saoId: string, feedback: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    await supabase
-      .from('sao_feedback')
-      .update({ feedback, status: 'submitted' })
-      .eq('sao_id', saoId)
-      .eq('supervisor_id', user.id);
-    setAllSAOs((prev) =>
-      prev.map((f) =>
-        f.sao_id === saoId ? { ...f, feedback, status: 'submitted' } : f
-      )
-    );
-    setPendingSAOs((prev) =>
-      prev.filter((f) => !(f.sao_id === saoId && f.status !== 'pending'))
-    );
-    setIsSAOModalOpen(false);
-    setSelectedSAO(null);
-    toast.success('Feedback submitted successfully!');
+    setSubmitLoading(saoId);
+    setSuccessMessage(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      await supabase
+        .from('sao_feedback')
+        .update({ feedback, status: 'submitted' })
+        .eq('sao_id', saoId)
+        .eq('supervisor_id', user.id);
+      setAllSAOs((prev) =>
+        prev.map((f) =>
+          f.sao_id === saoId ? { ...f, feedback, status: 'submitted' } : f
+        )
+      );
+      setPendingSAOs((prev) =>
+        prev.filter((f) => !(f.sao_id === saoId && f.status !== 'pending'))
+      );
+      setIsSAOModalOpen(false);
+      setSelectedSAO(null);
+      // Mark related SAO validation_request notification as read
+      notifications.filter(n =>
+        n.type === 'validation_request' &&
+        !n.read &&
+        n.data && n.data.saoTitle && selectedSAO && n.data.saoTitle === selectedSAO.sao?.title
+      ).forEach(n => markAsRead(n.id));
+      setSuccessMessage('Feedback submitted successfully!');
+      setTimeout(() => setSuccessMessage(null), 2000);
+      toast.success('Feedback submitted successfully!');
+    } catch (error: any) {
+      toast.error(error.message || 'Error submitting feedback');
+    } finally {
+      setSubmitLoading(null);
+    }
   };
 
   // --- UI ---
@@ -514,6 +549,9 @@ const SupervisorReviews: React.FC = () => {
             <div>No pending skill validation requests.</div>
           ) : (
             <div className="space-y-4">
+              {successMessage && (
+                <div className="p-3 bg-green-50 text-green-700 rounded-md text-sm mb-4">{successMessage}</div>
+              )}
               {filteredValidators.map((validator) => {
                 const eit = eitProfiles[validator.eit_id];
                 const skill = skills[validator.skill_id];
@@ -550,11 +588,13 @@ const SupervisorReviews: React.FC = () => {
                         placeholder="Score"
                       />
                       <button
-                        className="btn btn-primary"
+                        className="btn btn-primary flex items-center gap-2"
                         onClick={() => handleSubmit(validator)}
-                        disabled={!scoreInputs[validator.id] || scoreInputs[validator.id] < 1 || scoreInputs[validator.id] > 5}
+                        disabled={submitLoading === validator.id || !scoreInputs[validator.id] || scoreInputs[validator.id] < 1 || scoreInputs[validator.id] > 5}
                       >
-                        Submit Score
+                        {submitLoading === validator.id ? (
+                          <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></span>
+                        ) : 'Submit Score'}
                       </button>
                     </div>
                   </div>

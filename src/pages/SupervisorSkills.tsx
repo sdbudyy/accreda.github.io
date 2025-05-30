@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, memo } from 'react';
 import { useSkillsStore, Skill, Category } from '../store/skills';
 import { AlertTriangle, Info, Award } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 // Expanded skill summaries for each skill
 const SKILL_SUMMARIES: Record<string, string> = {
@@ -81,14 +81,19 @@ const SupervisorSkills: React.FC = () => {
   const { skillCategories, loadUserSkills, loading, error } = useSkillsStore();
   const skillRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
-  const [categoryAverages, setCategoryAverages] = useState<Record<string, { average: number; completionRate: number }>>({});
+  const [categoryAverages, setCategoryAverages] = useState<Record<string, { eitSelfAvg: number; supervisorAvg: number; completionRate: number }>>({});
   const navigate = useNavigate();
+  const location = useLocation();
 
   const categoryColors = ['#14b8a6', '#3b82f6', '#6366f1', '#a21caf', '#ec4899', '#22c55e']; // teal, blue, indigo, purple, pink, green
 
   useEffect(() => {
-    loadUserSkills();
-  }, [loadUserSkills]);
+    async function fetchAndCalculate() {
+      await loadUserSkills();
+      await calculateCategoryAverages();
+    }
+    fetchAndCalculate();
+  }, [loadUserSkills, location]);
 
   // Scroll and highlight functionality
   useEffect(() => {
@@ -132,49 +137,50 @@ const SupervisorSkills: React.FC = () => {
       if (skillsError) throw skillsError;
 
       // Calculate averages and completion rates for each category
-      const categoryStats: Record<string, { 
-        allScores: number[]; // Array to store all supervisor scores
-        completed: number; 
+      const categoryStats: Record<string, {
+        eitSelfScores: number[];
+        supervisorScores: number[];
+        completed: number;
         total: number;
-        eitCount: number; // Track number of EITs
+        eitCount: number;
       }> = {};
-      
       // Initialize category stats
       skillCategories.forEach(category => {
         categoryStats[category.name] = {
-          allScores: [],
+          eitSelfScores: [],
+          supervisorScores: [],
           completed: 0,
           total: category.skills.length * eitIds.length,
           eitCount: eitIds.length
         };
       });
-      
       skills.forEach(skill => {
-        const category = skillCategories.find(cat => 
+        const category = skillCategories.find(cat =>
           cat.skills.some(s => s.id === skill.skill_id)
         );
-        
         if (category) {
+          if (skill.rank !== null && skill.rank !== undefined) {
+            categoryStats[category.name].eitSelfScores.push(skill.rank);
+          }
           if (skill.supervisor_score !== null && skill.supervisor_score !== undefined) {
-            categoryStats[category.name].allScores.push(skill.supervisor_score);
-            // Count as marked if supervisor_score is set
+            categoryStats[category.name].supervisorScores.push(skill.supervisor_score);
             categoryStats[category.name].completed += 1;
           }
         }
       });
-
-      // Calculate final averages and completion rates
-      const averages: Record<string, { average: number; completionRate: number }> = {};
+      // Calculate final averages
+      const averages: Record<string, { eitSelfAvg: number; supervisorAvg: number; completionRate: number }> = {};
       Object.entries(categoryStats).forEach(([category, stats]) => {
-        const totalScore = stats.allScores.reduce((sum, score) => sum + score, 0);
-        const scoreCount = stats.allScores.length;
-        
+        const eitSelfTotal = stats.eitSelfScores.reduce((sum, score) => sum + score, 0);
+        const eitSelfCount = stats.eitSelfScores.length;
+        const supervisorTotal = stats.supervisorScores.reduce((sum, score) => sum + score, 0);
+        const supervisorCount = stats.supervisorScores.length;
         averages[category] = {
-          average: scoreCount > 0 ? Number((totalScore / scoreCount).toFixed(1)) : 0,
+          eitSelfAvg: eitSelfCount > 0 ? Number((eitSelfTotal / eitSelfCount).toFixed(2)) : 0,
+          supervisorAvg: supervisorCount > 0 ? Number((supervisorTotal / supervisorCount).toFixed(2)) : 0,
           completionRate: stats.total > 0 ? Number(((stats.completed / stats.total) * 100).toFixed(1)) : 0
         };
       });
-
       setCategoryAverages(averages);
     } catch (error) {
       console.error('Error calculating category averages:', error);
@@ -213,10 +219,7 @@ const SupervisorSkills: React.FC = () => {
       {/* Category Progress Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         {skillCategories.map((category, index) => {
-          const average = categoryAverages[category.name]?.average || 0;
-          const supervisorPercent = categoryAverages[category.name]?.completionRate || 0;
-          // For supervisor score, convert percent to a 0-5 scale for the bar
-          const supervisorScoreOutOfFive = (supervisorPercent / 100) * 5;
+          const averagesForCat = categoryAverages[category.name] || { eitSelfAvg: 0, supervisorAvg: 0, completionRate: 0 };
           const color = categoryColors[index % categoryColors.length];
           return (
             <div key={category.name} className="bg-white rounded-lg border border-slate-200 p-4">
@@ -229,19 +232,19 @@ const SupervisorSkills: React.FC = () => {
                   <span className="w-40 text-base font-semibold">Average EIT Self Score</span>
                   <div className="w-10 flex-shrink-0 flex justify-center">
                     <div className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 text-slate-800 text-sm font-bold border border-slate-200">
-                      {Math.round((average / 5) * 100)}%
+                      {Math.round((averagesForCat.eitSelfAvg / 5) * 100)}%
                     </div>
                   </div>
                   <div className="flex-1">
                     <div className="w-full max-w-[160px] bg-slate-200 rounded-full h-2">
                       <div
                         className="h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${(average / 5) * 100}%`, background: color }}
+                        style={{ width: `${(averagesForCat.eitSelfAvg / 5) * 100}%`, background: color }}
                       />
                     </div>
                   </div>
                   <div className="w-14 text-xs text-slate-500 text-right">
-                    {average.toFixed(1)}/5.0
+                    {averagesForCat.eitSelfAvg.toFixed(2)}/5.0
                   </div>
                 </div>
                 {/* Average Supervisor Score */}
@@ -249,19 +252,19 @@ const SupervisorSkills: React.FC = () => {
                   <span className="w-40 text-base font-semibold">Average Supervisor Score</span>
                   <div className="w-10 flex-shrink-0 flex justify-center">
                     <div className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 text-slate-800 text-sm font-bold border border-slate-200">
-                      {Math.round(supervisorPercent)}%
+                      {Math.round((averagesForCat.supervisorAvg / 5) * 100)}%
                     </div>
                   </div>
                   <div className="flex-1">
                     <div className="w-full max-w-[160px] bg-slate-200 rounded-full h-2">
                       <div
                         className="h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${(supervisorScoreOutOfFive / 5) * 100}%`, background: color }}
+                        style={{ width: `${(averagesForCat.supervisorAvg / 5) * 100}%`, background: color }}
                       />
                     </div>
                   </div>
                   <div className="w-14 text-xs text-slate-500 text-right">
-                    {supervisorScoreOutOfFive.toFixed(1)}/5.0
+                    {averagesForCat.supervisorAvg.toFixed(2)}/5.0
                   </div>
                 </div>
               </div>
