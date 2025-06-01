@@ -1029,33 +1029,53 @@ const Settings: React.FC = () => {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-medium text-gray-900">Skill Updates</h3>
-                  <p className="text-sm text-gray-500">Get notified when your skills are updated or approved</p>
+                  <h3 className="text-sm font-medium text-gray-900">User Skills</h3>
+                  <p className="text-sm text-gray-500">Get notified when your skills are validated or updated</p>
                 </div>
                 <Switch
                   checked={userSkills}
                   onChange={toggleUserSkills}
-                  className={`${
-                    userSkills ? 'bg-teal-600' : 'bg-gray-200'
-                  } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2`}
+                  className={`${userSkills ? 'bg-teal-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2`}
                 >
                   <span
-                    className={`${
-                      userSkills ? 'translate-x-6' : 'translate-x-1'
-                    } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                    className={`${userSkills ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
                   />
                 </Switch>
               </div>
+
+              {/* Portfolio Update Email Frequency */}
+              <div className="border-t border-gray-200 pt-4 mt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900">Portfolio Update Reminders</h3>
+                    <p className="text-sm text-gray-500">Receive automated reminders to update your portfolio</p>
+                  </div>
+                  <Switch
+                    checked={true}
+                    onChange={() => {}}
+                    className={`${true ? 'bg-teal-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2`}
+                  >
+                    <span
+                      className={`${true ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                    />
+                  </Switch>
+                </div>
+                <div className="mt-3">
+                  <label htmlFor="emailFrequency" className="block text-sm font-medium text-gray-700">Email Frequency</label>
+                  <select
+                    id="emailFrequency"
+                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm rounded-md"
+                    defaultValue="weekly"
+                  >
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="biweekly">Bi-weekly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
-
-          {/* Notifications Card (placeholder) */}
-          <section className="card p-6">
-            <h2 className="text-lg font-semibold flex items-center gap-2 mb-2">
-              <Bell /> Notifications
-            </h2>
-            <p className="text-slate-500 text-sm">Coming soon: Manage your email and in-app notification preferences.</p>
-          </section>
 
           {/* Theme Card (placeholder) */}
           <section className="card p-6">

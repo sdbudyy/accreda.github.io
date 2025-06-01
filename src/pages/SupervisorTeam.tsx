@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import Modal from '../components/common/Modal';
-import { Mail } from 'lucide-react';
+import { Mail, X } from 'lucide-react';
 import { sendNotification } from '../utils/notifications';
 
 interface EIT {
@@ -27,6 +27,15 @@ interface EITProgress {
   documentedExperiences: number;
   supervisorApprovals: number;
 }
+
+const CATEGORY_REQUIREMENTS = {
+  'Category 1 – Technical Competence': 3,
+  'Category 2 – Communication': 3,
+  'Category 3 – Project & Financial Management': 2,
+  'Category 4 – Team Effectiveness': 3,
+  'Category 5 – Professional Accountability': 3,
+  'Category 6 – Social, Economic, Environmental & Sustainability': 2
+};
 
 const fetchEITProgress = async (eitId: string): Promise<EITProgress> => {
   try {
@@ -80,6 +89,8 @@ const SupervisorTeam: React.FC = () => {
   const [nudgeSending, setNudgeSending] = useState(false);
   const [nudgeSuccess, setNudgeSuccess] = useState<string | null>(null);
   const [nudgeError, setNudgeError] = useState<string | null>(null);
+  const [expandedEIT, setExpandedEIT] = useState<string | null>(null);
+  const [skillsModalEIT, setSkillsModalEIT] = useState<EIT | null>(null);
 
   const fetchTeam = async () => {
     setLoading(true);
@@ -261,6 +272,11 @@ const SupervisorTeam: React.FC = () => {
   // Calculate average team progress
   const teamProgress = eits.length > 0 ? Math.round(eits.reduce((sum, eit) => sum + (progressMap[eit.id]?.overallProgress || 0), 0) / eits.length) : 0;
 
+  // Gradient for EIT mean bar
+  const eitBarGradient = 'linear-gradient(90deg, #14b8a6 0%, #3b82f6 100%)';
+  const requiredDotColor = '#f59e42'; // orange
+  const eitDotColor = '#3b82f6'; // blue
+
   if (loading) return <LoadingSpinner />;
   if (error) return <div className="p-6 text-red-600">{error}</div>;
 
@@ -320,9 +336,20 @@ const SupervisorTeam: React.FC = () => {
       <div className="bg-white rounded-lg shadow mb-8">
         <div className="p-6">
           <h2 className="text-xl font-semibold mb-4">Team Members</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="flex flex-col gap-4">
             {eits.map((eit) => {
               const progress = progressMap[eit.id];
+              // Calculate EIT's overall mean (mocked for now)
+              const eitOverallMean = 3.2; // TODO: calculate from skills
+              const requiredOverallMean =
+                Object.values(CATEGORY_REQUIREMENTS).reduce((a, b) => a + b, 0) /
+                Object.values(CATEGORY_REQUIREMENTS).length;
+              // Mock per-category means for demo
+              const categoryMeans = Object.entries(CATEGORY_REQUIREMENTS).map(([cat, req], i) => ({
+                name: cat,
+                eitMean: 3.2 - i * 0.2, // TODO: calculate real means
+                required: req
+              }));
               let expectedProgress = null;
               let progressColor = 'teal';
               let progressDescription = '';
@@ -355,52 +382,82 @@ const SupervisorTeam: React.FC = () => {
 
               return (
                 <div key={eit.id} className="border-b border-gray-200 pb-4 last:border-0">
-                  <div>
-                    <p className="text-sm text-gray-500">Name</p>
-                    <button className="font-medium text-teal-700 hover:underline" onClick={() => handleEITClick(eit)}>{eit.full_name}</button>
-                  </div>
-                  <div className="mt-2">
-                    <p className="text-sm text-gray-500">Email</p>
-                    <p className="font-medium">{eit.email}</p>
-                  </div>
-                  {progress && (
-                    <div className="mt-4">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-slate-700">Overall Progress</span>
-                        <span className="text-sm font-semibold text-teal-600">{progress.overallProgress}%</span>
+                  <div className="flex flex-col md:flex-row md:items-stretch md:gap-6 md:justify-between">
+                    {/* Left: Current Info */}
+                    <div className="flex-1 min-w-0 md:max-w-xl">
+                      <p className="text-sm text-gray-500">Name</p>
+                      <button className="font-medium text-teal-700 hover:underline" onClick={() => handleEITClick(eit)}>{eit.full_name}</button>
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-500">Email</p>
+                        <p className="font-medium">{eit.email}</p>
                       </div>
-                      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full rounded-full transition-all duration-300 ${
-                            progressColor === 'teal' ? 'bg-teal-500' :
-                            progressColor === 'blue' ? 'bg-blue-500' :
-                            'bg-purple-500'
-                          }`} 
-                          style={{ width: `${progress.overallProgress}%` }}
-                        ></div>
-                      </div>
-                      <div className="flex flex-col gap-1 mt-2">
-                        <div className="flex gap-4 text-xs text-slate-500">
-                          <span>Skills: {progress.completedSkills}/22</span>
-                          <span>Experiences: {progress.documentedExperiences}/24</span>
-                          <span>Approvals: {progress.supervisorApprovals}/24</span>
-                        </div>
-                        {expectedProgress !== null && (
-                          <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
-                            {progressDescription} (Expected: {expectedProgress}%)
-                            {showNudge && (
-                              <button
-                                className="ml-2 px-2 py-0.5 rounded bg-red-100 text-red-700 text-xs font-semibold flex items-center gap-1 hover:bg-red-200 transition"
-                                onClick={() => { setNudgeModalEIT(eit); setNudgeMessage(''); }}
-                              >
-                                <Mail size={14} className="mr-1" /> Nudge
-                              </button>
+                      {progress && (
+                        <div className="mt-4">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-medium text-slate-700">Overall Progress</span>
+                            <span className="text-sm font-semibold text-teal-600">{progress.overallProgress}%</span>
+                          </div>
+                          <div className="h-2 bg-slate-100 rounded-full overflow-hidden max-w-xs md:max-w-md w-full">
+                            <div 
+                              className={`h-full rounded-full transition-all duration-300 ${
+                                progressColor === 'teal' ? 'bg-teal-500' :
+                                progressColor === 'blue' ? 'bg-blue-500' :
+                                'bg-purple-500'
+                              }`} 
+                              style={{ width: `${progress.overallProgress}%` }}
+                            ></div>
+                          </div>
+                          <div className="flex flex-col gap-1 mt-2">
+                            <div className="flex gap-4 text-xs text-slate-500">
+                              <span>Skills: {progress.completedSkills}/22</span>
+                              <span>Experiences: {progress.documentedExperiences}/24</span>
+                              <span>Approvals: {progress.supervisorApprovals}/24</span>
+                            </div>
+                            {expectedProgress !== null && (
+                              <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                                {progressDescription} (Expected: {expectedProgress}%)
+                                {showNudge && (
+                                  <button
+                                    className="ml-2 px-2 py-0.5 rounded bg-red-100 text-red-700 text-xs font-semibold flex items-center gap-1 hover:bg-red-200 transition"
+                                    onClick={() => { setNudgeModalEIT(eit); setNudgeMessage(''); }}
+                                  >
+                                    <Mail size={14} className="mr-1" /> Nudge
+                                  </button>
+                                )}
+                              </div>
                             )}
                           </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
-                  )}
+                    {/* Right: Skills Section (visual only) */}
+                    <button
+                      className="md:self-center md:ml-auto w-full md:w-80 flex flex-col justify-center items-center bg-white rounded-lg shadow p-6 mt-4 md:mt-0 focus:outline-none focus:ring-2 focus:ring-teal-400 hover:shadow-md hover:bg-slate-50 transition cursor-pointer group"
+                      onClick={() => setSkillsModalEIT(eit)}
+                      type="button"
+                    >
+                      <span className="text-xl font-semibold text-slate-700 mb-3 group-hover:text-teal-700 transition">Skills Average</span>
+                      <div className="flex flex-col items-center w-full mb-2">
+                        {/* Required mean marker and badge */}
+                        <div className="relative w-full flex justify-center mb-3" style={{ height: '22px' }}>
+                          <div className="absolute" style={{ left: `calc(${(requiredOverallMean/5)*100}% - 18px)` }}>
+                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700 shadow" style={{ fontSize: '13px' }}>{requiredOverallMean.toFixed(1)}</span>
+                          </div>
+                        </div>
+                        {/* Bar */}
+                        <div className="relative w-64 h-4 bg-slate-100 rounded-full overflow-hidden mb-3">
+                          <div className="h-full rounded-full transition-all duration-300" style={{ width: `${(eitOverallMean/5)*100}%`, background: '#14b8a6' }}></div>
+                          {/* Required mean marker dot */}
+                          <div className="absolute top-1/2 -translate-y-1/2" style={{ left: `calc(${(requiredOverallMean/5)*100}% - 10px)` }}>
+                            <span className="w-5 h-5 rounded-full border-2 border-white shadow-md block" style={{ background: '#fde047' }}></span>
+                          </div>
+                        </div>
+                        {/* EIT mean number */}
+                        <span className="text-lg text-slate-700 font-bold mt-1">{eitOverallMean}</span>
+                      </div>
+                      <span className="text-xs text-slate-500 group-hover:text-teal-600 transition mt-2">Click for category breakdown</span>
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -503,6 +560,51 @@ const SupervisorTeam: React.FC = () => {
               <button className="btn btn-primary" onClick={handleSendNudge} disabled={nudgeSending}>
                 {nudgeSending ? 'Sending...' : 'Send Nudge'}
               </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+      {/* Skills Modal Popup */}
+      {skillsModalEIT && (
+        <Modal isOpen={!!skillsModalEIT} onClose={() => setSkillsModalEIT(null)}>
+          <div className="w-full max-w-lg bg-white rounded-xl p-8 shadow-lg relative">
+            <button className="absolute top-4 right-4 text-slate-400 hover:text-slate-700" onClick={() => setSkillsModalEIT(null)} aria-label="Close">
+              <X size={24} />
+            </button>
+            <h2 className="text-2xl font-bold mb-6 text-slate-800">{skillsModalEIT.full_name}'s Skills by Category</h2>
+            <div className="flex items-center gap-6 mb-6">
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-3 h-3 rounded-full" style={{ background: 'linear-gradient(90deg, #14b8a6 0%, #3b82f6 100%)' }}></span>
+                <span className="text-xs text-slate-700 font-medium">Your Mean</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-3 h-3 rounded-full" style={{ background: requiredDotColor }}></span>
+                <span className="text-xs text-slate-700 font-medium">Required Mean</span>
+              </div>
+            </div>
+            <div className="space-y-5">
+              {Object.entries(CATEGORY_REQUIREMENTS).map(([cat, req], i) => {
+                const eitMean = 3.2 - i * 0.2; // TODO: calculate real means
+                return (
+                  <div key={cat} className="mb-2">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm font-semibold text-slate-700">{cat}</span>
+                      <span className="text-base font-bold text-blue-700">{eitMean.toFixed(1)}</span>
+                    </div>
+                    <div className="relative w-full h-4 bg-slate-200 rounded-full overflow-hidden mb-3">
+                      {/* EIT mean bar */}
+                      <div className="h-full rounded-full transition-all duration-300" style={{ width: `${(eitMean/5)*100}%`, background: eitBarGradient }}></div>
+                      {/* Required mean marker */}
+                      <div className="absolute left-0 top-0 w-full h-full pointer-events-none">
+                        <div className="absolute flex flex-col items-center" style={{ left: `calc(${(req/5)*100}% - 10px)` }}>
+                          <span className="mb-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 shadow" style={{ fontSize: '11px' }}>{req}</span>
+                          <span className="w-4 h-4 rounded-full border-2 border-white shadow-md" style={{ background: requiredDotColor }}></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </Modal>

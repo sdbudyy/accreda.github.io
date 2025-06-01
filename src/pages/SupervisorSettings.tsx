@@ -645,14 +645,6 @@ const SupervisorSettings: React.FC = () => {
         </div>
       </section>
 
-      {/* Notifications Card (placeholder) */}
-      <section className="card p-6">
-        <h2 className="text-lg font-semibold flex items-center gap-2 mb-2">
-          <Bell /> Notifications
-        </h2>
-        <p className="text-slate-500 text-sm">Coming soon: Manage your email and in-app notification preferences.</p>
-      </section>
-
       {/* Theme Card (placeholder) */}
       <section className="card p-6">
         <h2 className="text-lg font-semibold flex items-center gap-2 mb-2">

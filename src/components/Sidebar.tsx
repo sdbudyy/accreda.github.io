@@ -41,7 +41,9 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-white flex flex-col">
       {/* Logo */}
       <div className="p-4 border-b border-slate-800 flex items-center justify-center">
-        <img src={AccredaLogo} alt="Accreda Logo" className="h-28 w-auto" />
+        <NavLink to="/dashboard" className="cursor-pointer">
+          <img src={AccredaLogo} alt="Accreda Logo" className="h-28 w-auto" />
+        </NavLink>
       </div>
 
       {/* Navigation */}
