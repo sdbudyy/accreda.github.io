@@ -164,52 +164,137 @@ const WeeklyDigest: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-6">
-              {eitActivities.map(({ eit, activities }) => (
-                <div key={eit.id} className="border border-gray-200 rounded-lg p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-xl font-semibold text-gray-900">{eit.full_name}</h3>
-                      <p className="text-gray-500">{eit.email}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-600">
-                        Program Start: {new Date(eit.start_date).toLocaleDateString()}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Target: {new Date(eit.target_date).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-4">
-                    <h4 className="text-lg font-medium text-gray-900 mb-3">Recent Activities</h4>
-                    {activities.length > 0 ? (
-                      <div className="space-y-3">
-                        {activities.map((activity, index) => (
-                          <div key={index} className="bg-gray-50 rounded-lg p-4">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <h5 className="font-medium text-gray-900">{activity.skills.name}</h5>
-                                <p className="text-sm text-gray-500">
-                                  {new Date(activity.validated_at).toLocaleDateString()}
-                                </p>
-                              </div>
-                              <div className="bg-teal-100 text-teal-800 px-3 py-1 rounded-full text-sm font-medium">
-                                Score: {activity.score}/5
-                              </div>
-                            </div>
-                            {activity.feedback && (
-                              <p className="mt-2 text-gray-600 text-sm">{activity.feedback}</p>
-                            )}
-                          </div>
-                        ))}
+              {eitActivities.map(({ eit, activities }) => {
+                // Calculate progress
+                const [progress, setProgress] = React.useState<number | null>(null);
+                const [completedSkills, setCompletedSkills] = React.useState<number | null>(null);
+                const [documentedExperiences, setDocumentedExperiences] = React.useState<number | null>(null);
+                const [supervisorApprovals, setSupervisorApprovals] = React.useState<number | null>(null);
+                const [expectedProgress, setExpectedProgress] = React.useState<number | null>(null);
+                const [progressColor, setProgressColor] = React.useState<'teal' | 'blue' | 'red'>('teal');
+                const [progressDescription, setProgressDescription] = React.useState<string>('');
+                React.useEffect(() => {
+                  const fetchProgress = async () => {
+                    // Skills
+                    const { count: skillsCount } = await supabase
+                      .from('eit_skills')
+                      .select('id', { count: 'exact', head: true })
+                      .eq('eit_id', eit.id)
+                      .not('rank', 'is', null);
+                    // Experiences
+                    const { count: expCount } = await supabase
+                      .from('experiences')
+                      .select('id', { count: 'exact', head: true })
+                      .eq('eit_id', eit.id);
+                    // Approvals
+                    const { count: apprCount } = await supabase
+                      .from('experiences')
+                      .select('id', { count: 'exact', head: true })
+                      .eq('eit_id', eit.id)
+                      .eq('supervisor_approved', true);
+                    const completedSkills = skillsCount || 0;
+                    const documentedExperiences = expCount || 0;
+                    const supervisorApprovals = apprCount || 0;
+                    setCompletedSkills(completedSkills);
+                    setDocumentedExperiences(documentedExperiences);
+                    setSupervisorApprovals(supervisorApprovals);
+                    const skillsProgress = completedSkills / 22;
+                    const experiencesProgress = documentedExperiences / 24;
+                    const approvalsProgress = supervisorApprovals / 24;
+                    const overallProgress = Math.round(((skillsProgress + experiencesProgress + approvalsProgress) / 3) * 100);
+                    setProgress(overallProgress);
+                    // Expected progress
+                    if (eit.start_date && eit.target_date) {
+                      const now = new Date();
+                      const start = new Date(eit.start_date);
+                      const end = new Date(eit.target_date);
+                      const total = end.getTime() - start.getTime();
+                      const elapsed = now.getTime() - start.getTime();
+                      let percent = Math.max(0, Math.min(100, Math.round((elapsed / total) * 100)));
+                      setExpectedProgress(percent);
+                      const delta = overallProgress - percent;
+                      if (delta > 5) {
+                        setProgressColor('teal');
+                        setProgressDescription('Ahead of schedule');
+                      } else if (delta >= -5) {
+                        setProgressColor('blue');
+                        setProgressDescription('On track');
+                      } else {
+                        setProgressColor('red');
+                        setProgressDescription('Behind schedule');
+                      }
+                    }
+                  };
+                  fetchProgress();
+                }, [eit.id, eit.start_date, eit.target_date]);
+                return (
+                  <div key={eit.id} className="border border-gray-200 rounded-lg p-6 mb-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="text-xl font-semibold text-gray-900">{eit.full_name}</h3>
+                        <p className="text-gray-500">{eit.email}</p>
                       </div>
-                    ) : (
-                      <p className="text-gray-500 italic">No recent activities</p>
-                    )}
+                      <div className="text-right">
+                        <p className="text-sm text-gray-600">
+                          Program Start: {new Date(eit.start_date).toLocaleDateString()}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Target: {new Date(eit.target_date).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium text-slate-700">Overall Progress</span>
+                        <span className={`text-sm font-semibold ${progressColor === 'teal' ? 'text-teal-600' : progressColor === 'blue' ? 'text-blue-600' : 'text-red-600'}`}>{progress !== null ? `${progress}%` : '--'}</span>
+                      </div>
+                      <div className="h-2 bg-slate-100 rounded-full overflow-hidden max-w-xs w-full">
+                        <div 
+                          className={`h-full rounded-full transition-all duration-300 ${progressColor === 'teal' ? 'bg-teal-500' : progressColor === 'blue' ? 'bg-blue-500' : 'bg-red-500'}`}
+                          style={{ width: progress !== null ? `${progress}%` : '0%' }}
+                        ></div>
+                      </div>
+                      {expectedProgress !== null && (
+                        <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                          {progressDescription} (Expected: {expectedProgress}%)
+                        </div>
+                      )}
+                      <div className="flex gap-4 text-xs text-slate-500 mt-2">
+                        <span>Skills: {completedSkills !== null ? completedSkills : '--'}/22</span>
+                        <span>Experiences: {documentedExperiences !== null ? documentedExperiences : '--'}/24</span>
+                        <span>Approvals: {supervisorApprovals !== null ? supervisorApprovals : '--'}/24</span>
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <h4 className="text-lg font-medium text-gray-900 mb-3">Recent Activities</h4>
+                      {activities.length > 0 ? (
+                        <div className="space-y-3">
+                          {activities.map((activity, index) => (
+                            <div key={index} className="bg-gray-50 rounded-lg p-4">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h5 className="font-medium text-gray-900">{activity.skills.name}</h5>
+                                  <p className="text-sm text-gray-500">
+                                    {new Date(activity.validated_at).toLocaleDateString()}
+                                  </p>
+                                </div>
+                                <div className="bg-teal-100 text-teal-800 px-3 py-1 rounded-full text-sm font-medium">
+                                  Score: {activity.score}/5
+                                </div>
+                              </div>
+                              {activity.feedback && (
+                                <p className="mt-2 text-sm text-gray-700">Feedback: {activity.feedback}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-500">No recent activities</p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

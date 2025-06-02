@@ -9,7 +9,6 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     document_limit INTEGER DEFAULT 5,
     sao_limit INTEGER DEFAULT 5,
     supervisor_limit INTEGER DEFAULT 1,
-    has_ai_access BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     UNIQUE(user_id)
@@ -39,17 +38,14 @@ BEGIN
             NEW.document_limit := 5;
             NEW.sao_limit := 5;
             NEW.supervisor_limit := 1;
-            NEW.has_ai_access := false;
         WHEN 'pro' THEN
             NEW.document_limit := 2147483647; -- Max integer value for "unlimited"
             NEW.sao_limit := 2147483647;
             NEW.supervisor_limit := 2147483647;
-            NEW.has_ai_access := true;
         WHEN 'enterprise' THEN
             NEW.document_limit := 2147483647;
             NEW.sao_limit := 2147483647;
             NEW.supervisor_limit := 2147483647;
-            NEW.has_ai_access := true;
     END CASE;
     RETURN NEW;
 END;

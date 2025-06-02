@@ -289,19 +289,6 @@ const Dashboard: React.FC = () => {
               <SkillsOverview />
             </Suspense>
           )}
-          <div className="card border-2 border-teal-100 bg-teal-50/50">
-            <h3 className="font-semibold text-teal-800 mb-2">AI Writing Assistant</h3>
-            <p className="text-sm text-teal-700 mb-3">
-              Let our AI help you draft your next Self-Assessment Outcome (SAO) essay based on your documented experiences.
-            </p>
-            <button 
-              className={`btn btn-primary w-full ${essayLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
-              onClick={() => startWriting()}
-              disabled={essayLoading}
-            >
-              {essayLoading ? 'Generating...' : 'Start Writing'}
-            </button>
-          </div>
         </div>
       </div>
     </div>

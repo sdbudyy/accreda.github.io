@@ -637,7 +637,6 @@ const Settings: React.FC = () => {
                     Connect with 1 supervisor
                   </li>
                   <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Standard support</li>
-                  <li className="flex items-center text-gray-700"><span className="text-red-500 mr-2">✗</span> AI Features</li>
                 </ul>
                 {tier === 'free' ? (
                   <span className="inline-block bg-blue-100 text-blue-800 px-4 py-2 rounded-full font-semibold text-sm shadow">Current Plan</span>
@@ -667,7 +666,6 @@ const Settings: React.FC = () => {
                   <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Unlimited SAOs</li>
                   <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Unlimited supervisors</li>
                   <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Priority support</li>
-                  <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> AI Features</li>
                 </ul>
                 {tier === 'pro' ? (
                   <button 

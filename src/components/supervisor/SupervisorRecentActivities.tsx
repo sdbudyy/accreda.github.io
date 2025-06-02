@@ -218,7 +218,7 @@ const SupervisorRecentActivities: React.FC = () => {
         
         <button 
           className="w-full text-center py-2 text-lg text-teal-600 hover:underline font-medium"
-          onClick={() => navigate('/supervisor/activities')}
+          onClick={() => setShowModal(true)}
         >
           View more activities
         </button>

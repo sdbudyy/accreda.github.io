@@ -7,7 +7,6 @@ interface SubscriptionData {
   document_limit: number;
   sao_limit: number;
   supervisor_limit: number;
-  has_ai_access: boolean;
 }
 
 interface SubscriptionState {
@@ -42,21 +41,18 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('No user found');
 
-        const { data, error } = await supabase
+        const { data: subscription } = await supabase
           .from('subscriptions')
           .select('*')
           .eq('user_id', user.id)
           .single();
 
-        if (error) throw error;
-
-        if (data) {
+        if (subscription) {
           set({
-            tier: data.tier,
-            documentLimit: data.document_limit,
-            saoLimit: data.sao_limit,
-            supervisorLimit: data.supervisor_limit,
-            hasAiAccess: data.has_ai_access,
+            tier: subscription.tier,
+            documentLimit: subscription.document_limit,
+            saoLimit: subscription.sao_limit,
+            supervisorLimit: subscription.supervisor_limit,
           });
         } else {
           // Create default free subscription if none exists
@@ -91,7 +87,6 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => {
                   documentLimit: newData.document_limit,
                   saoLimit: newData.sao_limit,
                   supervisorLimit: newData.supervisor_limit,
-                  hasAiAccess: newData.has_ai_access,
                 });
               }
             }

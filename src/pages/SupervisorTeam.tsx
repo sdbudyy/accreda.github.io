@@ -91,6 +91,7 @@ const SupervisorTeam: React.FC = () => {
   const [nudgeError, setNudgeError] = useState<string | null>(null);
   const [expandedEIT, setExpandedEIT] = useState<string | null>(null);
   const [skillsModalEIT, setSkillsModalEIT] = useState<EIT | null>(null);
+  const [eitSkillsMap, setEitSkillsMap] = useState<Record<string, any[]>>({});
 
   const fetchTeam = async () => {
     setLoading(true);
@@ -139,6 +140,18 @@ const SupervisorTeam: React.FC = () => {
       const progressResults = await Promise.all(progressPromises);
       const progressEntries = eitList.map((eit, index) => [eit.id, progressResults[index]]);
       setProgressMap(Object.fromEntries(progressEntries));
+      // Fetch all skills for all EITs
+      const skillsRes = await supabase
+        .from('eit_skills')
+        .select('*')
+        .in('eit_id', eitList.map(e => e.id));
+      if (skillsRes.error) throw skillsRes.error;
+      const skillsByEIT: Record<string, any[]> = {};
+      (skillsRes.data || []).forEach((skill: any) => {
+        if (!skillsByEIT[skill.eit_id]) skillsByEIT[skill.eit_id] = [];
+        skillsByEIT[skill.eit_id].push(skill);
+      });
+      setEitSkillsMap(skillsByEIT);
       // If modal is open, refresh the selected EIT's skills
       if (selectedEIT) {
         const updatedEIT = eitList.find(e => e.id === selectedEIT.id);
@@ -339,17 +352,24 @@ const SupervisorTeam: React.FC = () => {
           <div className="flex flex-col gap-4">
             {eits.map((eit) => {
               const progress = progressMap[eit.id];
-              // Calculate EIT's overall mean (mocked for now)
-              const eitOverallMean = 3.2; // TODO: calculate from skills
+              // Calculate EIT's overall mean from all ranked skills (ignore zeros/unranked)
+              const eitSkills = eitSkillsMap[eit.id] || [];
+              const rankedSkills = eitSkills.filter(skill => skill.rank !== null && skill.rank !== undefined);
+              const eitOverallMean = rankedSkills.length > 0 ? (rankedSkills.reduce((sum, skill) => sum + skill.rank, 0) / rankedSkills.length).toFixed(1) : '--';
               const requiredOverallMean =
                 Object.values(CATEGORY_REQUIREMENTS).reduce((a, b) => a + b, 0) /
                 Object.values(CATEGORY_REQUIREMENTS).length;
-              // Mock per-category means for demo
-              const categoryMeans = Object.entries(CATEGORY_REQUIREMENTS).map(([cat, req], i) => ({
-                name: cat,
-                eitMean: 3.2 - i * 0.2, // TODO: calculate real means
-                required: req
-              }));
+              // Calculate per-category means for popup
+              const categoryMeans = Object.entries(CATEGORY_REQUIREMENTS).map(([cat, req]) => {
+                const catSkills = (eitSkills || []).filter(skill => skill.category_name === cat);
+                const catRanked = catSkills.filter(skill => skill.rank !== null && skill.rank !== undefined);
+                const mean = catRanked.length > 0 ? (catRanked.reduce((sum, skill) => sum + skill.rank, 0) / catRanked.length).toFixed(1) : '--';
+                return {
+                  name: cat,
+                  eitMean: mean,
+                  required: req
+                };
+              });
               let expectedProgress = null;
               let progressColor = 'teal';
               let progressDescription = '';
@@ -366,14 +386,14 @@ const SupervisorTeam: React.FC = () => {
 
                 if (progress) {
                   const delta = progress.overallProgress - percent;
-                  if (delta > 0) {
-                    progressColor = 'teal';
+                  if (delta > 5) {
+                    progressColor = 'teal'; // green/teal (current shade)
                     progressDescription = 'Ahead of schedule';
                   } else if (delta >= -5) {
                     progressColor = 'blue';
                     progressDescription = 'On track';
                   } else {
-                    progressColor = 'purple';
+                    progressColor = 'red'; // use red for behind
                     progressDescription = 'Behind schedule';
                     showNudge = true;
                   }
@@ -402,7 +422,7 @@ const SupervisorTeam: React.FC = () => {
                               className={`h-full rounded-full transition-all duration-300 ${
                                 progressColor === 'teal' ? 'bg-teal-500' :
                                 progressColor === 'blue' ? 'bg-blue-500' :
-                                'bg-purple-500'
+                                'bg-red-500'
                               }`} 
                               style={{ width: `${progress.overallProgress}%` }}
                             ></div>
@@ -446,7 +466,7 @@ const SupervisorTeam: React.FC = () => {
                         </div>
                         {/* Bar */}
                         <div className="relative w-64 h-4 bg-slate-100 rounded-full overflow-hidden mb-3">
-                          <div className="h-full rounded-full transition-all duration-300" style={{ width: `${(eitOverallMean/5)*100}%`, background: '#14b8a6' }}></div>
+                          <div className="h-full rounded-full transition-all duration-300" style={{ width: `${eitOverallMean !== '--' ? (parseFloat(eitOverallMean)/5)*100 : 0}%`, background: '#14b8a6' }}></div>
                           {/* Required mean marker dot */}
                           <div className="absolute top-1/2 -translate-y-1/2" style={{ left: `calc(${(requiredOverallMean/5)*100}% - 10px)` }}>
                             <span className="w-5 h-5 rounded-full border-2 border-white shadow-md block" style={{ background: '#fde047' }}></span>
@@ -575,7 +595,7 @@ const SupervisorTeam: React.FC = () => {
             <div className="flex items-center gap-6 mb-6">
               <div className="flex items-center gap-2">
                 <span className="inline-block w-3 h-3 rounded-full" style={{ background: 'linear-gradient(90deg, #14b8a6 0%, #3b82f6 100%)' }}></span>
-                <span className="text-xs text-slate-700 font-medium">Your Mean</span>
+                <span className="text-xs text-slate-700 font-medium">Their Mean</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="inline-block w-3 h-3 rounded-full" style={{ background: requiredDotColor }}></span>
@@ -583,28 +603,66 @@ const SupervisorTeam: React.FC = () => {
               </div>
             </div>
             <div className="space-y-5">
-              {Object.entries(CATEGORY_REQUIREMENTS).map(([cat, req], i) => {
-                const eitMean = 3.2 - i * 0.2; // TODO: calculate real means
-                return (
-                  <div key={cat} className="mb-2">
+              {(function() {
+                // Calculate per-category means for the selected EIT for the popup
+                const eitSkills = eitSkillsMap[skillsModalEIT.id] || [];
+                const categoryMeans: { name: string; eitMean: string; required: number }[] = Object.entries(CATEGORY_REQUIREMENTS).map(([cat, req]) => {
+                  const catSkills = (eitSkills || []).filter(skill => skill.category_name === cat);
+                  const catRanked = catSkills.filter(skill => skill.rank !== null && skill.rank !== undefined);
+                  const mean = catRanked.length > 0 ? (catRanked.reduce((sum, skill) => sum + skill.rank, 0) / catRanked.length).toFixed(1) : '--';
+                  return {
+                    name: cat,
+                    eitMean: mean,
+                    required: req
+                  };
+                });
+                // Helper for warning logic
+                const showRequirementWarning = (categoryName: string, mean: string) => {
+                  const minimumRequired = CATEGORY_REQUIREMENTS[categoryName as keyof typeof CATEGORY_REQUIREMENTS];
+                  return mean !== '--' && parseFloat(mean) < minimumRequired;
+                };
+                const getRequirementMessage = (categoryName: string, mean: string) => {
+                  const minimumRequired = CATEGORY_REQUIREMENTS[categoryName as keyof typeof CATEGORY_REQUIREMENTS];
+                  return `A minimum average score of ${minimumRequired} is required for ${categoryName}. Current average: ${mean}`;
+                };
+                // Define category colors based on SkillsOverview theme
+                const categoryColors = ['#14b8a6', '#3b82f6', '#6366f1', '#a21caf', '#ec4899', '#22c55e']; // teal, blue, indigo, purple, pink, green
+                return categoryMeans.map(({ name, eitMean, required }, index) => (
+                  <div key={name} className="mb-2">
                     <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm font-semibold text-slate-700">{cat}</span>
-                      <span className="text-base font-bold text-blue-700">{eitMean.toFixed(1)}</span>
+                      <span className="text-sm font-semibold text-slate-700">{name}</span>
+                      <span className="text-base font-bold text-blue-700">{eitMean}</span>
                     </div>
                     <div className="relative w-full h-4 bg-slate-200 rounded-full overflow-hidden mb-3">
                       {/* EIT mean bar */}
-                      <div className="h-full rounded-full transition-all duration-300" style={{ width: `${(eitMean/5)*100}%`, background: eitBarGradient }}></div>
+                      <div className="h-full rounded-full transition-all duration-300" style={{ width: `${eitMean !== '--' ? (parseFloat(eitMean)/5)*100 : 0}%`, background: categoryColors[index % categoryColors.length] }}></div>
                       {/* Required mean marker */}
                       <div className="absolute left-0 top-0 w-full h-full pointer-events-none">
-                        <div className="absolute flex flex-col items-center" style={{ left: `calc(${(req/5)*100}% - 10px)` }}>
-                          <span className="mb-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 shadow" style={{ fontSize: '11px' }}>{req}</span>
+                        <div className="absolute flex flex-col items-center" style={{ left: `calc(${(required/5)*100}% - 10px)` }}>
+                          <span className="mb-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 shadow" style={{ fontSize: '11px' }}>{required}</span>
                           <span className="w-4 h-4 rounded-full border-2 border-white shadow-md" style={{ background: requiredDotColor }}></span>
                         </div>
                       </div>
                     </div>
+                    {/* Warning if below requirement */}
+                    {showRequirementWarning(name, eitMean) && (
+                      <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="text-red-600 mt-0.5 flex-shrink-0" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                          <div>
+                            <p className="text-sm font-medium text-red-800">
+                              Warning: This category does not meet the minimum requirements
+                            </p>
+                            <p className="text-sm text-red-600 mt-1">
+                              {getRequirementMessage(name, eitMean)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                );
-              })}
+                ));
+              })()}
             </div>
           </div>
         </Modal>

@@ -391,6 +391,18 @@ const SupervisorReviews: React.FC = () => {
         })
         .eq('id', validator.id);
       if (updateError) throw updateError;
+      // Insert into skill_validations for audit/history
+      const { error: insertError } = await supabase
+        .from('skill_validations')
+        .insert({
+          validator_id: user.id,
+          eit_id: validator.eit_id,
+          skill_id: validator.skill_id,
+          score: score,
+          feedback: validator.description,
+          validated_at: new Date().toISOString()
+        });
+      if (insertError) throw insertError;
       // Remove from pendingValidators
       setPendingValidators(prev => prev.filter(v => v.id !== validator.id));
       setScoreInputs(prev => {

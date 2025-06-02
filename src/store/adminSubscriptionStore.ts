@@ -10,7 +10,6 @@ interface AdminSubscriptionState {
     documentLimit: number;
     saoLimit: number;
     supervisorLimit: number;
-    hasAiAccess: boolean;
   } | null>;
 }
 
@@ -64,7 +63,6 @@ export const useAdminSubscriptionStore = create<AdminSubscriptionState>((set) =>
           documentLimit: data.document_limit,
           saoLimit: data.sao_limit,
           supervisorLimit: data.supervisor_limit,
-          hasAiAccess: data.has_ai_access,
         };
       }
       return null;

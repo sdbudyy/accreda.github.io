@@ -59,22 +59,6 @@ const Essays: React.FC = () => {
         <p className="text-slate-500 mt-1">Manage your Self-Assessment Outcome (SAO) essays</p>
       </div>
 
-      {/* AI Assistant Card */}
-      <div className="card bg-gradient-to-br from-teal-500 to-teal-700 text-white p-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between">
-          <div className="mb-4 md:mb-0">
-            <h2 className="text-xl font-bold">AI Essay Assistant</h2>
-            <p className="mt-1 text-teal-100">
-              Let our AI analyze your documented experiences and draft SAO essays that highlight your key competencies.
-            </p>
-          </div>
-          <button className="btn bg-white text-teal-700 hover:bg-teal-50 flex items-center self-start">
-            <Bot size={16} className="mr-2" />
-            Start New AI-Assisted Essay
-          </button>
-        </div>
-      </div>
-
       {/* Actions Row */}
       <div className="flex flex-col md:flex-row justify-between space-y-4 md:space-y-0">
         <button className="btn btn-primary flex items-center">
