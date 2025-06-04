@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => {
   
   return {
     plugins: [react()],
-    base: mode === 'production' ? '/accreda.github.io/' : '/',
+    base: '/',
     server: mode === 'development' ? {
       proxy: {
         '/api': {
