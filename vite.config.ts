@@ -12,10 +12,7 @@ export default defineConfig(({ mode }) => {
     base: '/',
     server: mode === 'development' ? {
       proxy: {
-        '/api': {
-          target: 'http://127.0.0.1:3001', // Backend port for dev
-          changeOrigin: true,
-        },
+        '/api': 'http://localhost:3001'
       },
     } : undefined,
     // Log the environment variables (without the actual values for security)
