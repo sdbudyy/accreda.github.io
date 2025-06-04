@@ -66,9 +66,20 @@ const SupervisorSettings: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUser(user);
-        setFullName(user.user_metadata?.full_name || '');
         setEmail(user.email || '');
         setNewEmail(user.email || '');
+        // Fetch name from profile table
+        let profileName = '';
+        const [supervisorProfile, eitProfile] = await Promise.all([
+          supabase.from('supervisor_profiles').select('full_name').eq('id', user.id).single(),
+          supabase.from('eit_profiles').select('full_name').eq('id', user.id).single()
+        ]);
+        if (supervisorProfile.data && supervisorProfile.data.full_name) {
+          profileName = supervisorProfile.data.full_name;
+        } else if (eitProfile.data && eitProfile.data.full_name) {
+          profileName = eitProfile.data.full_name;
+        }
+        setFullName(profileName || user.email?.split('@')[0] || '');
         // Fetch all active EIT connections
         supabase
           .from('supervisor_eit_relationships')

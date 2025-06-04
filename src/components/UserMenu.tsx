@@ -17,27 +17,32 @@ const UserMenu: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUserEmail(user.email || '');
-        setUserName(user.user_metadata?.full_name || user.email?.split('@')[0] || 'User');
-        setAvatarUrl(user.user_metadata?.avatar_url || '');
-
-        // Check user role
+        let profileName = '';
+        let avatar = user.user_metadata?.avatar_url || '';
+        // Try EIT profile first
         const { data: eitProfile } = await supabase
           .from('eit_profiles')
-          .select('id')
+          .select('full_name')
           .eq('id', user.id)
           .single();
-
-        const { data: supervisorProfile } = await supabase
-          .from('supervisor_profiles')
-          .select('id')
-          .eq('id', user.id)
-          .single();
-
-        if (supervisorProfile) {
-          setUserRole('supervisor');
-        } else if (eitProfile) {
+        if (eitProfile && eitProfile.full_name) {
+          profileName = eitProfile.full_name;
           setUserRole('eit');
         }
+        // Try supervisor profile if not EIT
+        if (!profileName) {
+          const { data: supervisorProfile } = await supabase
+            .from('supervisor_profiles')
+            .select('full_name')
+            .eq('id', user.id)
+            .single();
+          if (supervisorProfile && supervisorProfile.full_name) {
+            profileName = supervisorProfile.full_name;
+            setUserRole('supervisor');
+          }
+        }
+        setUserName(profileName || user.email?.split('@')[0] || 'User');
+        setAvatarUrl(avatar);
       }
     };
 

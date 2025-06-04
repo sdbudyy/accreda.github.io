@@ -117,11 +117,16 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
       console.log('User authenticated:', user.id);
 
       // Ensure EIT profile exists for this user
+      const { data: profile } = await supabase
+        .from('eit_profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
       await supabase
         .from('eit_profiles')
         .upsert({
           id: user.id,
-          full_name: user.user_metadata?.full_name || '',
+          full_name: profile?.full_name || '',
           email: user.email || ''
         });
 

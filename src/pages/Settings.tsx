@@ -94,35 +94,27 @@ const Settings: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUser(user);
-        setFullName(user.user_metadata?.full_name || '');
         setEmail(user.email || '');
         setNewEmail(user.email || '');
         setAvatarUrl(user.user_metadata?.avatar_url || '');
-
-        // Check user role and load EIT program dates if EIT
-        const { data: eitProfile } = await supabase
-          .from('eit_profiles')
-          .select('id, start_date, target_date')
-          .eq('id', user.id)
-          .single();
-        if (eitProfile) {
-          setUserRole('eit');
-          setStartDate(eitProfile.start_date || '');
-          setTargetDate(eitProfile.target_date || '');
-        }
-
-        const { data: supervisorProfile } = await supabase
-          .from('supervisor_profiles')
-          .select('id')
-          .eq('id', user.id)
-          .single();
-
-        if (supervisorProfile) {
+        // Fetch name from profile table
+        let profileName = '';
+        const [eitProfile, supervisorProfile] = await Promise.all([
+          supabase.from('eit_profiles').select('full_name, start_date, target_date').eq('id', user.id).single(),
+          supabase.from('supervisor_profiles').select('full_name').eq('id', user.id).single()
+        ]);
+        if (supervisorProfile.data && supervisorProfile.data.full_name) {
           setUserRole('supervisor');
+          profileName = supervisorProfile.data.full_name;
+        } else if (eitProfile.data && eitProfile.data.full_name) {
+          setUserRole('eit');
+          profileName = eitProfile.data.full_name;
+          setStartDate(eitProfile.data.start_date || '');
+          setTargetDate(eitProfile.data.target_date || '');
         }
+        setFullName(profileName || user.email?.split('@')[0] || '');
       }
     };
-
     getUserProfile();
     fetchSubscription();
   }, []);
@@ -217,29 +209,42 @@ const Settings: React.FC = () => {
 
     try {
       const updates: { data?: { full_name: string }, email?: string } = {};
-      
       if (isEditingName) {
         updates.data = { full_name: fullName };
       }
-      
       if (isEditingEmail && newEmail !== email) {
         updates.email = newEmail;
       }
-
       const { error } = await supabase.auth.updateUser(updates);
-
       if (error) throw error;
+
+      // --- Also update the full_name in the correct profile table ---
+      if (isEditingName && user) {
+        if (userRole === 'eit') {
+          const { error: profileError } = await supabase
+            .from('eit_profiles')
+            .update({ full_name: fullName })
+            .eq('id', user.id);
+          if (profileError) throw profileError;
+        } else if (userRole === 'supervisor') {
+          const { error: profileError } = await supabase
+            .from('supervisor_profiles')
+            .update({ full_name: fullName })
+            .eq('id', user.id);
+          if (profileError) throw profileError;
+        }
+      }
+      // ------------------------------------------------------------
 
       setMessage({ type: 'success', text: 'Profile updated successfully!' });
       setIsEditingName(false);
       setIsEditingEmail(false);
-      
       // Refresh user data
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUser(user);
-        setEmail(user.email || '');
-        setNewEmail(user.email || '');
+      const { data: { user: updatedUser } } = await supabase.auth.getUser();
+      if (updatedUser) {
+        setUser(updatedUser);
+        setEmail(updatedUser.email || '');
+        setNewEmail(updatedUser.email || '');
       }
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to update profile. Please try again.' });

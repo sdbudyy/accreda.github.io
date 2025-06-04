@@ -61,33 +61,32 @@ const Dashboard: React.FC = () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
-
-        // Set user name from metadata immediately
-        if (user.user_metadata?.full_name) {
-          setUserName(user.user_metadata.full_name);
+        // Fetch profile name from eit_profiles or supervisor_profiles
+        let profileName = '';
+        const [eitProfile, supervisorProfile] = await Promise.all([
+          supabase.from('eit_profiles').select('full_name').eq('id', user.id).single(),
+          supabase.from('supervisor_profiles').select('full_name').eq('id', user.id).single()
+        ]);
+        if (supervisorProfile.data && supervisorProfile.data.full_name) {
+          setUserName(supervisorProfile.data.full_name);
+          setUserRole('supervisor');
+        } else if (eitProfile.data && eitProfile.data.full_name) {
+          setUserName(eitProfile.data.full_name);
+          setUserRole('eit');
+        } else {
+          setUserName(user.email?.split('@')[0] || 'User');
         }
 
         // Parallel data fetching
         const [
-          eitProfile,
-          supervisorProfile,
           skillsData,
           progressData,
           saosData
         ] = await Promise.all([
-          supabase.from('eit_profiles').select('id, start_date, target_date').eq('id', user.id).single(),
-          supabase.from('supervisor_profiles').select('id').eq('id', user.id).single(),
           loadUserSkills(),
           initialize(),
           saos.length === 0 && !saosLoading ? loadUserSAOs() : Promise.resolve()
         ]);
-
-        // Set role based on profile data
-        if (supervisorProfile.data) {
-          setUserRole('supervisor');
-        } else if (eitProfile.data) {
-          setUserRole('eit');
-        }
 
         // Cache user profile data
         setUserProfileCache({

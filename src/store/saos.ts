@@ -317,8 +317,27 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
             status: 'pending'
           }
         ]);
-      // Notify supervisor
-      await sendSAOValidationRequestNotification(supervisorId, user.user_metadata?.full_name || user.email, sao?.title || 'SAO');
+      // Get user name from profile tables
+      let userName = user.email;
+      const { data: supervisorProfile } = await supabase
+        .from('supervisor_profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+      if (supervisorProfile && supervisorProfile.full_name) {
+        userName = supervisorProfile.full_name;
+      } else {
+        const { data: eitProfile } = await supabase
+          .from('eit_profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .single();
+        if (eitProfile && eitProfile.full_name) {
+          userName = eitProfile.full_name;
+        }
+      }
+      const saoTitle = sao?.title ?? 'SAO';
+      await sendSAOValidationRequestNotification(supervisorId, userName ?? 'Unknown', saoTitle);
       // Reload SAOs to get updated feedback
       await get().loadUserSAOs(true);
     } catch (error: any) {
@@ -470,22 +489,16 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError) throw authError;
       if (!user) throw new Error('No authenticated user found');
-      // Try to get supervisor_id if user is a supervisor, else null
-      let supervisor_id: string | null = null;
-      let author_role: 'supervisor' | 'eit' = 'eit';
-      let author_name = user.user_metadata?.full_name || user.email || 'Unknown';
-      // Check if user is a supervisor
+      // Get author_name from profile tables
+      let author_name = user.email || 'Unknown';
       const { data: supervisorProfile } = await supabase
         .from('supervisor_profiles')
-        .select('id, full_name')
+        .select('full_name')
         .eq('id', user.id)
         .single();
-      if (supervisorProfile) {
-        supervisor_id = supervisorProfile.id;
-        author_role = 'supervisor';
-        author_name = supervisorProfile.full_name || author_name;
+      if (supervisorProfile && supervisorProfile.full_name) {
+        author_name = supervisorProfile.full_name;
       } else {
-        // Try to get EIT name
         const { data: eitProfile } = await supabase
           .from('eit_profiles')
           .select('full_name')
@@ -500,10 +513,10 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
         .insert([
           {
             sao_id: saoId,
-            supervisor_id,
+            supervisor_id: user.id,
             created_by: user.id,
             author_name,
-            author_role,
+            author_role: 'supervisor',
             location,
             annotation,
             status: 'active',
