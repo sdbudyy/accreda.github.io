@@ -865,9 +865,11 @@ const SAOs: React.FC = () => {
       {/* SAO Limit Banner */}
       {tier === 'free' && (
         <div className="p-4 mb-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-900 text-center font-semibold">
-          {saoCreatedCount < saoLimit
-            ? `You have ${saoLimit - saoCreatedCount} SAO${saoLimit - saoCreatedCount === 1 ? '' : 's'} left on the Free plan.`
-            : 'You have reached your SAO limit for the Free plan. Upgrade to add more.'}
+          {(saoLimit === -1 || saoLimit === 2147483647)
+            ? 'You have Unlimited SAOs on your plan.'
+            : (saoCreatedCount < saoLimit
+              ? `You have ${saoLimit - saoCreatedCount} SAO${saoLimit - saoCreatedCount === 1 ? '' : 's'} left on the Free plan.`
+              : 'You have reached your SAO limit for the Free plan. Upgrade to add more.')}
         </div>
       )}
       <div className="flex justify-between items-center mb-4">
@@ -930,12 +932,12 @@ const SAOs: React.FC = () => {
           )}
           <button
             onClick={() => {
-              if (saoCreatedCount < saoLimit) setIsModalOpen(true);
+              if (saoLimit === -1 || saoLimit === 2147483647 || saoCreatedCount < saoLimit) setIsModalOpen(true);
             }}
-            className={`btn flex items-center gap-2 ${saoCreatedCount >= saoLimit ? 'bg-gray-300 text-gray-500 border-gray-300 cursor-not-allowed' : 'btn-primary'}`}
-            disabled={saoCreatedCount >= saoLimit}
-            aria-disabled={saoCreatedCount >= saoLimit}
-            title={saoCreatedCount >= saoLimit ? 'You have reached your SAO limit for the Free plan.' : 'Start a new SAO'}
+            className={`btn flex items-center gap-2 ${(saoLimit !== -1 && saoLimit !== 2147483647 && saoCreatedCount >= saoLimit) ? 'bg-gray-300 text-gray-500 border-gray-300 cursor-not-allowed' : 'btn-primary'}`}
+            disabled={saoLimit !== -1 && saoLimit !== 2147483647 && saoCreatedCount >= saoLimit}
+            aria-disabled={saoLimit !== -1 && saoLimit !== 2147483647 && saoCreatedCount >= saoLimit}
+            title={(saoLimit !== -1 && saoLimit !== 2147483647 && saoCreatedCount >= saoLimit) ? 'You have reached your SAO limit for the Free plan.' : 'Start a new SAO'}
           >
             <Plus size={18} />
             Start New SAO

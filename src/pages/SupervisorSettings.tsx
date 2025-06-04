@@ -544,7 +544,7 @@ const SupervisorSettings: React.FC = () => {
           {/* Connect with EIT Form */}
           <div>
             <h3 className="text-sm font-medium text-slate-700 mb-3">Connect with a New EIT</h3>
-            {tier === 'free' && eits.length >= 1 && (
+            {tier === 'free' && eits.length >= supervisorLimit && supervisorLimit !== -1 && supervisorLimit !== 2147483647 && (
               <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-yellow-900 font-semibold text-center">
                 You have reached your EIT connection limit for the Free plan. Upgrade to Enterprise to connect with more EITs.
               </div>

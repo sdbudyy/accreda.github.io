@@ -102,7 +102,7 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => {
 
     checkDocumentLimit: async () => {
       const { documentLimit } = get();
-      if (documentLimit === 2147483647) return true; // Unlimited
+      if (documentLimit === 2147483647 || documentLimit === -1) return true; // Unlimited
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return false;
@@ -117,7 +117,7 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => {
 
     checkSaoLimit: async () => {
       const { saoLimit } = get();
-      if (saoLimit === 2147483647) return true; // Unlimited
+      if (saoLimit === 2147483647 || saoLimit === -1) return true; // Unlimited
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return false;
@@ -132,7 +132,7 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => {
 
     checkSupervisorLimit: async () => {
       const { supervisorLimit } = get();
-      if (supervisorLimit === 2147483647) return true; // Unlimited
+      if (supervisorLimit === 2147483647 || supervisorLimit === -1) return true; // Unlimited
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return false;

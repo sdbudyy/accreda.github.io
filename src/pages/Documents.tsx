@@ -366,16 +366,18 @@ const Documents: React.FC = () => {
             className="hidden"
             ref={uploadInputRef}
             onChange={handleCreateDocument}
-            disabled={tier === 'free' && documentCreatedCount >= documentLimit}
+            disabled={tier === 'free' && documentCreatedCount >= documentLimit && documentLimit !== -1 && documentLimit !== 2147483647}
           />
         </div>
       </div>
       {/* Document Limit Banner */}
       {tier === 'free' && (
         <div className="p-4 mb-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-900 text-center font-semibold">
-          {documentCreatedCount < documentLimit
-            ? `You have ${documentLimit - documentCreatedCount} document${documentLimit - documentCreatedCount === 1 ? '' : 's'} left on the Free plan.`
-            : 'You have reached your document upload limit for the Free plan. Upgrade to add more.'}
+          {(documentLimit === -1 || documentLimit === 2147483647)
+            ? 'You have Unlimited documents on your plan.'
+            : (documentCreatedCount < documentLimit
+              ? `You have ${documentLimit - documentCreatedCount} document${documentLimit - documentCreatedCount === 1 ? '' : 's'} left on the Free plan.`
+              : 'You have reached your document upload limit for the Free plan. Upgrade to add more.')}
         </div>
       )}
       <div className="flex items-center justify-between">

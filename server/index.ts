@@ -38,6 +38,10 @@ app.post('/api/stripe-webhook', bodyParser.raw({ type: 'application/json' }), as
     console.log('Session metadata:', session.metadata);
     const userId = session.metadata?.userId;
     const subscriptionId = session.subscription;
+    // Determine plan interval
+    let planInterval = null;
+    if (session.metadata?.plan === 'pro_monthly') planInterval = 'monthly';
+    if (session.metadata?.plan === 'pro_yearly') planInterval = 'yearly';
     const PRO_LIMITS = {
       document_limit: 2147483647,
       sao_limit: 2147483647,
@@ -64,7 +68,8 @@ app.post('/api/stripe-webhook', bodyParser.raw({ type: 'application/json' }), as
             stripe_subscription_id: subscriptionId,
             document_limit: PRO_LIMITS.document_limit,
             sao_limit: PRO_LIMITS.sao_limit,
-            supervisor_limit: PRO_LIMITS.supervisor_limit
+            supervisor_limit: PRO_LIMITS.supervisor_limit,
+            plan_interval: planInterval
           })
           .eq('user_id', userId)
           .select();
@@ -198,9 +203,14 @@ app.post('/api/create-checkout-session', async (req: Request, res: Response) => 
   try {
     const { plan, userId, userEmail } = req.body;
     let priceId;
-    if (plan === 'pro_monthly') priceId = proMonthlyPriceId;
-    else if (plan === 'pro_yearly') priceId = proYearlyPriceId;
-    else {
+    let planMetadata = '';
+    if (plan === 'pro_monthly') {
+      priceId = proMonthlyPriceId;
+      planMetadata = 'pro_monthly';
+    } else if (plan === 'pro_yearly') {
+      priceId = proYearlyPriceId;
+      planMetadata = 'pro_yearly';
+    } else {
       res.status(400).json({ error: 'Invalid plan selected.' });
       return;
     }
@@ -213,7 +223,7 @@ app.post('/api/create-checkout-session', async (req: Request, res: Response) => 
       customer_email: userEmail,
       success_url: `${process.env.CLIENT_URL || 'http://localhost:5173'}/settings?success=true`,
       cancel_url: `${process.env.CLIENT_URL || 'http://localhost:5173'}/settings?canceled=true`,
-      metadata: { userId },
+      metadata: { userId, plan: planMetadata },
     });
     res.json({ url: session.url });
   } catch (err) {
@@ -258,6 +268,42 @@ app.post('/api/cancel-stripe-subscription', async (req: Request, res: Response) 
     res.status(500).json({ error: 'Failed to cancel subscription with Stripe.' });
     res.end();
   }
+});
+
+// Admin endpoint to manually override a user's subscription tier and limits
+app.post('/api/admin/set-subscription', async (req: Request, res: Response) => {
+  // NOTE: No authentication is added. Add admin auth in production!
+  const { userId, tier, document_limit, sao_limit, supervisor_limit, plan_interval } = req.body;
+  if (!userId || !tier) {
+    res.status(400).json({ error: 'Missing userId or tier' });
+    return;
+  }
+  // Set limits for pro/enterprise if not provided
+  let docLimit = document_limit;
+  let saoLimit = sao_limit;
+  let supLimit = supervisor_limit;
+  if (tier === 'pro' || tier === 'enterprise') {
+    docLimit = docLimit ?? 2147483647;
+    saoLimit = saoLimit ?? 2147483647;
+    supLimit = supLimit ?? 2147483647;
+  }
+  const updateObj: any = {
+    tier,
+    document_limit: docLimit,
+    sao_limit: saoLimit,
+    supervisor_limit: supLimit,
+    override: true, // Prevent Stripe from overwriting
+  };
+  if (plan_interval) updateObj.plan_interval = plan_interval;
+  const { error } = await supabase
+    .from('subscriptions')
+    .update(updateObj)
+    .eq('user_id', userId);
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ success: true });
 });
 
 // Serve static files from the frontend build in production

@@ -57,14 +57,9 @@ const Settings: React.FC = () => {
   const [proError, setProError] = useState<string | null>(null);
   const [proSuccess, setProSuccess] = useState(false);
   const [showDowngradeModal, setShowDowngradeModal] = useState(false);
-  const [downgradeName, setDowngradeName] = useState('');
-  const [downgradeEmail, setDowngradeEmail] = useState('');
-  const [downgradeMessage, setDowngradeMessage] = useState('');
-  const [downgradeLoading, setDowngradeLoading] = useState(false);
-  const [downgradeError, setDowngradeError] = useState<string | null>(null);
-  const [downgradeSuccess, setDowngradeSuccess] = useState(false);
   const [start_date, setStartDate] = useState('');
   const [target_date, setTargetDate] = useState('');
+  const [plan_interval, setPlanInterval] = useState('monthly');
 
   const {
     supervisorReviews,
@@ -433,6 +428,17 @@ const Settings: React.FC = () => {
     }
   };
 
+  // Add a helper to get the plan label
+  const getPlanLabel = () => {
+    if (tier === 'pro') {
+      if (plan_interval === 'monthly') return 'Pro (Monthly)';
+      if (plan_interval === 'yearly') return 'Pro (Yearly)';
+      return 'Pro';
+    }
+    if (tier === 'enterprise') return 'Enterprise';
+    return 'Free';
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -660,6 +666,9 @@ const Settings: React.FC = () => {
               <p className="text-gray-600 text-md max-w-2xl mx-auto">
                 Select the plan that best fits your needs
               </p>
+              <div className="mt-2 text-lg font-semibold text-teal-700">
+                Your Plan: {getPlanLabel()}
+              </div>
             </div>
             <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
               {/* Free Plan */}
@@ -684,12 +693,62 @@ const Settings: React.FC = () => {
                 {tier === 'free' ? (
                   <span className="inline-block bg-blue-100 text-blue-800 px-4 py-2 rounded-full font-semibold text-sm shadow">Current Plan</span>
                 ) : (
-                  <button 
-                    onClick={handleCancelSubscription}
-                    className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-semibold text-sm shadow transition-colors"
-                  >
-                    Contact to Downgrade
-                  </button>
+                  <>
+                    <button 
+                      onClick={() => setShowDowngradeModal(true)}
+                      className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-semibold text-sm shadow transition-colors"
+                    >
+                      Downgrade
+                    </button>
+                    {showDowngradeModal && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full relative">
+                          <button
+                            className="absolute top-2 right-2 text-slate-400 hover:text-slate-600"
+                            onClick={() => setShowDowngradeModal(false)}
+                            aria-label="Close"
+                          >
+                            ×
+                          </button>
+                          <h2 className="text-xl font-bold mb-4 text-blue-800">Downgrade to Free</h2>
+                          <p className="mb-6 text-slate-700">Are you sure you want to downgrade to the Free plan? You will lose access to Pro features.</p>
+                          <div className="flex justify-end gap-2">
+                            <button
+                              className="btn btn-secondary"
+                              onClick={() => setShowDowngradeModal(false)}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              className="btn btn-danger"
+                              onClick={async () => {
+                                setShowDowngradeModal(false);
+                                if (!user) return;
+                                try {
+                                  const response = await fetch('/api/cancel-stripe-subscription', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ userId: user.id }),
+                                  });
+                                  const data = await response.json();
+                                  if (response.ok) {
+                                    setMessage({ type: 'success', text: 'Subscription cancelled. You are now on the Free plan.' });
+                                    fetchSubscription();
+                                  } else {
+                                    setMessage({ type: 'error', text: data.error || 'Failed to cancel subscription.' });
+                                  }
+                                } catch (err) {
+                                  setMessage({ type: 'error', text: 'Failed to cancel subscription.' });
+                                }
+                              }}
+                            >
+                              Confirm Downgrade
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -956,7 +1015,7 @@ const Settings: React.FC = () => {
 
                 <div>
                   <h3 className="text-sm font-medium text-slate-700 mb-3">Connect with a New Supervisor</h3>
-                  {tier === 'free' && supervisors.length >= supervisorLimit && (
+                  {tier === 'free' && supervisors.length >= supervisorLimit && supervisorLimit !== -1 && supervisorLimit !== 2147483647 && (
                     <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-yellow-900 font-semibold text-center">
                       You have reached your supervisor connection limit for the Free plan. Upgrade to add more.
                     </div>
@@ -975,13 +1034,13 @@ const Settings: React.FC = () => {
                         className="input w-full"
                         placeholder="Enter supervisor's email"
                         required
-                        disabled={tier === 'free' && supervisors.length >= supervisorLimit}
+                        disabled={tier === 'free' && supervisors.length >= supervisorLimit && supervisorLimit !== -1 && supervisorLimit !== 2147483647}
                       />
                     </div>
                     <button 
                       type="submit" 
                       className="btn btn-primary whitespace-nowrap" 
-                      disabled={loading || (tier === 'free' && supervisors.length >= supervisorLimit)}
+                      disabled={loading || (tier === 'free' && supervisors.length >= supervisorLimit && supervisorLimit !== -1 && supervisorLimit !== 2147483647)}
                     >
                       {loading ? 'Sending...' : 'Send Request'}
                     </button>
@@ -1277,128 +1336,6 @@ const Settings: React.FC = () => {
                     disabled={contactLoading}
                   >
                     {contactLoading ? 'Sending...' : 'Send Message'}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
-      {/* Downgrade to Free Modal */}
-      {showDowngradeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full relative">
-            <button
-              className="absolute top-2 right-2 text-slate-400 hover:text-slate-600"
-              onClick={() => {
-                setShowDowngradeModal(false);
-                setDowngradeSuccess(false);
-                setDowngradeError(null);
-              }}
-              aria-label="Close"
-            >
-              ×
-            </button>
-            <h2 className="text-xl font-bold mb-4 text-blue-800">Downgrade to Free</h2>
-            {downgradeSuccess ? (
-              <div className="p-3 bg-green-50 text-green-700 rounded-md text-sm mb-4">
-                Your downgrade request has been sent successfully. We'll get back to you soon!
-              </div>
-            ) : (
-              <form
-                onSubmit={async e => {
-                  e.preventDefault();
-                  setDowngradeLoading(true);
-                  setDowngradeError(null);
-                  setDowngradeSuccess(false);
-                  try {
-                    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-support-email`, {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-                      },
-                      body: JSON.stringify({
-                        email: downgradeEmail,
-                        subject: 'Downgrade to Free Plan Request',
-                        message: `Name: ${downgradeName}\n\n${downgradeMessage}`,
-                        issueType: 'downgrade',
-                        mode: 'help',
-                      }),
-                    });
-                    const data = await response.json();
-                    if (!response.ok) {
-                      throw new Error(data.error || 'Failed to send message');
-                    }
-                    setDowngradeSuccess(true);
-                    setDowngradeName('');
-                    setDowngradeEmail('');
-                    setDowngradeMessage('');
-                  } catch (err) {
-                    setDowngradeError(err instanceof Error ? err.message : 'Failed to send message. Please try again later.');
-                  } finally {
-                    setDowngradeLoading(false);
-                  }
-                }}
-                className="space-y-4"
-              >
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
-                  <input
-                    type="text"
-                    className="input"
-                    value={downgradeName}
-                    onChange={e => setDowngradeName(e.target.value)}
-                    required
-                    disabled={downgradeLoading}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                  <input
-                    type="email"
-                    className="input"
-                    value={downgradeEmail}
-                    onChange={e => setDowngradeEmail(e.target.value)}
-                    required
-                    disabled={downgradeLoading}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Message</label>
-                  <textarea
-                    className="input"
-                    rows={4}
-                    value={downgradeMessage}
-                    onChange={e => setDowngradeMessage(e.target.value)}
-                    required
-                    disabled={downgradeLoading}
-                  />
-                </div>
-                {downgradeError && (
-                  <div className="p-3 bg-red-50 text-red-700 rounded-md text-sm">
-                    {downgradeError}
-                  </div>
-                )}
-                <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => {
-                      setShowDowngradeModal(false);
-                      setDowngradeSuccess(false);
-                      setDowngradeError(null);
-                    }}
-                    disabled={downgradeLoading}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn btn-primary"
-                    disabled={downgradeLoading}
-                  >
-                    {downgradeLoading ? 'Sending...' : 'Send Request'}
                   </button>
                 </div>
               </form>
