@@ -35,6 +35,8 @@ import SupervisorSkills from './pages/SupervisorSkills'
 import { useNotificationsStore } from './store/notifications'
 import RealtimeNotifications from './components/common/RealtimeNotifications'
 import { Toaster } from 'react-hot-toast'
+import { Analytics } from '@vercel/analytics/react'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 
 function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -181,6 +183,8 @@ function App() {
         {/* Catch all route */}
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <Analytics />
+      <SpeedInsights />
     </>
   )
 }
