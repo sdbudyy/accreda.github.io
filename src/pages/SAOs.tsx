@@ -14,6 +14,7 @@ import RichTextEditor from '../components/documents/RichTextEditor';
 import mammoth from 'mammoth';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker?worker';
+import DOMPurify from 'dompurify';
 
 // @ts-ignore
 declare global {
@@ -40,6 +41,13 @@ function getMostRecentFeedback(feedbackArr: { updated_at: string; status: string
   );
 }
 
+// Utility to convert HTML to plain text for annotation system
+function htmlToPlainText(html: string): string {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
+}
+
 const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated, initialContent, onInitialContentUsed }) => {
   const [title, setTitle] = useState('');
   const [sao, setSao] = useState('');
@@ -51,13 +59,17 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
   const [selectedSupervisor, setSelectedSupervisor] = useState<string>('');
   const [supervisors, setSupervisors] = useState<Array<{ id: string; name: string }>>([]);
   const { skillCategories } = useSkillsStore();
-  const { createSAO, updateSAO, loading, error, requestFeedback, loadUserSAOs } = useSAOsStore();
+  const { createSAO, updateSAO, loading, error, requestFeedback, loadUserSAOs, fetchSAOVersions } = useSAOsStore();
   const [ruleModalOpen, setRuleModalOpen] = useState(false);
   const [ruleModalMessage, setRuleModalMessage] = useState('');
   const { checkSaoLimit, tier, fetchSubscription } = useSubscriptionStore();
   const [limitError, setLimitError] = useState<string | null>(null);
   const [saoCreatedCount, setSaoCreatedCount] = useState<number>(0);
   const [showHistory, setShowHistory] = useState(false);
+  const [showVersionModal, setShowVersionModal] = useState(false);
+  const [versions, setVersions] = useState<any[]>([]);
+  const [loadingVersions, setLoadingVersions] = useState(false);
+  const [versionError, setVersionError] = useState<string | null>(null);
 
   const mostRecentFeedback = editSAO && editSAO.feedback ? getMostRecentFeedback(editSAO.feedback) : null;
 
@@ -280,23 +292,49 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-2">
               <span className="font-semibold text-slate-700">Comments & Feedback</span>
-              <button
-                type="button"
-                className="p-1 rounded hover:bg-slate-200"
-                title={showHistory ? 'Hide Feedback History' : 'Show Feedback History'}
-                onClick={() => setShowHistory(h => !h)}
-              >
-                <Clock size={18} className={showHistory ? 'text-blue-600' : 'text-slate-400'} />
-              </button>
+              {/* Version history clock */}
+              {editSAO && (
+                <button
+                  type="button"
+                  className="p-1 rounded hover:bg-slate-200"
+                  title="Show Version History"
+                  onClick={async () => {
+                    setShowVersionModal(true);
+                    setLoadingVersions(true);
+                    setVersionError(null);
+                    try {
+                      const data = await fetchSAOVersions(editSAO.id);
+                      setVersions(data);
+                    } catch (e: any) {
+                      setVersionError(e.message || 'Failed to load version history');
+                    } finally {
+                      setLoadingVersions(false);
+                    }
+                  }}
+                >
+                  <Clock size={18} className="text-slate-400" />
+                </button>
+              )}
             </div>
-            <SAOAnnotation saoId={editSAO.id} content={editSAO.content} />
+            <div className="text-xs text-slate-500 mb-1">
+              The preview below shows your formatting. Comments and highlights are made on the plain text version.
+            </div>
+            <div
+              className="bg-slate-50 rounded-lg p-4 mb-4 prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(editSAO.content) }}
+            />
+            {/* Pass plain text to annotation system for correct comment selection */}
+            <SAOAnnotation saoId={editSAO.id} content={htmlToPlainText(editSAO.content)} />
             {/* Feedback history (toggle) */}
             {showHistory && feedbackToShow.length > 1 && (
               <div className="mt-4">
                 <div className="font-semibold text-xs text-slate-500 mb-1">Feedback History</div>
                 {feedbackToShow.slice(0, -1).map((item, idx) => (
                   <div key={item.id} className="bg-slate-100 rounded p-2 mb-2 text-xs text-slate-700">
-                    <div className="mb-1">{item.feedback}</div>
+                    <div
+                      className="mb-1 prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.feedback) }}
+                    />
                     <div className="text-slate-400">{new Date(item.updated_at).toLocaleDateString()}</div>
                   </div>
                 ))}
@@ -528,6 +566,39 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
             </button>
           </div>
         </Modal>
+
+        {/* Version History Modal */}
+        {showVersionModal && (
+          <Modal isOpen={showVersionModal} onClose={() => setShowVersionModal(false)}>
+            <div className="p-6 max-h-[80vh] overflow-y-auto">
+              <h2 className="text-lg font-semibold mb-4">SAO Version History</h2>
+              {loadingVersions ? (
+                <div>Loading...</div>
+              ) : versionError ? (
+                <div className="text-red-600">{versionError}</div>
+              ) : versions.length === 0 ? (
+                <div className="text-slate-500">No previous versions found.</div>
+              ) : (
+                <div className="space-y-4">
+                  {versions.map((v, idx) => (
+                    <div key={v.id} className="bg-slate-50 rounded-lg p-4">
+                      <div className="text-xs text-slate-500 mb-2">
+                        {new Date(v.created_at).toLocaleString()} {idx === 0 && <span className="ml-2 text-green-600 font-semibold">Latest</span>}
+                      </div>
+                      <div className="font-semibold mb-1">{v.title}</div>
+                      <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: v.content }} />
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex justify-end mt-6">
+                <button className="btn btn-secondary" onClick={() => setShowVersionModal(false)}>
+                  Close
+                </button>
+              </div>
+            </div>
+          </Modal>
+        )}
       </div>
     </div>
   );
@@ -593,7 +664,10 @@ const SAOCard: React.FC<{
           </button>
         </div>
       </div>
-      <p className="text-slate-600 whitespace-pre-wrap mb-4">{sao.content}</p>
+      <div
+        className="text-slate-600 whitespace-pre-wrap mb-4 prose prose-sm max-w-none"
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(sao.content) }}
+      />
       <div className="flex flex-wrap gap-2">
         {sao.skills.map((skill) => (
           <span

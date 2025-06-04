@@ -3,6 +3,7 @@ import { X, ExternalLink, Briefcase, MessageSquare } from 'lucide-react';
 import { SAO } from '../../store/saos';
 import { useNavigate } from 'react-router-dom';
 import SAOFeedbackComponent from '../saos/SAOFeedback';
+import DOMPurify from 'dompurify';
 
 interface Job {
   id: string;
@@ -76,7 +77,10 @@ const LinksPopup: React.FC<LinksPopupProps> = ({ isOpen, onClose, skillName, sao
                         <ExternalLink size={18} />
                       </button>
                     </div>
-                    <p className="text-sm text-slate-600">{sao.content}</p>
+                    <div
+                      className="text-sm text-slate-600 prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(sao.content) }}
+                    />
                     {sao.feedback && sao.feedback.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-slate-200">
                         <SAOFeedbackComponent

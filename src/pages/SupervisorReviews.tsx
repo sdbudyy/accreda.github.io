@@ -6,6 +6,7 @@ import { X, Info, Clock } from 'lucide-react';
 import SAOAnnotation from '../components/saos/SAOAnnotation';
 import toast from 'react-hot-toast';
 import { useNotificationsStore } from '../store/notifications';
+import DOMPurify from 'dompurify';
 
 // --- Skill Validation Types ---
 interface Validator {
@@ -213,6 +214,13 @@ function formatRubric(skillName: string) {
       )}
     </div>
   );
+}
+
+// Utility to convert HTML to plain text for annotation system
+function htmlToPlainText(html: string): string {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
 }
 
 const SupervisorReviews: React.FC = () => {
@@ -800,12 +808,13 @@ const SupervisorReviews: React.FC = () => {
               
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-slate-800 mb-2">SAO Content</h3>
-                <div className="bg-slate-50 rounded-lg p-4">
-                  {/* Annotation UI for supervisors */}
-                  {selectedSAO.sao_id && selectedSAO.sao?.content && (
-                    <SAOAnnotation saoId={selectedSAO.sao_id} content={selectedSAO.sao.content} />
-                  )}
-                </div>
+                <div className="bg-slate-50 rounded-lg p-4 mb-4 prose prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedSAO.sao?.content || '') }}
+                />
+                {/* Annotation UI for supervisors */}
+                {selectedSAO.sao_id && selectedSAO.sao?.content && (
+                  <SAOAnnotation saoId={selectedSAO.sao_id} content={htmlToPlainText(selectedSAO.sao.content)} />
+                )}
               </div>
 
               <SAOFeedbackComponent

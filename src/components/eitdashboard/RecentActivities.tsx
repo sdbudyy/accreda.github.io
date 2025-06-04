@@ -474,13 +474,6 @@ const RecentActivities: React.FC = () => {
             No recent activities
           </div>
         )}
-        
-        <button 
-          className="w-full text-center py-2 text-lg text-teal-600 hover:underline font-medium"
-          onClick={() => navigate('/dashboard/activities')}
-        >
-          View more activities
-        </button>
       </div>
 
       {/* Activities Modal */}

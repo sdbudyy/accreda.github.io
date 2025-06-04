@@ -105,14 +105,16 @@ export const enhanceSAOClarity = async (text: string): Promise<string> => {
   if (!OPENROUTER_API_KEY) {
     throw new Error("OpenRouter API key is missing. Please set VITE_OPENROUTER_API_KEY in your .env file.");
   }
-  const prompt = `You are an expert in improving the clarity and grammar of professional writing. Please enhance the following text by:
+  const prompt = `You are an expert in improving the clarity and professionalism of writing. Please enhance the following text by:
 
-1. Fixing any grammatical errors
+1. Fixing any grammatical errors and spelling mistakes
 2. Improving sentence structure and flow
-3. Enhancing clarity while maintaining the original meaning
-4. Using more precise and professional language
-5. Maintaining the original tone and style
-6. Preserving all specific details, numbers, and technical terms
+3. Enhancing clarity while maintaining the exact same meaning and content
+4. Adjusting tone to be more professional and clear
+5. Preserving all specific details, numbers, technical terms, and names
+6. NOT changing any of the actual content or meaning
+
+Important: Do not modify or change any of the actual content, facts, or meaning of the text. Only improve the grammar, spelling, tone, and clarity.
 
 Please provide the enhanced version with clear markdown formatting to show the changes:
 

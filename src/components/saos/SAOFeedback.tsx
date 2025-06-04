@@ -3,6 +3,7 @@ import { MessageSquare, CheckCircle2, XCircle, Sparkles } from 'lucide-react';
 import { SAOFeedback } from '../../store/saos';
 import { supabase } from '../../lib/supabase';
 import { enhanceSAOClarity } from '../../lib/webllm';
+import DOMPurify from 'dompurify';
 
 interface SAOFeedbackProps {
   feedback: SAOFeedback[];
@@ -109,47 +110,23 @@ const SAOFeedbackComponent: React.FC<SAOFeedbackProps> = ({
   };
 
   return (
-    <div className="mt-6 border-t pt-6">
-      <h3 className="text-lg font-semibold text-slate-900 mb-4">Supervisor Feedback</h3>
-      
-      {feedback.length > 0 ? (
-        <div className="space-y-4">
-          {feedback.map((item) => (
+    <div className="space-y-4">
+      {feedback.map((item) => (
+        <div key={item.id} className="bg-slate-50 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-2">
+            {getStatusIcon(item.status)}
+            <span className="text-sm font-medium text-slate-700">
+              {getStatusText(item.status)}
+            </span>
+          </div>
+          {item.feedback && (
             <div
-              key={item.id}
-              className="bg-slate-50 rounded-lg p-4"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  {getStatusIcon(item.status)}
-                  <span className="text-sm font-medium text-slate-700">
-                    {getStatusText(item.status)}
-                  </span>
-                </div>
-                {isSupervisor && item.status === 'submitted' && false && (
-                  <button
-                    onClick={() => onResolve(item.id)}
-                    className="text-sm text-teal-600 hover:text-teal-700"
-                    disabled={loading}
-                  >
-                    Mark as Resolved
-                  </button>
-                )}
-              </div>
-              
-              {item.feedback && (
-                <p className="text-slate-600 whitespace-pre-wrap">{item.feedback}</p>
-              )}
-              
-              <div className="mt-2 text-xs text-slate-500">
-                {new Date(item.updated_at).toLocaleDateString()}
-              </div>
-            </div>
-          ))}
+              className="text-slate-700 prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.feedback) }}
+            />
+          )}
         </div>
-      ) : (
-        <p className="text-slate-500 italic">No feedback yet.</p>
-      )}
+      ))}
 
       {isSupervisor && feedback.length > 0 && feedback[0].status === 'pending' && (
         <form onSubmit={handleSubmitFeedback} className="mt-4">
@@ -162,7 +139,7 @@ const SAOFeedbackComponent: React.FC<SAOFeedbackProps> = ({
                 className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-teal-600 hover:text-teal-700 hover:bg-teal-50 rounded-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Sparkles size={16} className={isEnhancing ? 'animate-pulse' : ''} />
-                {isEnhancing ? 'Enhancing...' : 'Enhance Clarity'}
+                {isEnhancing ? 'Enhancing...' : 'Enhance with AI'}
               </button>
             </div>
           )}

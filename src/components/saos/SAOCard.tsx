@@ -5,6 +5,7 @@ import SAOFeedbackComponent from './SAOFeedback';
 import { useSAOsStore } from '../../store/saos';
 import { supabase } from '../../lib/supabase';
 import SAOAnnotation from './SAOAnnotation';
+import DOMPurify from 'dompurify';
 
 interface SAOCardProps {
   sao: SAO;
@@ -85,7 +86,10 @@ const SAOCard: React.FC<SAOCardProps> = ({ sao, onEdit, onDelete }) => {
       </div>
       
       <p className="text-sm text-slate-600 mt-2">{sao.description}</p>
-      <p className="text-sm text-slate-600 mt-2 whitespace-pre-wrap">{sao.content}</p>
+      <div
+        className="text-slate-600 whitespace-pre-wrap mb-4 prose prose-sm max-w-none"
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(sao.content) }}
+      />
 
       {/* Annotation UI for both EIT and Supervisor */}
       <SAOAnnotation saoId={sao.id} content={sao.content} />

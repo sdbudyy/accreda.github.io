@@ -45,6 +45,7 @@ interface SAOsState {
   resolveAnnotation: (annotationId: string) => Promise<void>;
   deleteAnnotation: (annotationId: string) => Promise<void>;
   updateAnnotationStatus: (annotationId: string, status: string) => Promise<void>;
+  fetchSAOVersions: (saoId: string) => Promise<any[]>;
 }
 
 export const useSAOsStore = create<SAOsState>((set, get) => ({
@@ -107,7 +108,12 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
         throw saoError;
       }
 
-      console.log('SAO created successfully:', sao);
+      // Save version history
+      await supabase.from('sao_versions').insert({
+        sao_id: sao.id,
+        title: sao.title,
+        content: sao.content
+      });
 
       // Then, create the SAO skills relationships
       const saoSkills = skills.map(skill => ({
@@ -173,6 +179,13 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
         console.error('Error updating SAO:', saoError);
         throw saoError;
       }
+
+      // Save version history
+      await supabase.from('sao_versions').insert({
+        sao_id: id,
+        title,
+        content
+      });
 
       // Delete existing SAO skills
       const { error: deleteError } = await supabase
@@ -591,6 +604,24 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
     } catch (error: any) {
       set({ error: `Failed to update annotation status: ${error.message || 'Unknown error'}` });
       throw error;
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  fetchSAOVersions: async (saoId: string) => {
+    set({ loading: true, error: null });
+    try {
+      const { data, error } = await supabase
+        .from('sao_versions')
+        .select('*')
+        .eq('sao_id', saoId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    } catch (error: any) {
+      set({ error: `Failed to fetch SAO versions: ${error.message || 'Unknown error'}` });
+      return [];
     } finally {
       set({ loading: false });
     }
