@@ -411,7 +411,7 @@ const Settings: React.FC = () => {
   const handleCancelSubscription = async () => {
     if (!user) return;
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/cancel-stripe-subscription`, {
+      const response = await fetch('/api/cancel-stripe-subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id }),
@@ -725,7 +725,7 @@ const Settings: React.FC = () => {
                                 setShowDowngradeModal(false);
                                 if (!user) return;
                                 try {
-                                  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/cancel-stripe-subscription`, {
+                                  const response = await fetch('/api/cancel-stripe-subscription', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ userId: user.id }),
@@ -1237,7 +1237,7 @@ const Settings: React.FC = () => {
                   setContactError(null);
                   setContactSuccess(false);
                   try {
-                    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-support-email`, {
+                    const response = await fetch('/api/send-support-email', {
                       method: 'POST',
                       headers: {
                         'Content-Type': 'application/json',
