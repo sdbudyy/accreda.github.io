@@ -7,6 +7,7 @@ import SupervisorAutocomplete from '../components/references/SupervisorAutocompl
 import { sendValidationRequestNotification } from '../utils/notifications';
 import { toast } from 'react-hot-toast';
 import ReferenceAutocomplete from '../components/references/ReferenceAutocomplete';
+import SkillSelectModal from '../components/common/SkillSelectModal';
 
 interface Validator {
   id: string;
@@ -547,6 +548,25 @@ const References: React.FC = () => {
   const [connections, setConnections] = useState<EITConnection[]>([]);
   const [selectedReferenceForValidation, setSelectedReferenceForValidation] = useState<Reference | null>(null);
   const [validationNotes, setValidationNotes] = useState('');
+  const [isAddJobModalOpen, setIsAddJobModalOpen] = useState(false);
+  const [addJobLoading, setAddJobLoading] = useState(false);
+  const [addJobError, setAddJobError] = useState<string | null>(null);
+  const [newJob, setNewJob] = useState({
+    title: '',
+    company: '',
+    location: '',
+    start_date: '',
+    end_date: '',
+    description: '',
+    skills: [] as string[],
+  });
+  const [isSkillsModalOpen, setIsSkillsModalOpen] = useState(false);
+  const [isEditJobModalOpen, setIsEditJobModalOpen] = useState(false);
+  const [editJob, setEditJob] = useState<Job | null>(null);
+
+  const selectedSkills = skillCategories
+    .flatMap(cat => cat.skills)
+    .filter(skill => newJob.skills.includes(skill.id));
 
   // Get completed skills grouped by category
   const completedSkillsByCategory = skillCategories.map(category => ({
@@ -855,11 +875,12 @@ const References: React.FC = () => {
             Work Experience
           </h2>
           <button
-            className="btn btn-primary flex items-center gap-2 shadow-lg fixed bottom-8 right-8 z-40"
-            onClick={() => {/* open add job modal logic here */}}
-            title="Add Job"
+            className="btn btn-primary flex items-center gap-2 shadow-sm hover:shadow-md transition-all duration-200"
+            onClick={() => setIsAddJobModalOpen(true)}
+            title="Add Experience"
           >
-            <Plus size={18} /> Add Job
+            <Plus size={16} />
+            Add Experience
           </button>
         </div>
         <div className="mb-6">
@@ -904,13 +925,25 @@ const References: React.FC = () => {
                           <span className="flex items-center gap-1"><MapPin size={14} />{job.location}</span>
                         </div>
                       </div>
-                      <button
-                        className="ml-4 p-2 rounded-full hover:bg-slate-100 text-slate-500"
-                        onClick={() => setExpandedJobId(expandedJobId === job.id ? null : job.id)}
-                        title={expandedJobId === job.id ? 'Collapse' : 'Expand'}
-                      >
-                        {expandedJobId === job.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          className="ml-2 p-2 rounded-full hover:bg-slate-100 text-slate-500"
+                          onClick={() => {
+                            setEditJob(job);
+                            setIsEditJobModalOpen(true);
+                          }}
+                          title="Edit Job"
+                        >
+                          <Edit2 size={20} />
+                        </button>
+                        <button
+                          className="ml-4 p-2 rounded-full hover:bg-slate-100 text-slate-500"
+                          onClick={() => setExpandedJobId(expandedJobId === job.id ? null : job.id)}
+                          title={expandedJobId === job.id ? 'Collapse' : 'Expand'}
+                        >
+                          {expandedJobId === job.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                        </button>
+                      </div>
                     </div>
                     {expandedJobId === job.id && (
                       <div className="mt-4 space-y-3">
@@ -921,10 +954,15 @@ const References: React.FC = () => {
                           <div>
                             <h4 className="text-sm font-medium text-slate-700 mb-1">Skills:</h4>
                             <div className="flex flex-wrap gap-2">
-                              {job.skills.map((skillId) => {
+                              {job.skills.map((skillId: string) => {
                                 const skill = skillCategories.flatMap(cat => cat.skills).find(s => s.id === skillId);
                                 return skill ? (
-                                  <span key={skillId} className="px-2 py-1 bg-slate-100 text-slate-700 rounded-full text-xs">{skill.name}</span>
+                                  <span
+                                    key={skillId}
+                                    className="px-2 py-1 bg-slate-100 text-slate-700 rounded-full text-xs"
+                                  >
+                                    {skill.name}
+                                  </span>
                                 ) : null;
                               })}
                             </div>
@@ -1091,10 +1129,8 @@ const References: React.FC = () => {
                       <div className="mt-3">
                         <h4 className="text-sm font-medium text-slate-700 mb-2">Skills:</h4>
                         <div className="flex flex-wrap gap-2">
-                          {job.skills.map((skillId) => {
-                            const skill = skillCategories
-                              .flatMap(cat => cat.skills)
-                              .find(s => s.id === skillId);
+                          {job.skills.map((skillId: string) => {
+                            const skill = skillCategories.flatMap(cat => cat.skills).find(s => s.id === skillId);
                             return skill ? (
                               <span
                                 key={skillId}
@@ -1435,6 +1471,179 @@ const References: React.FC = () => {
                 Validate
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Job Modal */}
+      {isAddJobModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold mb-4">Add Experience</h3>
+            {addJobError && <div className="mb-2 text-red-600">{addJobError}</div>}
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setAddJobLoading(true);
+                setAddJobError(null);
+                try {
+                  const { data: { user } } = await supabase.auth.getUser();
+                  if (!user) throw new Error('No authenticated user');
+                  if (!newJob.title || !newJob.company || !newJob.location || !newJob.start_date) {
+                    setAddJobError('Please fill in all required fields.');
+                    setAddJobLoading(false);
+                    return;
+                  }
+                  const { error } = await supabase.from('jobs').insert([
+                    {
+                      ...newJob,
+                      eit_id: user.id,
+                      skills: newJob.skills,
+                      end_date: newJob.end_date ? newJob.end_date : null,
+                    },
+                  ]);
+                  if (error) throw error;
+                  setIsAddJobModalOpen(false);
+                  setNewJob({ title: '', company: '', location: '', start_date: '', end_date: '', description: '', skills: [] });
+                  await loadJobs();
+                  toast.success('Experience added!');
+                } catch (err: any) {
+                  setAddJobError(err.message || 'Failed to add experience');
+                } finally {
+                  setAddJobLoading(false);
+                }
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-sm font-medium mb-1">Job Title <span className="text-red-500">*</span></label>
+                <input type="text" className="w-full border rounded px-3 py-2" value={newJob.title} onChange={e => setNewJob(j => ({ ...j, title: e.target.value }))} required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Company <span className="text-red-500">*</span></label>
+                <input type="text" className="w-full border rounded px-3 py-2" value={newJob.company} onChange={e => setNewJob(j => ({ ...j, company: e.target.value }))} required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Location <span className="text-red-500">*</span></label>
+                <input type="text" className="w-full border rounded px-3 py-2" value={newJob.location} onChange={e => setNewJob(j => ({ ...j, location: e.target.value }))} required />
+              </div>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium mb-1">Start Date <span className="text-red-500">*</span></label>
+                  <input type="date" className="w-full border rounded px-3 py-2" value={newJob.start_date} onChange={e => setNewJob(j => ({ ...j, start_date: e.target.value }))} required />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-medium mb-1">End Date</label>
+                  <input type="date" className="w-full border rounded px-3 py-2" value={newJob.end_date} onChange={e => setNewJob(j => ({ ...j, end_date: e.target.value }))} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea className="w-full border rounded px-3 py-2" value={newJob.description} onChange={e => setNewJob(j => ({ ...j, description: e.target.value }))} rows={3} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Skills</label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {selectedSkills.map(skill => (
+                    <span key={skill.id} className="px-2 py-1 bg-slate-100 text-slate-700 rounded-full text-xs flex items-center gap-1">
+                      {skill.name}
+                      <button type="button" onClick={() => setNewJob(j => ({ ...j, skills: j.skills.filter(id => id !== skill.id) }))} className="text-slate-400 hover:text-red-600"><X size={12} /></button>
+                    </span>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary w-full flex items-center justify-center gap-2 py-3 text-lg"
+                  onClick={() => setIsSkillsModalOpen(true)}
+                >
+                  <Plus size={20} />
+                  Select Skills
+                </button>
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <button type="button" className="btn btn-secondary" onClick={() => setIsAddJobModalOpen(false)} disabled={addJobLoading}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={addJobLoading}>{addJobLoading ? 'Saving...' : 'Save'}</button>
+              </div>
+            </form>
+            <SkillSelectModal
+              isOpen={isSkillsModalOpen}
+              onClose={() => setIsSkillsModalOpen(false)}
+              selectedSkills={selectedSkills}
+              onChange={skills => setNewJob(j => ({ ...j, skills: skills.map(s => s.id) }))}
+              skillCategories={skillCategories}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Edit Job Modal */}
+      {isEditJobModalOpen && editJob && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold mb-4">Edit Experience</h3>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setAddJobLoading(true);
+                setAddJobError(null);
+                try {
+                  const { data: { user } } = await supabase.auth.getUser();
+                  if (!user) throw new Error('No authenticated user');
+                  if (!editJob.title || !editJob.company || !editJob.location || !editJob.start_date) {
+                    setAddJobError('Please fill in all required fields.');
+                    setAddJobLoading(false);
+                    return;
+                  }
+                  const { error } = await supabase.from('jobs').update({
+                    ...editJob,
+                    eit_id: user.id,
+                    end_date: editJob.end_date ? editJob.end_date : null,
+                  }).eq('id', editJob.id);
+                  if (error) throw error;
+                  setIsEditJobModalOpen(false);
+                  setEditJob(null);
+                  await loadJobs();
+                  toast.success('Experience updated!');
+                } catch (err: any) {
+                  setAddJobError(err.message || 'Failed to update experience');
+                } finally {
+                  setAddJobLoading(false);
+                }
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-sm font-medium mb-1">Job Title <span className="text-red-500">*</span></label>
+                <input type="text" className="w-full border rounded px-3 py-2" value={editJob.title} onChange={e => setEditJob(j => j ? { ...j, title: e.target.value } : j)} required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Company <span className="text-red-500">*</span></label>
+                <input type="text" className="w-full border rounded px-3 py-2" value={editJob.company} onChange={e => setEditJob(j => j ? { ...j, company: e.target.value } : j)} required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Location <span className="text-red-500">*</span></label>
+                <input type="text" className="w-full border rounded px-3 py-2" value={editJob.location} onChange={e => setEditJob(j => j ? { ...j, location: e.target.value } : j)} required />
+              </div>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium mb-1">Start Date <span className="text-red-500">*</span></label>
+                  <input type="date" className="w-full border rounded px-3 py-2" value={editJob.start_date} onChange={e => setEditJob(j => j ? { ...j, start_date: e.target.value } : j)} required />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-medium mb-1">End Date</label>
+                  <input type="date" className="w-full border rounded px-3 py-2" value={editJob.end_date || ''} onChange={e => setEditJob(j => j ? { ...j, end_date: e.target.value } : j)} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea className="w-full border rounded px-3 py-2" value={editJob.description || ''} onChange={e => setEditJob(j => j ? { ...j, description: e.target.value } : j)} rows={3} />
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <button type="button" className="btn btn-secondary" onClick={() => { setIsEditJobModalOpen(false); setEditJob(null); }} disabled={addJobLoading}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={addJobLoading}>{addJobLoading ? 'Saving...' : 'Save'}</button>
+              </div>
+              {addJobError && <div className="text-red-600 mt-2">{addJobError}</div>}
+            </form>
           </div>
         </div>
       )}

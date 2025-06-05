@@ -18,6 +18,7 @@ interface ProgressState {
   initialize: (force?: boolean) => Promise<void>;
   setupRealtimeSubscriptions: () => Promise<void>;
   clearState: () => void;
+  loadProgress: () => Promise<void>;
 }
 
 export const useProgressStore = create<ProgressState>((set, get) => ({
@@ -32,6 +33,10 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
   loading: false,
   initialized: false,
   lastFetched: null,
+
+  loadProgress: async () => {
+    await get().updateProgress(true);
+  },
 
   clearState: () => set({
     overallProgress: 0,

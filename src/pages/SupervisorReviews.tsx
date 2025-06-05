@@ -7,6 +7,7 @@ import SAOAnnotation from '../components/saos/SAOAnnotation';
 import toast from 'react-hot-toast';
 import { useNotificationsStore } from '../store/notifications';
 import DOMPurify from 'dompurify';
+import ScrollToTop from '../components/ScrollToTop';
 
 // --- Skill Validation Types ---
 interface Validator {
@@ -491,360 +492,363 @@ const SupervisorReviews: React.FC = () => {
 
   // --- UI ---
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Review Center</h1>
-      </div>
-      {/* Top Controls Row: History (left), Toggle (center), Refresh & EIT Filter (right) */}
-      <div className="flex items-center justify-between my-8 w-full">
-        {/* Left: Refresh Button */}
-        <div className="flex items-center">
-          <button
-            onClick={tab === 'skills' ? () => window.location.reload() : fetchFeedbackRequests}
-            disabled={loadingSkills || loadingSAOs}
-            className="px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {(loadingSkills && tab === 'skills') || (loadingSAOs && tab === 'saos') ? 'Refreshing...' : 'Refresh'}
-          </button>
+    <>
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold">Review Center</h1>
         </div>
-        {/* Center: Tab Toggle */}
-        <div className="flex-1 flex justify-center">
-          <div className="relative flex bg-slate-100 rounded-full p-1 shadow-inner gap-0 items-center">
+        {/* Top Controls Row: History (left), Toggle (center), Refresh & EIT Filter (right) */}
+        <div className="flex items-center justify-between my-8 w-full">
+          {/* Left: Refresh Button */}
+          <div className="flex items-center">
             <button
-              onClick={() => setTab('skills')}
-              className={`px-6 py-2 rounded-full font-semibold transition-all duration-200 text-sm focus:outline-none z-10
-                ${tab === 'skills' ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-700 hover:text-teal-600'}`}
-              style={{ marginRight: '-0.5rem', marginLeft: '0.5rem' }}
-              aria-pressed={tab === 'skills'}
+              onClick={tab === 'skills' ? () => window.location.reload() : fetchFeedbackRequests}
+              disabled={loadingSkills || loadingSAOs}
+              className="px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Skills
-            </button>
-            <button
-              onClick={() => setTab('saos')}
-              className={`px-6 py-2 rounded-full font-semibold transition-all duration-200 text-sm focus:outline-none z-10
-                ${tab === 'saos' ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-700 hover:text-teal-600'}`}
-              style={{ marginLeft: '-0.5rem', marginRight: '0.5rem' }}
-              aria-pressed={tab === 'saos'}
-            >
-              SAOs
+              {(loadingSkills && tab === 'skills') || (loadingSAOs && tab === 'saos') ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
-        </div>
-        {/* Right: EIT Filter Dropdown & History Button */}
-        <div className="flex items-center gap-2">
-          <div className="ml-2 flex items-center gap-2">
-            <label htmlFor="eit-filter" className="text-sm font-medium text-slate-700">
-              Filter by EIT:
-            </label>
-            <select
-              id="eit-filter"
-              value={selectedEIT}
-              onChange={(e) => setSelectedEIT(e.target.value)}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
-            >
-              <option value="all">All EITs</option>
-              {Object.values(eitProfiles).map((eit) => (
-                <option key={eit.id} value={eit.id}>
-                  {eit.full_name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <button
-            className={`p-2 rounded-full text-slate-500 hover:bg-slate-200 transition ${showHistoryMode ? 'bg-slate-300' : ''}`}
-            title="Show History"
-            onClick={() => setShowHistoryMode((prev) => !prev)}
-            type="button"
-          >
-            <Clock size={20} />
-          </button>
-        </div>
-      </div>
-      {/* Skills Tab */}
-      {tab === 'skills' && !showHistoryMode && (
-        <div>
-          {loadingSkills ? (
-            <div>Loading...</div>
-          ) : filteredValidators.length === 0 ? (
-            <div>No pending skill validation requests.</div>
-          ) : (
-            <div className="space-y-4">
-              {successMessage && (
-                <div className="p-3 bg-green-50 text-green-700 rounded-md text-sm mb-4">{successMessage}</div>
-              )}
-              {filteredValidators.map((validator) => {
-                const eit = eitProfiles[validator.eit_id];
-                const skill = skills[validator.skill_id];
-                return (
-                  <div 
-                    key={validator.id} 
-                    className="bg-white rounded-lg shadow p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 transition-all duration-300"
-                  >
-                    <div>
-                      <div className="font-semibold flex items-center gap-2">
-                        Skill: {skill ? skill.name : validator.skill_id}
-                        {skill && (
-                          <button
-                            className="ml-1 p-1 rounded-full text-blue-500 hover:bg-blue-50"
-                            title="View Skill Rubric"
-                            onClick={() => setRubricSkill(skill.name)}
-                            type="button"
-                          >
-                            <Info size={18} />
-                          </button>
-                        )}
-                      </div>
-                      <div className="text-slate-600">EIT: {eit ? `${eit.full_name} (${eit.email})` : validator.eit_id}</div>
-                      <div className="text-slate-600">Description: {validator.description}</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min={1}
-                        max={5}
-                        value={scoreInputs[validator.id] || ''}
-                        onChange={(e) => handleScoreChange(validator.id, Number(e.target.value))}
-                        className="input w-24"
-                        placeholder="Score"
-                      />
-                      <button
-                        className="btn btn-primary flex items-center gap-2"
-                        onClick={() => handleSubmit(validator)}
-                        disabled={submitLoading === validator.id || !scoreInputs[validator.id] || scoreInputs[validator.id] < 1 || scoreInputs[validator.id] > 5}
-                      >
-                        {submitLoading === validator.id ? (
-                          <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></span>
-                        ) : 'Submit Score'}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+          {/* Center: Tab Toggle */}
+          <div className="flex-1 flex justify-center">
+            <div className="relative flex bg-slate-100 rounded-full p-1 shadow-inner gap-0 items-center">
+              <button
+                onClick={() => setTab('skills')}
+                className={`px-6 py-2 rounded-full font-semibold transition-all duration-200 text-sm focus:outline-none z-10
+                  ${tab === 'skills' ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-700 hover:text-teal-600'}`}
+                style={{ marginRight: '-0.5rem', marginLeft: '0.5rem' }}
+                aria-pressed={tab === 'skills'}
+              >
+                Skills
+              </button>
+              <button
+                onClick={() => setTab('saos')}
+                className={`px-6 py-2 rounded-full font-semibold transition-all duration-200 text-sm focus:outline-none z-10
+                  ${tab === 'saos' ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-700 hover:text-teal-600'}`}
+                style={{ marginLeft: '-0.5rem', marginRight: '0.5rem' }}
+                aria-pressed={tab === 'saos'}
+              >
+                SAOs
+              </button>
             </div>
-          )}
+          </div>
+          {/* Right: EIT Filter Dropdown & History Button */}
+          <div className="flex items-center gap-2">
+            <div className="ml-2 flex items-center gap-2">
+              <label htmlFor="eit-filter" className="text-sm font-medium text-slate-700">
+                Filter by EIT:
+              </label>
+              <select
+                id="eit-filter"
+                value={selectedEIT}
+                onChange={(e) => setSelectedEIT(e.target.value)}
+                className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+              >
+                <option value="all">All EITs</option>
+                {Object.values(eitProfiles).map((eit) => (
+                  <option key={eit.id} value={eit.id}>
+                    {eit.full_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              className={`p-2 rounded-full text-slate-500 hover:bg-slate-200 transition ${showHistoryMode ? 'bg-slate-300' : ''}`}
+              title="Show History"
+              onClick={() => setShowHistoryMode((prev) => !prev)}
+              type="button"
+            >
+              <Clock size={20} />
+            </button>
+          </div>
         </div>
-      )}
-      {/* History Mode */}
-      {tab === 'skills' && showHistoryMode && (
-        <div>
-          <div className="text-xl font-bold mb-4">History</div>
-          {loadingSkills ? (
-            <div>Loading...</div>
-          ) : Object.keys(filteredHistory).length === 0 ? (
-            <div>No history available.</div>
-          ) : (
-            <div className="space-y-4">
-              {Object.entries(filteredHistory).map(([key, entries]) => {
-                const latest = entries[0];
-                const eit = eitProfiles[latest.eit_id];
-                const skill = skills[latest.skill_id];
-                return (
-                  <div
-                    key={key}
-                    className="bg-white rounded-lg shadow p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 transition-all duration-300"
-                  >
-                    <div>
-                      <div className="font-semibold flex items-center gap-2">
-                        Skill: {skill ? skill.name : latest.skill_id}
-                        {skill && (
-                          <button
-                            className="ml-1 p-1 rounded-full text-blue-500 hover:bg-blue-50"
-                            title="View Skill Rubric"
-                            onClick={() => setRubricSkill(skill.name)}
-                            type="button"
-                          >
-                            <Info size={18} />
-                          </button>
-                        )}
+        {/* Skills Tab */}
+        {tab === 'skills' && !showHistoryMode && (
+          <div>
+            {loadingSkills ? (
+              <div>Loading...</div>
+            ) : filteredValidators.length === 0 ? (
+              <div>No pending skill validation requests.</div>
+            ) : (
+              <div className="space-y-4">
+                {successMessage && (
+                  <div className="p-3 bg-green-50 text-green-700 rounded-md text-sm mb-4">{successMessage}</div>
+                )}
+                {filteredValidators.map((validator) => {
+                  const eit = eitProfiles[validator.eit_id];
+                  const skill = skills[validator.skill_id];
+                  return (
+                    <div 
+                      key={validator.id} 
+                      className="bg-white rounded-lg shadow p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 transition-all duration-300"
+                    >
+                      <div>
+                        <div className="font-semibold flex items-center gap-2">
+                          Skill: {skill ? skill.name : validator.skill_id}
+                          {skill && (
+                            <button
+                              className="ml-1 p-1 rounded-full text-blue-500 hover:bg-blue-50"
+                              title="View Skill Rubric"
+                              onClick={() => setRubricSkill(skill.name)}
+                              type="button"
+                            >
+                              <Info size={18} />
+                            </button>
+                          )}
+                        </div>
+                        <div className="text-slate-600">EIT: {eit ? `${eit.full_name} (${eit.email})` : validator.eit_id}</div>
+                        <div className="text-slate-600">Description: {validator.description}</div>
                       </div>
-                      <div className="text-slate-600">EIT: {eit ? `${eit.full_name} (${eit.email})` : latest.eit_id}</div>
-                      <div className="text-slate-600">Description: {latest.feedback || ''}</div>
-                      <div className="mt-3 border-t pt-3">
-                        <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
-                          {entries.map((h, idx) => (
-                            <div key={idx} className="bg-slate-50 rounded-lg p-2 text-sm">
-                              <div className="flex items-center justify-between mb-1">
-                                <span className="font-medium text-slate-700">Score: {h.score}</span>
-                                <span className="text-xs text-slate-500">
-                                  {h.validated_at ? new Date(h.validated_at).toLocaleDateString() : ''}
-                                </span>
-                              </div>
-                              {h.feedback && (
-                                <div className="text-slate-600 text-xs mt-1">
-                                  <span className="font-medium">Feedback:</span> {h.feedback}
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={1}
+                          max={5}
+                          value={scoreInputs[validator.id] || ''}
+                          onChange={(e) => handleScoreChange(validator.id, Number(e.target.value))}
+                          className="input w-24"
+                          placeholder="Score"
+                        />
+                        <button
+                          className="btn btn-primary flex items-center gap-2"
+                          onClick={() => handleSubmit(validator)}
+                          disabled={submitLoading === validator.id || !scoreInputs[validator.id] || scoreInputs[validator.id] < 1 || scoreInputs[validator.id] > 5}
+                        >
+                          {submitLoading === validator.id ? (
+                            <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></span>
+                          ) : 'Submit Score'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+        {/* History Mode */}
+        {tab === 'skills' && showHistoryMode && (
+          <div>
+            <div className="text-xl font-bold mb-4">History</div>
+            {loadingSkills ? (
+              <div>Loading...</div>
+            ) : Object.keys(filteredHistory).length === 0 ? (
+              <div>No history available.</div>
+            ) : (
+              <div className="space-y-4">
+                {Object.entries(filteredHistory).map(([key, entries]) => {
+                  const latest = entries[0];
+                  const eit = eitProfiles[latest.eit_id];
+                  const skill = skills[latest.skill_id];
+                  return (
+                    <div
+                      key={key}
+                      className="bg-white rounded-lg shadow p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 transition-all duration-300"
+                    >
+                      <div>
+                        <div className="font-semibold flex items-center gap-2">
+                          Skill: {skill ? skill.name : latest.skill_id}
+                          {skill && (
+                            <button
+                              className="ml-1 p-1 rounded-full text-blue-500 hover:bg-blue-50"
+                              title="View Skill Rubric"
+                              onClick={() => setRubricSkill(skill.name)}
+                              type="button"
+                            >
+                              <Info size={18} />
+                            </button>
+                          )}
+                        </div>
+                        <div className="text-slate-600">EIT: {eit ? `${eit.full_name} (${eit.email})` : latest.eit_id}</div>
+                        <div className="text-slate-600">Description: {latest.feedback || ''}</div>
+                        <div className="mt-3 border-t pt-3">
+                          <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                            {entries.map((h, idx) => (
+                              <div key={idx} className="bg-slate-50 rounded-lg p-2 text-sm">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="font-medium text-slate-700">Score: {h.score}</span>
+                                  <span className="text-xs text-slate-500">
+                                    {h.validated_at ? new Date(h.validated_at).toLocaleDateString() : ''}
+                                  </span>
                                 </div>
-                              )}
-                            </div>
-                          ))}
+                                {h.feedback && (
+                                  <div className="text-slate-600 text-xs mt-1">
+                                    <span className="font-medium">Feedback:</span> {h.feedback}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={1}
+                          max={5}
+                          value={scoreInputs[`${latest.eit_id}_${latest.skill_id}`] || ''}
+                          onChange={(e) => handleScoreChange(`${latest.eit_id}_${latest.skill_id}`, Number(e.target.value))}
+                          className="input w-24"
+                          placeholder="Score"
+                        />
+                        <button
+                          className="btn btn-primary"
+                          onClick={() => handleSubmit({
+                            ...latest,
+                            id: `${latest.eit_id}_${latest.skill_id}`,
+                            description: latest.feedback || ''
+                          })}
+                          disabled={!scoreInputs[`${latest.eit_id}_${latest.skill_id}`] || scoreInputs[`${latest.eit_id}_${latest.skill_id}`] < 1 || scoreInputs[`${latest.eit_id}_${latest.skill_id}`] > 5}
+                        >
+                          Update Score
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min={1}
-                        max={5}
-                        value={scoreInputs[`${latest.eit_id}_${latest.skill_id}`] || ''}
-                        onChange={(e) => handleScoreChange(`${latest.eit_id}_${latest.skill_id}`, Number(e.target.value))}
-                        className="input w-24"
-                        placeholder="Score"
-                      />
-                      <button
-                        className="btn btn-primary"
-                        onClick={() => handleSubmit({
-                          ...latest,
-                          id: `${latest.eit_id}_${latest.skill_id}`,
-                          description: latest.feedback || ''
-                        })}
-                        disabled={!scoreInputs[`${latest.eit_id}_${latest.skill_id}`] || scoreInputs[`${latest.eit_id}_${latest.skill_id}`] < 1 || scoreInputs[`${latest.eit_id}_${latest.skill_id}`] > 5}
-                      >
-                        Update Score
-                      </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+        {/* SAOs Tab */}
+        {tab === 'saos' && !showHistoryMode && (
+          <div>
+            {loadingSAOs ? (
+              <div>Loading...</div>
+            ) : error ? (
+              <div className="text-red-600">{error}</div>
+            ) : filteredSAOs.length === 0 ? (
+              <div className="text-slate-500">No pending feedback requests assigned to you.</div>
+            ) : (
+              <div className="space-y-4">
+                {filteredSAOs.map((req) => (
+                  <div 
+                    key={req.id} 
+                    className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => {
+                      setSelectedSAO(req);
+                      setIsSAOModalOpen(true);
+                    }}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h2 className="text-lg font-semibold text-teal-600">{req.sao?.title || 'Untitled SAO'}</h2>
+                        <p className="text-sm text-slate-500">From: {eitNameMap[req.sao?.eit_id || ''] || req.sao?.eit_id || 'Unknown'}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {req.status === 'pending' && (
+                          <span className="px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
+                            Pending Review
+                          </span>
+                        )}
+                        {req.status === 'submitted' && (
+                          <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                            Feedback Submitted
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-      {/* SAOs Tab */}
-      {tab === 'saos' && !showHistoryMode && (
-        <div>
-          {loadingSAOs ? (
-            <div>Loading...</div>
-          ) : error ? (
-            <div className="text-red-600">{error}</div>
-          ) : filteredSAOs.length === 0 ? (
-            <div className="text-slate-500">No pending feedback requests assigned to you.</div>
-          ) : (
-            <div className="space-y-4">
-              {filteredSAOs.map((req) => (
-                <div 
-                  key={req.id} 
-                  className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => {
-                    setSelectedSAO(req);
-                    setIsSAOModalOpen(true);
-                  }}
-                >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h2 className="text-lg font-semibold text-teal-600">{req.sao?.title || 'Untitled SAO'}</h2>
-                      <p className="text-sm text-slate-500">From: {eitNameMap[req.sao?.eit_id || ''] || req.sao?.eit_id || 'Unknown'}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {req.status === 'pending' && (
-                        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
-                          Pending Review
-                        </span>
-                      )}
-                      {req.status === 'submitted' && (
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {tab === 'saos' && showHistoryMode && (
+          <div>
+            <div className="text-xl font-bold mb-4">History</div>
+            {loadingSAOs ? (
+              <div>Loading...</div>
+            ) : allSAOs.filter((req) => req.status === 'submitted').length === 0 ? (
+              <div className="text-slate-500">No SAO history available.</div>
+            ) : (
+              <div className="space-y-4">
+                {allSAOs.filter((req) => req.status === 'submitted').map((req) => (
+                  <div 
+                    key={req.id} 
+                    className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => {
+                      setSelectedSAO(req);
+                      setIsSAOModalOpen(true);
+                    }}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h2 className="text-lg font-semibold text-teal-600">{req.sao?.title || 'Untitled SAO'}</h2>
+                        <p className="text-sm text-slate-500">From: {eitNameMap[req.sao?.eit_id || ''] || req.sao?.eit_id || 'Unknown'}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
                         <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
                           Feedback Submitted
                         </span>
-                      )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-      {tab === 'saos' && showHistoryMode && (
-        <div>
-          <div className="text-xl font-bold mb-4">History</div>
-          {loadingSAOs ? (
-            <div>Loading...</div>
-          ) : allSAOs.filter((req) => req.status === 'submitted').length === 0 ? (
-            <div className="text-slate-500">No SAO history available.</div>
-          ) : (
-            <div className="space-y-4">
-              {allSAOs.filter((req) => req.status === 'submitted').map((req) => (
-                <div 
-                  key={req.id} 
-                  className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => {
-                    setSelectedSAO(req);
-                    setIsSAOModalOpen(true);
-                  }}
-                >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h2 className="text-lg font-semibold text-teal-600">{req.sao?.title || 'Untitled SAO'}</h2>
-                      <p className="text-sm text-slate-500">From: {eitNameMap[req.sao?.eit_id || ''] || req.sao?.eit_id || 'Unknown'}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                        Feedback Submitted
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* SAO Details Modal */}
-      {isSAOModalOpen && selectedSAO && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <h2 className="text-2xl font-bold text-slate-900">{selectedSAO.sao?.title || 'Untitled SAO'}</h2>
-                <button
-                  onClick={() => {
-                    setIsSAOModalOpen(false);
-                    setSelectedSAO(null);
-                  }}
-                  className="text-slate-400 hover:text-slate-600"
-                >
-                  <X size={24} />
-                </button>
+                ))}
               </div>
-              
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-slate-800 mb-2">SAO Content</h3>
-                <div className="bg-slate-50 rounded-lg p-4 mb-4 prose prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedSAO.sao?.content || '') }}
+            )}
+          </div>
+        )}
+
+        {/* SAO Details Modal */}
+        {isSAOModalOpen && selectedSAO && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <h2 className="text-2xl font-bold text-slate-900">{selectedSAO.sao?.title || 'Untitled SAO'}</h2>
+                  <button
+                    onClick={() => {
+                      setIsSAOModalOpen(false);
+                      setSelectedSAO(null);
+                    }}
+                    className="text-slate-400 hover:text-slate-600"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+                
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-slate-800 mb-2">SAO Content</h3>
+                  <div className="bg-slate-50 rounded-lg p-4 mb-4 prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedSAO.sao?.content || '') }}
+                  />
+                  {/* Annotation UI for supervisors */}
+                  {selectedSAO.sao_id && selectedSAO.sao?.content && (
+                    <SAOAnnotation saoId={selectedSAO.sao_id} content={htmlToPlainText(selectedSAO.sao.content)} />
+                  )}
+                </div>
+
+                <SAOFeedbackComponent
+                  feedback={[selectedSAO]}
+                  onResolve={handleResolve}
+                  onSubmitFeedback={handleSubmitFeedback}
+                  isSupervisor={true}
+                  saoContent={selectedSAO.sao?.content}
                 />
-                {/* Annotation UI for supervisors */}
-                {selectedSAO.sao_id && selectedSAO.sao?.content && (
-                  <SAOAnnotation saoId={selectedSAO.sao_id} content={htmlToPlainText(selectedSAO.sao.content)} />
-                )}
               </div>
-
-              <SAOFeedbackComponent
-                feedback={[selectedSAO]}
-                onResolve={handleResolve}
-                onSubmitFeedback={handleSubmitFeedback}
-                isSupervisor={true}
-                saoContent={selectedSAO.sao?.content}
-              />
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Rubric Modal */}
-      {rubricSkill && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full relative">
-            <button
-              className="absolute top-2 right-2 text-slate-400 hover:text-slate-600"
-              onClick={() => setRubricSkill(null)}
-            >
-              ×
-            </button>
-            <h3 className="text-lg font-semibold mb-4">{rubricSkill}</h3>
-            {formatRubric(rubricSkill)}
+        {/* Rubric Modal */}
+        {rubricSkill && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full relative">
+              <button
+                className="absolute top-2 right-2 text-slate-400 hover:text-slate-600"
+                onClick={() => setRubricSkill(null)}
+              >
+                ×
+              </button>
+              <h3 className="text-lg font-semibold mb-4">{rubricSkill}</h3>
+              {formatRubric(rubricSkill)}
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+      <ScrollToTop />
+    </>
   );
 };
 

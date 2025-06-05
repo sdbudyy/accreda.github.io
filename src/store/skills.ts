@@ -24,6 +24,7 @@ interface SkillsState {
   clearState: () => void;
   skills: Skill[];
   lastFetched: number | null;
+  loadSkills: () => Promise<void>;
 }
 
 // Initial skill categories data
@@ -88,6 +89,10 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
   error: null,
   skills: [],
   lastFetched: null,
+
+  loadSkills: async () => {
+    await get().loadUserSkills(true);
+  },
 
   clearState: () => set({
     skillCategories: initialSkillCategories,

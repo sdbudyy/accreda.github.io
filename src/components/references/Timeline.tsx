@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Calendar, MapPin, Briefcase, Edit2, Trash2, X, Users, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useSkillsStore } from '../../store/skills';
+import { toast } from 'react-hot-toast';
 
 interface Job {
   id: string;
@@ -67,7 +68,9 @@ const JobForm: React.FC<JobFormProps> = ({
       <h3 className="font-medium mb-4">{isEditing ? 'Edit Job' : 'Add New Job'}</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Job Title</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            Job Title <span className="text-red-500">*</span>
+          </label>
           <input
             type="text"
             value={job.title || ''}
@@ -75,10 +78,13 @@ const JobForm: React.FC<JobFormProps> = ({
             className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 min-w-[200px]"
             placeholder="e.g., Software Engineer"
             maxLength={100}
+            required
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Company</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            Company <span className="text-red-500">*</span>
+          </label>
           <input
             type="text"
             value={job.company || ''}
@@ -86,10 +92,13 @@ const JobForm: React.FC<JobFormProps> = ({
             className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 min-w-[200px]"
             placeholder="e.g., Tech Corp"
             maxLength={100}
+            required
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            Location <span className="text-red-500">*</span>
+          </label>
           <input
             type="text"
             value={job.location || ''}
@@ -97,16 +106,20 @@ const JobForm: React.FC<JobFormProps> = ({
             className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 min-w-[200px]"
             placeholder="e.g., San Francisco, CA"
             maxLength={100}
+            required
           />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Start Date <span className="text-red-500">*</span>
+            </label>
             <input
               type="date"
               value={job.start_date || ''}
               onChange={(e) => onJobChange('start_date', e.target.value)}
               className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 min-w-[150px]"
+              required
             />
           </div>
           <div>
@@ -188,7 +201,7 @@ const Timeline: React.FC = () => {
   const [isEditingJob, setIsEditingJob] = useState<string | null>(null);
   const [isSkillsPopupOpen, setIsSkillsPopupOpen] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const { skillCategories } = useSkillsStore();
+  const { skillCategories, loadUserSkills, loading: skillsLoading } = useSkillsStore();
   const [newJob, setNewJob] = useState<Partial<Job>>({
     title: '',
     company: '',
@@ -199,6 +212,23 @@ const Timeline: React.FC = () => {
     skills: []
   });
   const [pendingScroll, setPendingScroll] = useState<{ itemId: string; itemType: string } | null>(null);
+
+  useEffect(() => {
+    loadUserSkills();
+  }, [loadUserSkills]);
+
+  const handleAddJobClick = () => {
+    console.log('Add Job button clicked');
+    if (skillsLoading) {
+      toast.error('Please wait while skills are loading...');
+      return;
+    }
+    if (skillCategories.length === 0) {
+      toast.error('Unable to load skills. Please try again later.');
+      return;
+    }
+    setIsAddingJob(true);
+  };
 
   const fetchAll = async () => {
     setLoading(true);
@@ -384,7 +414,17 @@ const Timeline: React.FC = () => {
   const handleAddJob = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.error('No authenticated user found');
+        return;
+      }
+
+      // Validate required fields
+      if (!newJob.title || !newJob.company || !newJob.location || !newJob.start_date) {
+        console.error('Missing required fields');
+        toast.error('Please fill in all required fields (Title, Company, Location, and Start Date)');
+        return;
+      }
 
       const { error } = await supabase
         .from('jobs')
@@ -394,7 +434,11 @@ const Timeline: React.FC = () => {
           skills: newJob.skills || [] // Ensure skills array is included
         }]);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error adding job:', error);
+        toast.error(error.message || 'Failed to add job');
+        return;
+      }
 
       // Reset form and reload jobs
       setNewJob({
@@ -409,8 +453,10 @@ const Timeline: React.FC = () => {
       setIsAddingJob(false);
       await fetchAll();
       window.dispatchEvent(new Event('jobs-updated'));
+      toast.success('Job added successfully');
     } catch (error) {
       console.error('Error adding job:', error);
+      toast.error('An unexpected error occurred while adding the job');
     }
   };
 
@@ -439,9 +485,13 @@ const Timeline: React.FC = () => {
         return;
       }
 
-      // Prepare the update data
+      // Prepare the update data with all fields
       const updateData = {
         title: newJob.title || existingJob.title,
+        company: newJob.company || existingJob.company,
+        location: newJob.location || existingJob.location,
+        start_date: newJob.start_date || existingJob.start_date,
+        end_date: newJob.end_date || existingJob.end_date,
         description: newJob.description || existingJob.description,
         skills: updatedSkills || newJob.skills || [],
         eit_id: user.id
@@ -478,8 +528,10 @@ const Timeline: React.FC = () => {
       setIsEditingJob(null);
       await fetchAll();
       window.dispatchEvent(new Event('jobs-updated'));
+      toast.success('Job updated successfully!');
     } catch (error) {
       console.error('Error in handleUpdateJob:', error);
+      toast.error('Failed to update job. Please try again.');
     }
   };
 
@@ -675,8 +727,15 @@ const Timeline: React.FC = () => {
             <h2 className="text-2xl font-bold text-slate-900">Work Experience</h2>
             <p className="text-slate-500 mt-1">Track your professional journey and achievements</p>
           </div>
+          {/* TEMP TEST BUTTON FOR DEBUGGING */}
           <button
-            onClick={() => setIsAddingJob(true)}
+            onClick={() => console.log('Test button clicked')}
+            className="btn btn-secondary flex items-center gap-2 shadow-sm hover:shadow-md transition-all duration-200"
+          >
+            Test Button
+          </button>
+          <button
+            onClick={handleAddJobClick}
             className="btn btn-primary flex items-center gap-2 shadow-sm hover:shadow-md transition-all duration-200"
           >
             <Plus size={16} />
@@ -684,30 +743,35 @@ const Timeline: React.FC = () => {
           </button>
         </div>
 
-        {isAddingJob && (
-          <div className="mb-8">
-            <JobForm
-              onSubmit={handleAddJob}
-              onCancel={() => {
-                setIsAddingJob(false);
-                setNewJob({
-                  title: '',
-                  company: '',
-                  location: '',
-                  start_date: '',
-                  end_date: '',
-                  description: '',
-                  skills: []
-                });
-              }}
-              isEditing={false}
-              job={newJob}
-              onJobChange={handleInputChange}
-              onSkillsToggle={handleSkillToggle}
-              onSkillsPopupOpen={() => setIsSkillsPopupOpen('new')}
-              skillCategories={skillCategories}
-            />
-          </div>
+        {isAddingJob && !skillsLoading && skillCategories.length > 0 && (
+          (() => {
+            console.log('Rendering JobForm:', { isAddingJob, skillsLoading, skillCategoriesLength: skillCategories.length });
+            return (
+              <div className="mb-8">
+                <JobForm
+                  onSubmit={handleAddJob}
+                  onCancel={() => {
+                    setIsAddingJob(false);
+                    setNewJob({
+                      title: '',
+                      company: '',
+                      location: '',
+                      start_date: '',
+                      end_date: '',
+                      description: '',
+                      skills: []
+                    });
+                  }}
+                  isEditing={false}
+                  job={newJob}
+                  onJobChange={handleInputChange}
+                  onSkillsToggle={handleSkillToggle}
+                  onSkillsPopupOpen={() => setIsSkillsPopupOpen('new')}
+                  skillCategories={skillCategories}
+                />
+              </div>
+            );
+          })()
         )}
 
         <div className="relative">

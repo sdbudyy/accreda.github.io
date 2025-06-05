@@ -3,6 +3,7 @@ import { useSkillsStore, Skill, Category } from '../store/skills';
 import { AlertTriangle, Info, Award } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useNavigate, useLocation } from 'react-router-dom';
+import ScrollToTop from '../components/ScrollToTop';
 
 // Expanded skill summaries for each skill
 const SKILL_SUMMARIES: Record<string, string> = {
@@ -208,104 +209,107 @@ const SupervisorSkills: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-slate-900 flex items-center">
-          <Award size={24} className="mr-2 text-teal-600" />
-          Skills
-        </h1>
-      </div>
+    <>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold text-slate-900 flex items-center">
+            <Award size={24} className="mr-2 text-teal-600" />
+            Skills
+          </h1>
+        </div>
 
-      {/* Category Progress Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        {skillCategories.map((category, index) => {
-          const averagesForCat = categoryAverages[category.name] || { eitSelfAvg: 0, supervisorAvg: 0, completionRate: 0 };
-          const color = categoryColors[index % categoryColors.length];
-          return (
-            <div key={category.name} className="bg-white rounded-lg border border-slate-200 p-4">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="font-medium text-slate-900 text-lg">{category.name}</h3>
-              </div>
-              <div className="space-y-5">
-                {/* Average EIT Self Score */}
-                <div className="flex items-center gap-4">
-                  <span className="w-40 text-base font-semibold">Average EIT Self Score</span>
-                  <div className="w-10 flex-shrink-0 flex justify-center">
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 text-slate-800 text-sm font-bold border border-slate-200">
-                      {Math.round((averagesForCat.eitSelfAvg / 5) * 100)}%
+        {/* Category Progress Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          {skillCategories.map((category, index) => {
+            const averagesForCat = categoryAverages[category.name] || { eitSelfAvg: 0, supervisorAvg: 0, completionRate: 0 };
+            const color = categoryColors[index % categoryColors.length];
+            return (
+              <div key={category.name} className="bg-white rounded-lg border border-slate-200 p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-medium text-slate-900 text-lg">{category.name}</h3>
+                </div>
+                <div className="space-y-5">
+                  {/* Average EIT Self Score */}
+                  <div className="flex items-center gap-4">
+                    <span className="w-40 text-base font-semibold">Average EIT Self Score</span>
+                    <div className="w-10 flex-shrink-0 flex justify-center">
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 text-slate-800 text-sm font-bold border border-slate-200">
+                        {Math.round((averagesForCat.eitSelfAvg / 5) * 100)}%
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="w-full max-w-[160px] bg-slate-200 rounded-full h-2">
+                        <div
+                          className="h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${(averagesForCat.eitSelfAvg / 5) * 100}%`, background: color }}
+                        />
+                      </div>
+                    </div>
+                    <div className="w-14 text-xs text-slate-500 text-right">
+                      {averagesForCat.eitSelfAvg.toFixed(2)}/5.0
                     </div>
                   </div>
-                  <div className="flex-1">
-                    <div className="w-full max-w-[160px] bg-slate-200 rounded-full h-2">
-                      <div
-                        className="h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${(averagesForCat.eitSelfAvg / 5) * 100}%`, background: color }}
-                      />
+                  {/* Average Supervisor Score */}
+                  <div className="flex items-center gap-4">
+                    <span className="w-40 text-base font-semibold">Average Supervisor Score</span>
+                    <div className="w-10 flex-shrink-0 flex justify-center">
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 text-slate-800 text-sm font-bold border border-slate-200">
+                        {Math.round((averagesForCat.supervisorAvg / 5) * 100)}%
+                      </div>
                     </div>
-                  </div>
-                  <div className="w-14 text-xs text-slate-500 text-right">
-                    {averagesForCat.eitSelfAvg.toFixed(2)}/5.0
+                    <div className="flex-1">
+                      <div className="w-full max-w-[160px] bg-slate-200 rounded-full h-2">
+                        <div
+                          className="h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${(averagesForCat.supervisorAvg / 5) * 100}%`, background: color }}
+                        />
+                      </div>
+                    </div>
+                    <div className="w-14 text-xs text-slate-500 text-right">
+                      {averagesForCat.supervisorAvg.toFixed(2)}/5.0
+                    </div>
                   </div>
                 </div>
-                {/* Average Supervisor Score */}
-                <div className="flex items-center gap-4">
-                  <span className="w-40 text-base font-semibold">Average Supervisor Score</span>
-                  <div className="w-10 flex-shrink-0 flex justify-center">
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 text-slate-800 text-sm font-bold border border-slate-200">
-                      {Math.round((averagesForCat.supervisorAvg / 5) * 100)}%
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <div className="w-full max-w-[160px] bg-slate-200 rounded-full h-2">
-                      <div
-                        className="h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${(averagesForCat.supervisorAvg / 5) * 100}%`, background: color }}
-                      />
-                    </div>
-                  </div>
-                  <div className="w-14 text-xs text-slate-500 text-right">
-                    {averagesForCat.supervisorAvg.toFixed(2)}/5.0
-                  </div>
-                </div>
               </div>
+            );
+          })}
+        </div>
+
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-800">Skills & Competencies</h1>
+          <p className="text-slate-500 mt-1">View the EIT program competencies</p>
+        </div>
+        {error && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <AlertTriangle size={18} className="text-red-600 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-red-800">{error}</p>
             </div>
-          );
-        })}
-      </div>
-
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-slate-800">Skills & Competencies</h1>
-        <p className="text-slate-500 mt-1">View the EIT program competencies</p>
-      </div>
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-          <div className="flex items-start gap-2">
-            <AlertTriangle size={18} className="text-red-600 mt-0.5 flex-shrink-0" />
-            <p className="text-sm text-red-800">{error}</p>
           </div>
-        </div>
-      )}
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {skillCategories.map((category) => (
-            <div className="card" key={category.name}>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold">{category.name}</h2>
+        )}
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {skillCategories.map((category) => (
+              <div className="card" key={category.name}>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-lg font-semibold">{category.name}</h2>
+                </div>
+                <div className="space-y-3">
+                  {category.skills.map((skill) => (
+                    <SkillItem key={skill.id} skill={skill} skillRef={el => (skillRefs.current[skill.id] = el)} />
+                  ))}
+                </div>
               </div>
-              <div className="space-y-3">
-                {category.skills.map((skill) => (
-                  <SkillItem key={skill.id} skill={skill} skillRef={el => (skillRefs.current[skill.id] = el)} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <ScrollToTop />
+    </>
   );
 };
 

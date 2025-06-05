@@ -7,6 +7,7 @@ import { Clock } from 'lucide-react';
 import { supervisorService, SupervisorCategoryAverage } from '../services/supervisorService';
 import SupervisorRecentActivities from '../components/supervisor/SupervisorRecentActivities';
 import WeeklyDigest from '../components/dashboard/WeeklyDigest';
+import ScrollToTop from '../components/ScrollToTop';
 
 interface EIT {
   id: string;
@@ -214,109 +215,112 @@ const SupervisorDashboard: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <WeeklyDigest />
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-800 flex items-center gap-2">
-            Welcome back, {supervisorName}!
-            <span className="ml-2 px-2 py-0.5 rounded text-xs font-semibold bg-purple-100 text-purple-800">SUPERVISOR</span>
-          </h1>
-          <p className="text-slate-500 mt-1">Here's an overview of your team's progress</p>
-        </div>
-        <div className="flex items-center space-x-2 mt-4 md:mt-0">
-          <span className="text-sm text-slate-500 flex items-center">
-            <Clock size={14} className="mr-1" />
-            Last updated: {formatLastUpdated(lastUpdated)}
-          </span>
-          <button
-            className={`btn btn-primary ${refreshing ? 'opacity-75 cursor-not-allowed' : ''}`}
-            onClick={fetchDashboardData}
-            disabled={refreshing}
-          >
-            {refreshing ? 'Refreshing...' : 'Refresh'}
-          </button>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-2xl shadow p-6 flex flex-col gap-4 min-w-[220px]">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold text-lg text-slate-800">Team Progress</span>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-teal-50 text-teal-600">{averageTeamProgress}%</span>
+    <>
+      <div className="container mx-auto px-4 py-8">
+        <WeeklyDigest />
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-800 flex items-center gap-2">
+              Welcome back, {supervisorName}!
+              <span className="ml-2 px-2 py-0.5 rounded text-xs font-semibold bg-purple-100 text-purple-800">SUPERVISOR</span>
+            </h1>
+            <p className="text-slate-500 mt-1">Here's an overview of your team's progress</p>
           </div>
-          <div className="w-full h-2 rounded bg-slate-100">
-            <div className="h-full rounded bg-teal-500 transition-all duration-700" style={{ width: `${averageTeamProgress}%` }}></div>
+          <div className="flex items-center space-x-2 mt-4 md:mt-0">
+            <span className="text-sm text-slate-500 flex items-center">
+              <Clock size={14} className="mr-1" />
+              Last updated: {formatLastUpdated(lastUpdated)}
+            </span>
+            <button
+              className={`btn btn-primary ${refreshing ? 'opacity-75 cursor-not-allowed' : ''}`}
+              onClick={fetchDashboardData}
+              disabled={refreshing}
+            >
+              {refreshing ? 'Refreshing...' : 'Refresh'}
+            </button>
           </div>
-          <div className="text-xs text-slate-500 mt-1">Average team completion rate</div>
         </div>
-        <div className="bg-white rounded-2xl shadow p-6 flex flex-col gap-4 min-w-[220px]">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold text-lg text-slate-800">Total EITs</span>
-          </div>
-          <span className="block text-3xl font-extrabold text-slate-900 leading-tight">{metrics.totalEITs}</span>
-          <div className="text-xs text-slate-500 mt-1">EITs under your supervision</div>
-        </div>
-        <div className="bg-white rounded-2xl shadow p-6 flex flex-col gap-4 min-w-[220px]">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold text-lg text-slate-800">Pending Reviews</span>
-          </div>
-          <span className="block text-3xl font-extrabold text-slate-900 leading-tight">{pendingValidationRequests + pendingSAOFeedbackRequests}</span>
-          <div className="text-xs text-slate-500 mt-1">Validations: {pendingValidationRequests}, SAOs: {pendingSAOFeedbackRequests}</div>
-        </div>
-        <div className="bg-white rounded-2xl shadow p-6 flex flex-col gap-4 min-w-[220px]">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold text-lg text-slate-800">Completed Reviews</span>
-          </div>
-          <span className="block text-3xl font-extrabold text-slate-900 leading-tight">{metrics.completedReviews}</span>
-          <div className="text-xs text-slate-500 mt-1">Reviews completed</div>
-        </div>
-      </div>
-      {/* Category Averages Cards */}
-      {categoryAverages.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
-          {categoryAverages.map((cat) => (
-            <div key={cat.category} className="bg-white rounded-2xl shadow p-6 flex flex-col gap-2 min-w-[220px]">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-lg text-slate-800">{cat.category}</span>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-600">
-                  {cat.average_score?.toFixed(2) ?? '0.00'}
-                </span>
-              </div>
-              <div className="text-xs text-slate-500 mt-1">Avg. self-score (from {cat.num_eits} EIT{cat.num_eits !== 1 ? 's' : ''})</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white rounded-2xl shadow p-6 flex flex-col gap-4 min-w-[220px]">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-lg text-slate-800">Team Progress</span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-teal-50 text-teal-600">{averageTeamProgress}%</span>
             </div>
-          ))}
+            <div className="w-full h-2 rounded bg-slate-100">
+              <div className="h-full rounded bg-teal-500 transition-all duration-700" style={{ width: `${averageTeamProgress}%` }}></div>
+            </div>
+            <div className="text-xs text-slate-500 mt-1">Average team completion rate</div>
+          </div>
+          <div className="bg-white rounded-2xl shadow p-6 flex flex-col gap-4 min-w-[220px]">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-lg text-slate-800">Total EITs</span>
+            </div>
+            <span className="block text-3xl font-extrabold text-slate-900 leading-tight">{metrics.totalEITs}</span>
+            <div className="text-xs text-slate-500 mt-1">EITs under your supervision</div>
+          </div>
+          <div className="bg-white rounded-2xl shadow p-6 flex flex-col gap-4 min-w-[220px]">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-lg text-slate-800">Pending Reviews</span>
+            </div>
+            <span className="block text-3xl font-extrabold text-slate-900 leading-tight">{pendingValidationRequests + pendingSAOFeedbackRequests}</span>
+            <div className="text-xs text-slate-500 mt-1">Validations: {pendingValidationRequests}, SAOs: {pendingSAOFeedbackRequests}</div>
+          </div>
+          <div className="bg-white rounded-2xl shadow p-6 flex flex-col gap-4 min-w-[220px]">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-lg text-slate-800">Completed Reviews</span>
+            </div>
+            <span className="block text-3xl font-extrabold text-slate-900 leading-tight">{metrics.completedReviews}</span>
+            <div className="text-xs text-slate-500 mt-1">Reviews completed</div>
+          </div>
         </div>
-      )}
-      {/* Team Members */}
-      {eits.length > 0 && (
-        <div className="card mb-8">
-          <div className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Team Members</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {eits.map((eit) => (
-                <div key={eit.id} className="border-b border-gray-200 pb-4 last:border-0">
-                  <div>
-                    <p className="text-sm text-gray-500">Name</p>
-                    <p className="font-medium">{eit.full_name}</p>
-                  </div>
-                  <div className="mt-2">
-                    <p className="text-sm text-gray-500">Email</p>
-                    <p className="font-medium">{eit.email}</p>
-                  </div>
+        {/* Category Averages Cards */}
+        {categoryAverages.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
+            {categoryAverages.map((cat) => (
+              <div key={cat.category} className="bg-white rounded-2xl shadow p-6 flex flex-col gap-2 min-w-[220px]">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-lg text-slate-800">{cat.category}</span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-600">
+                    {cat.average_score?.toFixed(2) ?? '0.00'}
+                  </span>
                 </div>
-              ))}
+                <div className="text-xs text-slate-500 mt-1">Avg. self-score (from {cat.num_eits} EIT{cat.num_eits !== 1 ? 's' : ''})</div>
+              </div>
+            ))}
+          </div>
+        )}
+        {/* Team Members */}
+        {eits.length > 0 && (
+          <div className="card mb-8">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-4">Team Members</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {eits.map((eit) => (
+                  <div key={eit.id} className="border-b border-gray-200 pb-4 last:border-0">
+                    <div>
+                      <p className="text-sm text-gray-500">Name</p>
+                      <p className="font-medium">{eit.full_name}</p>
+                    </div>
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-500">Email</p>
+                      <p className="font-medium">{eit.email}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      )}
-      {/* Recent Activities */}
-      <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300">
-        <div className="p-6">
-          <h2 className="text-xl font-semibold mb-4 text-[#2C3E50]">Recent Activities</h2>
-          <SupervisorRecentActivities />
+        )}
+        {/* Recent Activities */}
+        <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300">
+          <div className="p-6">
+            <h2 className="text-xl font-semibold mb-4 text-[#2C3E50]">Recent Activities</h2>
+            <SupervisorRecentActivities />
+          </div>
         </div>
       </div>
-    </div>
+      <ScrollToTop />
+    </>
   );
 };
 

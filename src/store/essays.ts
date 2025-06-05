@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 interface EssayState {
   loading: boolean;
   startWriting: () => Promise<void>;
+  loadEssays: () => Promise<void>;
 }
 
 export const useEssayStore = create<EssayState>((set) => ({
@@ -45,4 +46,8 @@ export const useEssayStore = create<EssayState>((set) => ({
       set({ loading: false });
     }
   },
+  loadEssays: async () => {
+    // This is a placeholder for now since we don't have essay loading functionality yet
+    return Promise.resolve();
+  }
 }));

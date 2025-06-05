@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import LoadingSpinner from '../common/LoadingSpinner';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  requiredRole?: 'eit' | 'supervisor';
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -36,6 +38,22 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
           return;
         }
 
+        // If a specific role is required, check if the user has that role
+        if (requiredRole) {
+          const isEit = eitProfile.data && eitProfile.data.length > 0;
+          const isSupervisor = supervisorProfile.data && supervisorProfile.data.length > 0;
+
+          if (requiredRole === 'eit' && !isEit) {
+            navigate('/dashboard/supervisor');
+            return;
+          }
+
+          if (requiredRole === 'supervisor' && !isSupervisor) {
+            navigate('/dashboard');
+            return;
+          }
+        }
+
       } catch (error) {
         console.error('Auth check error:', error);
         navigate('/login');
@@ -56,7 +74,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [navigate, requiredRole]);
 
   if (loading) {
     return <LoadingSpinner />;

@@ -37,94 +37,37 @@ import RealtimeNotifications from './components/common/RealtimeNotifications'
 import { Toaster } from 'react-hot-toast'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
+import ProtectedRoute from './components/auth/ProtectedRoute'
 
 function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
-  const initialize = useProgressStore(state => state.initialize)
-  const setupRealtimeSubscriptions = useProgressStore(state => state.setupRealtimeSubscriptions)
-  const loadUserSkills = useSkillsStore(state => state.loadUserSkills)
-  const initializeNotifications = useNotificationsStore(state => state.initialize)
-
-  const initializeApp = async () => {
-    try {
-      console.log('Starting app initialization...');
-      // First load skills, then initialize progress
-      await loadUserSkills();
-      console.log('Skills loaded successfully');
-      await initialize();
-      console.log('Progress initialized successfully');
-      await setupRealtimeSubscriptions();
-      console.log('Realtime subscriptions set up successfully');
-      await initializeNotifications();
-      console.log('Notifications initialized successfully');
-    } catch (error) {
-      console.error('Error initializing app:', error);
-      // Don't throw the error, just log it
-      // This prevents the app from crashing if initialization fails
-    }
-  }
+  const { loadProgress } = useProgressStore()
+  const { loadSkills } = useSkillsStore()
+  const { loadEssays } = useEssayStore()
 
   useEffect(() => {
-    console.log('Checking for existing session...');
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Session check result:', session ? 'Session found' : 'No session');
       setSession(session)
       setLoading(false)
-      if (session) {
-        console.log('Session found, initializing app...');
-        initializeApp();
-      }
     })
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('Auth state changed:', _event, session ? 'Session present' : 'No session');
       setSession(session)
-      if (session) {
-        console.log('New session detected, initializing app...');
-        initializeApp();
-      }
     })
 
     return () => subscription.unsubscribe()
-  }, [initialize, setupRealtimeSubscriptions, loadUserSkills])
+  }, [])
 
-  // Auto sign-out after 30 minutes of tab inactivity (tab closed)
   useEffect(() => {
-    const LAST_CLOSE_KEY = 'accreda_last_tab_close';
-    const THIRTY_MINUTES = 30 * 60 * 1000;
-
-    // On load, check if last close was > 30 min ago
-    const lastClose = localStorage.getItem(LAST_CLOSE_KEY);
-    if (lastClose) {
-      const lastCloseTime = parseInt(lastClose, 10);
-      if (!isNaN(lastCloseTime) && Date.now() - lastCloseTime > THIRTY_MINUTES) {
-        // Sign out if session exists
-        supabase.auth.signOut().then(() => {
-          setSession(null);
-        });
-      }
+    if (session) {
+      loadProgress()
+      loadSkills()
+      loadEssays()
     }
-
-    // On unload, store timestamp
-    const handleUnload = () => {
-      localStorage.setItem(LAST_CLOSE_KEY, Date.now().toString());
-    };
-    window.addEventListener('beforeunload', handleUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleUnload);
-    };
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
-      </div>
-    )
-  }
+  }, [session, loadProgress, loadSkills, loadEssays])
 
   return (
     <>
@@ -150,10 +93,14 @@ function App() {
           element={!session ? <ResetPassword /> : <Navigate to="/dashboard" />}
         />
 
-        {/* Protected routes */}
+        {/* Protected EIT routes */}
         <Route
           path="/dashboard"
-          element={session ? <Layout appLoaded={!loading} /> : <Navigate to="/" />}
+          element={
+            <ProtectedRoute requiredRole="eit">
+              <Layout appLoaded={!loading} />
+            </ProtectedRoute>
+          }
         >
           <Route index element={<EitDashboardGate />} />
           <Route path="skills" element={<Skills />} />
@@ -166,10 +113,15 @@ function App() {
           <Route path="help" element={<Support />} />
           <Route path="references" element={<References />} />
         </Route>
-        {/* Supervisor dashboard route */}
+
+        {/* Protected Supervisor routes */}
         <Route
           path="/dashboard/supervisor"
-          element={session ? <SupervisorLayout appLoaded={!loading} /> : <Navigate to="/" />}
+          element={
+            <ProtectedRoute requiredRole="supervisor">
+              <SupervisorLayout appLoaded={!loading} />
+            </ProtectedRoute>
+          }
         >
           <Route index element={<SupervisorDashboardContent />} />
           <Route path="team" element={<SupervisorTeam />} />
