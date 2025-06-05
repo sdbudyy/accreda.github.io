@@ -18,6 +18,8 @@ export default function SignUp() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const navigate = useNavigate()
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -46,11 +48,12 @@ export default function SignUp() {
         throw new Error('Organization is required for supervisors')
       }
 
-      if (formData.accountType === 'eit') {
-        if (!formData.startDate || !formData.targetDate) {
-          throw new Error('Please provide your program start and expected end date.');
-        }
-      }
+      // Remove required validation for EIT start and target date
+      // if (formData.accountType === 'eit') {
+      //   if (!formData.startDate || !formData.targetDate) {
+      //     throw new Error('Please provide your program start and expected end date.');
+      //   }
+      // }
 
       // Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -76,10 +79,11 @@ export default function SignUp() {
           account_type: 'supervisor',
           organization: formData.organization
         }),
-        ...(formData.accountType === 'eit' && {
-          start_date: formData.startDate,
-          target_date: formData.targetDate
-        })
+        // Only include start_date and target_date if provided
+        ...(formData.accountType === 'eit' && formData.startDate && { start_date: formData.startDate }),
+        ...(formData.accountType === 'eit' && formData.targetDate && { target_date: formData.targetDate }),
+        // Include organization for EIT if provided
+        ...(formData.accountType === 'eit' && formData.organization && { organization: formData.organization })
       }
 
       const profileTable = formData.accountType === 'eit' ? 'eit_profiles' : 'supervisor_profiles';
@@ -263,64 +267,98 @@ export default function SignUp() {
               <label htmlFor="password" className="block text-sm font-medium text-[#1a365d] mb-1">
                 Password
               </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a365d] focus:border-transparent sm:text-sm transition-colors"
-                placeholder="Create a password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  required
+                  className="appearance-none relative block w-full px-3 py-2 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a365d] focus:border-transparent sm:text-sm transition-colors"
+                  placeholder="Create a password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                />
+                <button
+                  type="button"
+                  className="absolute right-2 top-2 text-gray-500"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  tabIndex={-1}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
             </div>
             <div>
               <label htmlFor="confirm-password" className="block text-sm font-medium text-[#1a365d] mb-1">
                 Confirm Password
               </label>
-              <input
-                id="confirm-password"
-                name="confirm-password"
-                type="password"
-                autoComplete="new-password"
-                required
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a365d] focus:border-transparent sm:text-sm transition-colors"
-                placeholder="Confirm your password"
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-              />
+              <div className="relative">
+                <input
+                  id="confirm-password"
+                  name="confirm-password"
+                  type={showConfirmPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  required
+                  className="appearance-none relative block w-full px-3 py-2 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a365d] focus:border-transparent sm:text-sm transition-colors"
+                  placeholder="Confirm your password"
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                />
+                <button
+                  type="button"
+                  className="absolute right-2 top-2 text-gray-500"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  tabIndex={-1}
+                >
+                  {showConfirmPassword ? "Hide" : "Show"}
+                </button>
+              </div>
             </div>
             {formData.accountType === 'eit' && (
-              <div className="card p-4 mb-2 bg-blue-50/50 border border-blue-100 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                  <span className="font-semibold text-blue-800">Program Timeline</span>
+              <>
+                <div>
+                  <label htmlFor="organization" className="block text-sm font-medium text-[#1a365d] mb-1">
+                    Organization (Optional)
+                  </label>
+                  <input
+                    id="organization"
+                    name="organization"
+                    type="text"
+                    className="appearance-none relative block w-full px-3 py-2 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a365d] focus:border-transparent sm:text-sm transition-colors"
+                    placeholder="Enter your organization"
+                    value={formData.organization}
+                    onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
+                  />
                 </div>
-                <p className="text-xs text-blue-700 mb-3">Set your program start and expected end date for personalized progress tracking.</p>
-                <div className="flex flex-col gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-blue-900 mb-1">Start Date</label>
-                    <input
-                      type="date"
-                      className="w-full border border-blue-200 rounded px-3 py-2 text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      value={formData.startDate}
-                      onChange={e => setFormData({ ...formData, startDate: e.target.value })}
-                      required
-                    />
+                <div className="card p-4 mb-2 bg-blue-50/50 border border-blue-100 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    <span className="font-semibold text-blue-800">Program Timeline</span>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-blue-900 mb-1">Expected End Date</label>
-                    <input
-                      type="date"
-                      className="w-full border border-blue-200 rounded px-3 py-2 text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      value={formData.targetDate}
-                      onChange={e => setFormData({ ...formData, targetDate: e.target.value })}
-                      required
-                    />
+                  <p className="text-xs text-blue-700 mb-3">Set your program start and expected end date for personalized progress tracking. (Optional)</p>
+                  <div className="flex flex-col gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-blue-900 mb-1">Start Date</label>
+                      <input
+                        type="date"
+                        className="w-full border border-blue-200 rounded px-3 py-2 text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        value={formData.startDate}
+                        onChange={e => setFormData({ ...formData, startDate: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-blue-900 mb-1">Expected End Date</label>
+                      <input
+                        type="date"
+                        className="w-full border border-blue-200 rounded px-3 py-2 text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        value={formData.targetDate}
+                        onChange={e => setFormData({ ...formData, targetDate: e.target.value })}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
 
