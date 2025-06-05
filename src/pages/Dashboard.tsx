@@ -150,8 +150,8 @@ const Dashboard: React.FC = () => {
 
   // Calculate expected progress for EITs
   let expectedProgress = null;
-  let expectedProgressColor: 'teal' | 'blue' | 'indigo' | 'purple' = 'teal';
-  let expectedProgressDescription = '';
+  let progressColor: 'teal' | 'blue' | 'purple' = 'teal';
+  let progressDescription = '';
   if (userRole === 'eit' && userProfileCache?.eitProfile) {
     const { start_date, target_date } = userProfileCache.eitProfile;
     if (start_date && target_date) {
@@ -162,17 +162,16 @@ const Dashboard: React.FC = () => {
       const elapsed = now.getTime() - start.getTime();
       let percent = Math.max(0, Math.min(100, Math.round((elapsed / total) * 100)));
       expectedProgress = percent;
-      // Compare to actual progress
       const delta = overallProgress - percent;
-      if (delta > 0) {
-        expectedProgressColor = 'teal'; // Green for ahead
-        expectedProgressDescription = 'You are ahead of schedule!';
+      if (delta > 5) {
+        progressColor = 'teal';
+        progressDescription = 'Ahead of schedule';
       } else if (delta >= -5) {
-        expectedProgressColor = 'blue'; // Blue for on track
-        expectedProgressDescription = 'You are on track!';
+        progressColor = 'blue';
+        progressDescription = 'On track';
       } else {
-        expectedProgressColor = 'purple'; // Red for behind
-        expectedProgressDescription = 'You are behind schedule.';
+        progressColor = 'purple'; // Use purple for 'behind' as ProgressCard supports it
+        progressDescription = 'Behind schedule';
       }
     }
   }
@@ -243,12 +242,12 @@ const Dashboard: React.FC = () => {
             total={100}
             description={
               userRole === 'eit' && expectedProgress !== null
-                ? `${expectedProgressDescription} (Expected: ${expectedProgress}%)`
+                ? `${progressDescription} (Expected: ${expectedProgress}%)`
                 : overallProgress >= 75 ? 'Excellent progress!' : 
                   overallProgress >= 50 ? 'Good progress!' : 
                   overallProgress >= 25 ? 'Keep going!' : 'Just getting started!'
             }
-            color={userRole === 'eit' && expectedProgress !== null ? expectedProgressColor : 'teal'}
+            color={userRole === 'eit' && expectedProgress !== null ? progressColor : 'teal'}
           />
           {progressStats.slice(1).map((stat, index) => (
             <ProgressCard key={index} {...stat} />

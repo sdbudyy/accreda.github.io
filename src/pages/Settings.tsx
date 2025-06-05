@@ -12,6 +12,26 @@ import { sendSupervisorRequestNotification } from '../utils/notifications';
 const defaultAvatar =
   'https://ui-avatars.com/api/?name=User&background=E0F2FE&color=0891B2&size=128';
 
+async function getUserProfileTable(userId: string) {
+  // Try EIT profile first
+  const { data: eitProfile } = await supabase
+    .from('eit_profiles')
+    .select('id')
+    .eq('id', userId)
+    .single();
+  if (eitProfile) return 'eit_profiles';
+
+  // Try supervisor profile
+  const { data: supervisorProfile } = await supabase
+    .from('supervisor_profiles')
+    .select('id')
+    .eq('id', userId)
+    .single();
+  if (supervisorProfile) return 'supervisor_profiles';
+
+  return null;
+}
+
 const Settings: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [fullName, setFullName] = useState('');
@@ -213,21 +233,19 @@ const Settings: React.FC = () => {
       const { error } = await supabase.auth.updateUser(updates);
       if (error) throw error;
 
-      // --- Also update the full_name in the correct profile table ---
+      // --- Dynamically update the correct profile table ---
       if (isEditingName && user) {
-        if (userRole === 'eit') {
-          const { error: profileError } = await supabase
-            .from('eit_profiles')
-            .update({ full_name: fullName })
-            .eq('id', user.id);
-          if (profileError) throw profileError;
-        } else if (userRole === 'supervisor') {
-          const { error: profileError } = await supabase
-            .from('supervisor_profiles')
-            .update({ full_name: fullName })
-            .eq('id', user.id);
-          if (profileError) throw profileError;
+        const profileTable = await getUserProfileTable(user.id);
+        if (!profileTable) {
+          setMessage({ type: 'error', text: 'Profile not found.' });
+          setLoading(false);
+          return;
         }
+        const { error: profileError } = await supabase
+          .from(profileTable)
+          .update({ full_name: fullName })
+          .eq('id', user.id);
+        if (profileError) throw profileError;
       }
       // ------------------------------------------------------------
 

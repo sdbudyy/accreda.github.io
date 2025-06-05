@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 
+export interface SharedSupervisor {
+  id: string;
+  full_name: string;
+  email: string;
+}
+
 export interface Document {
   id: string;
   title: string;
@@ -14,7 +20,7 @@ export interface Document {
   file_type?: string;
   file_size?: number;
   category?: string;
-  supervisor_id?: string;
+  shared_supervisors?: SharedSupervisor[];
 }
 
 interface DocumentsState {
@@ -27,6 +33,9 @@ interface DocumentsState {
   updateDocument: (id: string, updates: Partial<Document>) => Promise<void>;
   deleteDocument: (id: string) => Promise<void>;
   loadUserDocuments: () => Promise<void>;
+  fetchDocumentShares: (documentId: string) => Promise<SharedSupervisor[]>;
+  shareDocumentWithSupervisors: (documentId: string, supervisorIds: string[]) => Promise<void>;
+  removeDocumentShare: (documentId: string, supervisorId: string) => Promise<void>;
 }
 
 export const useDocumentsStore = create<DocumentsState>((set, get) => ({
@@ -173,7 +182,7 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
       if (fetchError) throw fetchError;
 
       // Process base64 content for PDF and DOC files
-      const processedDocuments = documents.map(doc => {
+      const processedDocuments = await Promise.all(documents.map(async doc => {
         if (doc.file_type && (
           doc.file_type === 'application/pdf' ||
           doc.file_type === 'application/msword' ||
@@ -190,8 +199,13 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
             console.error('Error processing document content:', error);
           }
         }
+        const { data: shares, error: sharesError } = await supabase
+          .from('document_shares')
+          .select('supervisor_id, supervisor_profiles (id, full_name, email)')
+          .eq('document_id', doc.id);
+        doc.shared_supervisors = (shares || []).map((row: any) => row.supervisor_profiles).filter(Boolean);
         return doc;
-      });
+      }));
 
       set({
         documents: processedDocuments,
@@ -202,5 +216,31 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
       console.error('Error loading documents:', error);
       set({ error: error instanceof Error ? error.message : 'Failed to load documents', loading: false });
     }
+  },
+
+  fetchDocumentShares: async (documentId: string) => {
+    const { data, error } = await supabase
+      .from('document_shares')
+      .select('supervisor_id, supervisor_profiles (id, full_name, email)')
+      .eq('document_id', documentId);
+    if (error) throw error;
+    return (data || []).map((row: any) => row.supervisor_profiles).filter(Boolean);
+  },
+
+  shareDocumentWithSupervisors: async (documentId: string, supervisorIds: string[]) => {
+    // Remove duplicates
+    const uniqueIds = Array.from(new Set(supervisorIds));
+    const inserts = uniqueIds.map(id => ({ document_id: documentId, supervisor_id: id }));
+    const { error } = await supabase.from('document_shares').insert(inserts);
+    if (error) throw error;
+  },
+
+  removeDocumentShare: async (documentId: string, supervisorId: string) => {
+    const { error } = await supabase
+      .from('document_shares')
+      .delete()
+      .eq('document_id', documentId)
+      .eq('supervisor_id', supervisorId);
+    if (error) throw error;
   }
 })); 

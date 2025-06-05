@@ -159,6 +159,21 @@ if (!supabaseUrl || !supabaseKey) {
 }
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// Debug endpoint to check subscriptions table access
+app.get('/api/debug-subscriptions', async (req: Request, res: Response) => {
+  try {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .limit(1);
+    console.log('DEBUG subscriptions:', data, error);
+    res.json({ data, error });
+  } catch (err) {
+    console.error('DEBUG subscriptions error:', err);
+    res.status(500).json({ error: 'Failed to query subscriptions table.' });
+  }
+});
+
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: express.NextFunction) => {
   console.error('Unhandled error:', err);

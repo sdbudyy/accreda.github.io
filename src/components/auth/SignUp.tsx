@@ -72,8 +72,8 @@ export default function SignUp() {
         id: authData.user.id,
         email: formData.email,
         full_name: formData.fullName,
-        account_type: formData.accountType,
         ...(formData.accountType === 'supervisor' && {
+          account_type: 'supervisor',
           organization: formData.organization
         }),
         ...(formData.accountType === 'eit' && {
@@ -82,8 +82,11 @@ export default function SignUp() {
         })
       }
 
+      const profileTable = formData.accountType === 'eit' ? 'eit_profiles' : 'supervisor_profiles';
+      console.log('SIGNUP DEBUG: Inserting profile', profileData, 'into', profileTable);
+
       const { error: profileError } = await supabase
-        .from(formData.accountType === 'eit' ? 'eit_profiles' : 'supervisor_profiles')
+        .from(profileTable)
         .insert([profileData])
 
       if (profileError) {
@@ -108,6 +111,20 @@ export default function SignUp() {
           message: 'Please check your email to confirm your account. You can now sign in.' 
         } 
       })
+
+      // After successful login
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: subscription } = await supabase
+          .from('subscriptions')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        if (!subscription) {
+          await supabase.from('subscriptions').insert([{ user_id: user.id, tier: 'free' }]);
+        }
+      }
     } catch (error) {
       let message = error instanceof Error ? error.message : 'An error occurred during signup';
       if (

@@ -23,6 +23,8 @@ const Documents: React.FC = () => {
     updateDocument,
     deleteDocument,
     loadUserDocuments,
+    fetchDocumentShares,
+    shareDocumentWithSupervisors,
   } = useDocumentsStore();
 
   const { tier, documentLimit, fetchSubscription } = useSubscriptionStore();
@@ -40,8 +42,9 @@ const Documents: React.FC = () => {
   const [previewDocument, setPreviewDocument] = useState<Document | null>(null);
   const [shareModalDoc, setShareModalDoc] = useState<Document | null>(null);
   const [supervisors, setSupervisors] = useState<{ id: string; full_name: string; email: string }[]>([]);
-  const [selectedSupervisor, setSelectedSupervisor] = useState<string>('');
+  const [selectedSupervisors, setSelectedSupervisors] = useState<string[]>([]);
   const [shareLoading, setShareLoading] = useState(false);
+  const [unshareLoading, setUnshareLoading] = useState<string | null>(null);
   const [shareError, setShareError] = useState<string | null>(null);
   const [importMenuOpen, setImportMenuOpen] = useState(false);
   const [importedContent, setImportedContent] = useState<string | null>(null);
@@ -172,7 +175,9 @@ const Documents: React.FC = () => {
           if (error) throw error;
           const supervisorsList = (data || []).map((rel: any) => rel.supervisor_profiles).filter(Boolean);
           setSupervisors(supervisorsList);
-          setSelectedSupervisor(supervisorsList[0]?.id || '');
+          // Fetch current shares for this doc
+          const shares = await fetchDocumentShares(shareModalDoc.id);
+          setSelectedSupervisors(shares.map(s => s.id));
         } catch (err) {
           setShareError('Failed to load supervisors.');
         } finally {
@@ -289,13 +294,31 @@ const Documents: React.FC = () => {
   // Get unique types from documents
   const types = ['all', ...new Set(documents.map(doc => doc.type))];
 
+  const handleUnshare = async (supervisorId: string) => {
+    if (!shareModalDoc) return;
+    setUnshareLoading(supervisorId);
+    try {
+      await useDocumentsStore.getState().removeDocumentShare(shareModalDoc.id, supervisorId);
+      // Remove from selectedSupervisors
+      setSelectedSupervisors(selectedSupervisors.filter(id => id !== supervisorId));
+      // Optionally, refresh the shares from backend
+      const shares = await fetchDocumentShares(shareModalDoc.id);
+      setSelectedSupervisors(shares.map(s => s.id));
+      // Also refresh the main document list so 'Not shared' updates
+      await loadUserDocuments();
+    } finally {
+      setUnshareLoading(null);
+    }
+  };
+
   const handleShare = async () => {
-    if (!shareModalDoc || !selectedSupervisor) return;
+    if (!shareModalDoc) return;
     setShareLoading(true);
     setShareError(null);
     try {
-      await updateDocument(shareModalDoc.id, { supervisor_id: selectedSupervisor });
+      await shareDocumentWithSupervisors(shareModalDoc.id, selectedSupervisors);
       setShareModalDoc(null);
+      await loadUserDocuments(); // Refresh after sharing
     } catch (err) {
       setShareError('Failed to share document.');
     } finally {
@@ -550,7 +573,17 @@ const Documents: React.FC = () => {
               <div className="text-xs text-slate-500">
                 <span>{new Date(doc.created_at).toLocaleDateString()}</span>
                 <span className="mx-2">•</span>
-                <span className="capitalize">{doc.status}</span>
+                {doc.shared_supervisors && doc.shared_supervisors.length > 0 ? (
+                  <button
+                    className="text-xs px-2 py-1 rounded-full bg-teal-50 text-teal-700 flex items-center gap-1 hover:bg-teal-100 transition"
+                    onClick={() => {/* show modal with supervisor list */}}
+                    title="View shared supervisors"
+                  >
+                    Shared with {doc.shared_supervisors.length}
+                  </button>
+                ) : (
+                  <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600">Not shared</span>
+                )}
               </div>
               {doc.type === 'other' ? (
                 <button
@@ -599,16 +632,39 @@ const Documents: React.FC = () => {
                 <div className="text-slate-500 text-sm">No active supervisors found. Connect with a supervisor first.</div>
               ) : (
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Select Supervisor</label>
-                  <select
-                    value={selectedSupervisor}
-                    onChange={e => setSelectedSupervisor(e.target.value)}
-                    className="input w-full mb-2"
-                  >
-                    {supervisors.map(sup => (
-                      <option key={sup.id} value={sup.id}>{sup.full_name} ({sup.email})</option>
-                    ))}
-                  </select>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Select Supervisors</label>
+                  <div className="flex flex-col gap-2 mb-2">
+                    {selectedSupervisors.map((id, idx) => {
+                      const sup = supervisors.find(s => s.id === id);
+                      return sup ? (
+                        <div key={id} className="flex items-center gap-2 bg-slate-100 rounded px-2 py-1">
+                          <span>{sup.full_name} ({sup.email})</span>
+                          <button
+                            onClick={() => handleUnshare(id)}
+                            className="text-red-500 hover:text-red-700"
+                            disabled={!!unshareLoading}
+                          >
+                            {unshareLoading === id ? 'Removing...' : 'Remove'}
+                          </button>
+                        </div>
+                      ) : null;
+                    })}
+                    <div className="flex gap-2 items-center">
+                      <select
+                        value=""
+                        onChange={e => {
+                          const val = e.target.value;
+                          if (val && !selectedSupervisors.includes(val)) setSelectedSupervisors([...selectedSupervisors, val]);
+                        }}
+                        className="input flex-1"
+                      >
+                        <option value="">Select another...</option>
+                        {supervisors.filter(s => !selectedSupervisors.includes(s.id)).map(sup => (
+                          <option key={sup.id} value={sup.id}>{sup.full_name} ({sup.email})</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                 </div>
               )}
               {shareError && <div className="text-red-600 text-sm mt-2">{shareError}</div>}
@@ -624,8 +680,8 @@ const Documents: React.FC = () => {
               </button>
               <button
                 type="button"
-                className={`btn btn-primary ${(!selectedSupervisor || shareLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                disabled={!selectedSupervisor || shareLoading}
+                className={`btn btn-primary ${(!selectedSupervisors.length || shareLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={!selectedSupervisors.length || shareLoading}
                 onClick={handleShare}
               >
                 {shareLoading ? 'Sending...' : 'Send'}

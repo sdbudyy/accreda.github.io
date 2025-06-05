@@ -4,6 +4,7 @@ import LoadingSpinner from '../common/LoadingSpinner';
 import { useProgressStore } from '../../store/progress';
 import SkillsOverview from './SkillsOverview';
 import ConnectionStatus from '../common/ConnectionStatus';
+import ProgressCard from './ProgressCard';
 
 interface Supervisor {
   id: string;
@@ -22,12 +23,21 @@ const EITDashboard: React.FC = () => {
   const [supervisor, setSupervisor] = useState<Supervisor | null>(null);
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
   const { overallProgress, completedSkills, documentedExperiences, supervisorApprovals } = useProgressStore();
+  const [eitProfile, setEitProfile] = useState<any>(null);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
+
+        // Fetch EIT profile for expected progress
+        const { data: eitProfileData } = await supabase
+          .from('eit_profiles')
+          .select('start_date, target_date')
+          .eq('id', user.id)
+          .single();
+        setEitProfile(eitProfileData);
 
         // Fetch supervisor information
         const { data: relationship, error: relError } = await supabase
@@ -88,9 +98,48 @@ const EITDashboard: React.FC = () => {
 
         {/* Progress Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-semibold mb-2">Overall Progress</h3>
-            <p className="text-3xl font-bold text-teal-600">{overallProgress}%</p>
+          <div>
+            {/* Enhanced Overall Progress Card */}
+            {(() => {
+              let expectedProgress = null;
+              let progressColor: 'teal' | 'blue' | 'purple' = 'teal';
+              let progressDescription = '';
+              if (eitProfile && eitProfile.start_date && eitProfile.target_date) {
+                const now = new Date();
+                const start = new Date(eitProfile.start_date);
+                const end = new Date(eitProfile.target_date);
+                const total = end.getTime() - start.getTime();
+                const elapsed = now.getTime() - start.getTime();
+                let percent = Math.max(0, Math.min(100, Math.round((elapsed / total) * 100)));
+                expectedProgress = percent;
+                const delta = overallProgress - percent;
+                if (delta > 5) {
+                  progressColor = 'teal';
+                  progressDescription = 'Ahead of schedule';
+                } else if (delta >= -5) {
+                  progressColor = 'blue';
+                  progressDescription = 'On track';
+                } else {
+                  progressColor = 'purple'; // Use purple for 'behind' as ProgressCard supports it
+                  progressDescription = 'Behind schedule';
+                }
+              }
+              return (
+                <ProgressCard
+                  title="Overall Progress"
+                  value={overallProgress}
+                  total={100}
+                  description={
+                    expectedProgress !== null
+                      ? `${progressDescription} (Expected: ${expectedProgress}%)`
+                      : overallProgress >= 75 ? 'Excellent progress!' : 
+                        overallProgress >= 50 ? 'Good progress!' : 
+                        overallProgress >= 25 ? 'Keep going!' : 'Just getting started!'
+                  }
+                  color={eitProfile && eitProfile.start_date && eitProfile.target_date ? progressColor : 'teal'}
+                />
+              );
+            })()}
           </div>
           <div className="bg-white p-6 rounded-lg shadow">
             <h3 className="text-lg font-semibold mb-2">Skills Completed</h3>

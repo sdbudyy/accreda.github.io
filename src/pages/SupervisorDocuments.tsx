@@ -30,40 +30,46 @@ const SupervisorDocuments: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [previewDocument, setPreviewDocument] = useState<Document | null>(null);
   const [selectedEIT, setSelectedEIT] = useState<string>('all');
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Move fetchDocuments outside useEffect so it can be used by the refresh button
+  const fetchDocuments = async () => {
+    setLoading(true);
+    setRefreshing(true);
+    setError(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+      // Fetch all document_shares for this supervisor
+      const { data: shares, error: sharesError } = await supabase
+        .from('document_shares')
+        .select('document_id, documents:document_id(*)')
+        .eq('supervisor_id', user.id);
+      if (sharesError) throw sharesError;
+      const docs = (shares || []).map((row: any) => row.documents).filter(Boolean);
+      setDocuments(docs);
+      // Fetch EIT profiles for all unique eit_ids
+      const eitIds = Array.from(new Set((docs || []).map((doc: any) => doc.eit_id).filter(Boolean)));
+      if (eitIds.length > 0) {
+        const { data: profiles, error: profileError } = await supabase
+          .from('eit_profiles')
+          .select('id, full_name, email')
+          .in('id', eitIds);
+        if (!profileError && profiles) {
+          const map: Record<string, EITProfile> = {};
+          profiles.forEach((p: EITProfile) => { map[p.id] = p; });
+          setEitProfiles(map);
+        }
+      }
+    } catch (err) {
+      setError('Failed to load documents.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchDocuments = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('No authenticated user');
-        const { data, error } = await supabase
-          .from('documents')
-          .select('*')
-          .eq('supervisor_id', user.id)
-          .order('created_at', { ascending: false });
-        if (error) throw error;
-        setDocuments(data || []);
-        // Fetch EIT profiles for all unique eit_ids
-        const eitIds = Array.from(new Set((data || []).map((doc: Document) => doc.eit_id).filter(Boolean)));
-        if (eitIds.length > 0) {
-          const { data: profiles, error: profileError } = await supabase
-            .from('eit_profiles')
-            .select('id, full_name, email')
-            .in('id', eitIds);
-          if (!profileError && profiles) {
-            const map: Record<string, EITProfile> = {};
-            profiles.forEach((p: EITProfile) => { map[p.id] = p; });
-            setEitProfiles(map);
-          }
-        }
-      } catch (err) {
-        setError('Failed to load documents.');
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchDocuments();
   }, []);
 
@@ -94,6 +100,15 @@ const SupervisorDocuments: React.FC = () => {
           </select>
         </div>
       )}
+      <div className="flex justify-end mb-4">
+        <button
+          className={`btn btn-primary ${refreshing ? 'opacity-50 cursor-not-allowed' : ''}`}
+          onClick={fetchDocuments}
+          disabled={refreshing}
+        >
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </button>
+      </div>
       {loading && <div>Loading...</div>}
       {error && <div className="text-red-600">{error}</div>}
       {!loading && !error && documents.length === 0 && (
