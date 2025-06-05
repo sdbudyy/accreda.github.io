@@ -38,6 +38,7 @@ import { Toaster } from 'react-hot-toast'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
 import ProtectedRoute from './components/auth/ProtectedRoute'
+import ThankYou from './pages/ThankYou'
 
 function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -92,6 +93,7 @@ function App() {
           path="/reset-password"
           element={!session ? <ResetPassword /> : <Navigate to="/dashboard" />}
         />
+        <Route path="/thank-you" element={<ThankYou />} />
 
         {/* Protected EIT routes */}
         <Route
