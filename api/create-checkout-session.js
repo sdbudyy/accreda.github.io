@@ -37,8 +37,8 @@ export default async function handler(req, res) {
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
       customer_email: userEmail,
-      success_url: `${process.env.CLIENT_URL || 'https://accreda.ca'}/dashboard/settings?success=true`,
-      cancel_url: `${process.env.CLIENT_URL || 'https://accreda.ca'}/dashboard/settings?canceled=true`,
+      success_url: `${process.env.CLIENT_URL || 'https://accreda.ca'}/settings?success=true`,
+      cancel_url: `${process.env.CLIENT_URL || 'https://accreda.ca'}/settings?canceled=true`,
       metadata: { userId, plan: planMetadata },
     });
     return res.json({ url: session.url });

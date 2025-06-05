@@ -71,11 +71,13 @@ serve(async (req) => {
     if (updateError) throw updateError
 
     // Construct the reference form URL
+    // Use a dedicated environment variable for the public, no-auth reference form app
+    // Set REFERENCE_FORM_URL to your deployed reference form app, e.g., https://references.accreda.ca
     const referenceFormUrl = `${Deno.env.get('REFERENCE_FORM_URL')}/reference/${token}`
 
     // Send email using Resend
     const { error: emailError } = await resend.emails.send({
-      from: 'Accreda References <noreply@references.accreda.com>',
+      from: 'Accreda References <noreply@references.accreda.ca>',
       to: email,
       subject: `Reference Request: ${reference.jobs.title} at ${reference.jobs.company}`,
       html: `

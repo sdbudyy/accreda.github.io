@@ -34,50 +34,38 @@ app.post('/api/stripe-webhook', bodyParser.raw({ type: 'application/json' }), as
   console.log('Received Stripe event:', event.type);
 
   if (event.type === 'checkout.session.completed') {
-    const session = event.data.object as any;
-    console.log('Session metadata:', session.metadata);
+    const session = event.data.object;
+    console.log('Received checkout.session.completed:', session);
+
     const userId = session.metadata?.userId;
     const subscriptionId = session.subscription;
-    // Determine plan interval
+    const plan = session.metadata?.plan;
     let planInterval = null;
-    if (session.metadata?.plan === 'pro_monthly') planInterval = 'monthly';
-    if (session.metadata?.plan === 'pro_yearly') planInterval = 'yearly';
-    const PRO_LIMITS = {
-      document_limit: 2147483647,
-      sao_limit: 2147483647,
-      supervisor_limit: 2147483647,
-    };
+    if (plan === 'pro_monthly') planInterval = 'monthly';
+    if (plan === 'pro_yearly') planInterval = 'yearly';
+
+    console.log('userId:', userId, 'subscriptionId:', subscriptionId, 'planInterval:', planInterval);
+
     if (userId && subscriptionId) {
-      // Check for override or enterprise tier
-      const { data: subData } = await supabase
+      const { data, error } = await supabase
         .from('subscriptions')
-        .select('override, tier')
+        .update({
+          tier: 'pro',
+          stripe_subscription_id: subscriptionId,
+          document_limit: 2147483647,
+          sao_limit: 2147483647,
+          supervisor_limit: 2147483647,
+          plan_interval: planInterval
+        })
         .eq('user_id', userId)
-        .single();
-      if (subData?.override) {
-        console.log('Manual override set, skipping Stripe webhook update.');
-        res.end();
-        return;
-      }
-      if (subData?.tier !== 'enterprise') {
-        // Always set pro limits when upgrading to pro
-        const { data, error } = await supabase
-          .from('subscriptions')
-          .update({
-            tier: 'pro',
-            stripe_subscription_id: subscriptionId,
-            document_limit: PRO_LIMITS.document_limit,
-            sao_limit: PRO_LIMITS.sao_limit,
-            supervisor_limit: PRO_LIMITS.supervisor_limit,
-            plan_interval: planInterval
-          })
-          .eq('user_id', userId)
-          .select();
-        if (error) {
-          console.error('Supabase update error:', error);
-        } else {
-          console.log(`Supabase update result for user ${userId}:`, data);
-        }
+        .select();
+
+      if (error) {
+        console.error('Supabase update error:', error);
+      } else if (data && data.length === 0) {
+        console.error('No subscription row found for userId:', userId);
+      } else {
+        console.log(`Supabase update result for user ${userId}:`, data);
       }
     } else {
       if (!userId) console.error('No userId found in session metadata.');

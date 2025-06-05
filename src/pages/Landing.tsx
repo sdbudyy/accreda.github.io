@@ -269,6 +269,7 @@ const Landing: React.FC = () => {
                 <li className="flex items-center text-slate-700"><span className="text-green-500 mr-2">✓</span> Custom integrations</li>
                 <li className="flex items-center text-slate-700"><span className="text-green-500 mr-2">✓</span> Dedicated support</li>
                 <li className="flex items-center text-slate-700"><span className="text-green-500 mr-2">✓</span> Team management</li>
+                <li className="flex items-center text-slate-700"><span className="text-green-500 mr-2">✓</span> Access to Supervisor Dashboard</li>
               </ul>
               <Link 
                 to="/support" 
