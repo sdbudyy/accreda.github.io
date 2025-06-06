@@ -39,6 +39,7 @@ import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import ThankYou from './pages/ThankYou'
+import Enterprise from './pages/Enterprise'
 
 function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -77,6 +78,8 @@ function App() {
       <Routes>
         {/* Public routes */}
         <Route path="/" element={!session ? <Landing /> : <RoleBasedDashboard />} />
+        <Route path="/pricing" element={<Navigate to="/?scroll=pricing" replace />} />
+        <Route path="/#pricing" element={<Navigate to="/?scroll=pricing" replace />} />
         <Route
           path="/login"
           element={!session ? <Login /> : <Navigate to="/dashboard" />}
@@ -84,6 +87,10 @@ function App() {
         <Route
           path="/signup"
           element={!session ? <SignUp /> : <Navigate to="/dashboard" />}
+        />
+        <Route
+          path="/enterprise"
+          element={<Enterprise />}
         />
         <Route
           path="/forgot-password"

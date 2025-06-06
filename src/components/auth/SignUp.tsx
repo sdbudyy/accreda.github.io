@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { useNavigate, Link, useLocation } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import AccredaLogo from '../../assets/accreda-logo.png'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -22,29 +22,6 @@ export default function SignUp() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [step, setStep] = useState(1)
   const navigate = useNavigate()
-  const location = useLocation()
-  const params = new URLSearchParams(location.search)
-  const proIntent = params.get('plan') === 'pro'
-  const [showProModal, setShowProModal] = useState(false)
-  const [createdUser, setCreatedUser] = useState<{ id: string; email: string } | null>(null)
-
-  const handleStripeCheckout = async (plan: 'pro_monthly' | 'pro_yearly', userId: string, userEmail: string) => {
-    try {
-      const response = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan, userId, userEmail }),
-      })
-      const data = await response.json()
-      if (data.url) {
-        window.location.href = data.url
-      } else {
-        alert('Failed to start checkout. Please try again.')
-      }
-    } catch (err) {
-      alert('Failed to start checkout. Please try again.')
-    }
-  }
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -134,17 +111,11 @@ export default function SignUp() {
         targetDate: ''
       })
 
-      // If pro intent, show modal, else navigate
-      if (proIntent) {
-        setCreatedUser({ id: authData.user.id, email: formData.email })
-        setShowProModal(true)
-      } else {
-        navigate('/login', { 
-          state: { 
-            message: 'Please check your email to confirm your account. You can now sign in.' 
-          } 
-        })
-      }
+      navigate('/login', { 
+        state: { 
+          message: 'Please check your email to confirm your account. You can now sign in.' 
+        } 
+      })
 
       // After successful login
       const { data: { user } } = await supabase.auth.getUser();
@@ -355,50 +326,6 @@ export default function SignUp() {
             </Link>
           </p>
         </div>
-        <AnimatePresence>
-          {showProModal && createdUser && (
-            <motion.div
-              key="pro-modal"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.25 }}
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
-            >
-              <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative flex flex-col items-center">
-                <button
-                  className="absolute top-2 right-2 text-slate-400 hover:text-slate-600 text-2xl"
-                  onClick={() => { setShowProModal(false); navigate('/login', { state: { message: 'Please check your email to confirm your account. You can now sign in.' } }) }}
-                  aria-label="Close"
-                >
-                  ×
-                </button>
-                <h2 className="text-2xl font-bold text-teal-700 mb-2 text-center">Upgrade to Pro?</h2>
-                <p className="text-slate-600 mb-6 text-center">Would you like to upgrade your new account to Pro now? Choose a plan below to unlock unlimited features.</p>
-                <div className="flex flex-col gap-4 w-full">
-                  <button
-                    className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-xl shadow-md transition-all duration-150 text-lg"
-                    onClick={() => handleStripeCheckout('pro_monthly', createdUser.id, createdUser.email)}
-                  >
-                    Upgrade to Pro Monthly ($19.99/mo)
-                  </button>
-                  <button
-                    className="w-full bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 rounded-xl shadow-md transition-all duration-150 text-lg"
-                    onClick={() => handleStripeCheckout('pro_yearly', createdUser.id, createdUser.email)}
-                  >
-                    Upgrade to Pro Yearly ($17.49/mo billed yearly)
-                  </button>
-                  <button
-                    className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl shadow-sm transition-all duration-150 text-lg mt-2"
-                    onClick={() => { setShowProModal(false); navigate('/login', { state: { message: 'Please check your email to confirm your account. You can now sign in.' } }) }}
-                  >
-                    Maybe Later
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </motion.div>
     </div>
   )
