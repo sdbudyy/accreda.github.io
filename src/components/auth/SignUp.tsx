@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import AccredaLogo from '../../assets/accreda-logo.png'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 
 export default function SignUp() {
   const [formData, setFormData] = useState({
@@ -20,7 +20,31 @@ export default function SignUp() {
   const [success, setSuccess] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [step, setStep] = useState(1)
   const navigate = useNavigate()
+  const location = useLocation()
+  const params = new URLSearchParams(location.search)
+  const proIntent = params.get('plan') === 'pro'
+  const [showProModal, setShowProModal] = useState(false)
+  const [createdUser, setCreatedUser] = useState<{ id: string; email: string } | null>(null)
+
+  const handleStripeCheckout = async (plan: 'pro_monthly' | 'pro_yearly', userId: string, userEmail: string) => {
+    try {
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan, userId, userEmail }),
+      })
+      const data = await response.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        alert('Failed to start checkout. Please try again.')
+      }
+    } catch (err) {
+      alert('Failed to start checkout. Please try again.')
+    }
+  }
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -110,11 +134,17 @@ export default function SignUp() {
         targetDate: ''
       })
 
-      navigate('/login', { 
-        state: { 
-          message: 'Please check your email to confirm your account. You can now sign in.' 
-        } 
-      })
+      // If pro intent, show modal, else navigate
+      if (proIntent) {
+        setCreatedUser({ id: authData.user.id, email: formData.email })
+        setShowProModal(true)
+      } else {
+        navigate('/login', { 
+          state: { 
+            message: 'Please check your email to confirm your account. You can now sign in.' 
+          } 
+        })
+      }
 
       // After successful login
       const { data: { user } } = await supabase.auth.getUser();
@@ -153,7 +183,7 @@ export default function SignUp() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1a365d] to-[#0f2942] py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f6fbff] to-[#e3f0fa] py-12 px-4 sm:px-6 lg:px-8">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -164,223 +194,211 @@ export default function SignUp() {
           <img
             src={AccredaLogo}
             alt="Accreda Logo"
-            className="h-24 w-auto mb-6 cursor-pointer"
+            className="h-20 w-auto mb-4 cursor-pointer"
             onClick={() => navigate('/')}
           />
-          <h2 className="text-2xl font-bold text-[#1a365d]">
+          <h2 className="text-2xl font-bold text-[#1a365d] mb-1">
             Create your account
           </h2>
-          <p className="mt-2 text-sm text-[#4a5568]">
-            Join EIT Track to start your journey
-          </p>
+          <div className="text-sm text-[#4a5568] mb-2">Step {step} of 2</div>
         </div>
-
-        <form className="mt-8 space-y-6" onSubmit={handleSignUp}>
-          {error && (
-            <div className="rounded-lg bg-red-50 p-4 border border-red-100">
-              <div className="text-sm text-red-700">{error}</div>
-            </div>
-          )}
-          {success && (
-            <div className="rounded-lg bg-green-50 p-4 border border-green-100">
-              <div className="text-sm text-green-700">{success}</div>
-            </div>
-          )}
-          <div className="space-y-4">
-            <div className="flex justify-center mb-4 gap-3">
-              <button
-                type="button"
-                className={`px-4 py-2 rounded-lg border font-semibold transition-all duration-200 transform focus:outline-none focus:ring-2 focus:ring-[#1a365d]
-                  ${formData.accountType === 'eit'
-                    ? 'bg-[#1a365d] text-white scale-105 shadow-lg'
-                    : 'bg-white text-[#1a365d] border-[#1a365d] hover:scale-105 hover:brightness-95'}
-                `}
-                onClick={() => setFormData({ ...formData, accountType: 'eit' })}
-              >
-                EIT
-              </button>
-              <button
-                type="button"
-                className={`px-4 py-2 rounded-lg border font-semibold transition-all duration-200 transform focus:outline-none focus:ring-2 focus:ring-[#1a365d]
-                  ${formData.accountType === 'supervisor'
-                    ? 'bg-[#1a365d] text-white scale-105 shadow-lg'
-                    : 'bg-white text-[#1a365d] border-[#1a365d] hover:scale-105 hover:brightness-95'}
-                `}
-                onClick={() => setFormData({ ...formData, accountType: 'supervisor' })}
-              >
-                Supervisor
-              </button>
-            </div>
-
-            <div>
-              <label htmlFor="full-name" className="block text-sm font-medium text-[#1a365d] mb-1">
-                Full Name
-              </label>
-              <input
-                id="full-name"
-                name="full-name"
-                type="text"
-                autoComplete="name"
-                required
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a365d] focus:border-transparent sm:text-sm transition-colors"
-                placeholder="Enter your full name"
-                value={formData.fullName}
-                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-              />
-            </div>
-
-            {formData.accountType === 'supervisor' && (
-              <div>
-                <label htmlFor="organization" className="block text-sm font-medium text-[#1a365d] mb-1">
-                  Organization
-                </label>
-                <input
-                  id="organization"
-                  name="organization"
-                  type="text"
-                  required
-                  className="appearance-none relative block w-full px-3 py-2 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a365d] focus:border-transparent sm:text-sm transition-colors"
-                  placeholder="Enter your organization"
-                  value={formData.organization}
-                  onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
-                />
-              </div>
-            )}
-
-            <div>
-              <label htmlFor="email-address" className="block text-sm font-medium text-[#1a365d] mb-1">
-                Email address
-              </label>
-              <input
-                id="email-address"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a365d] focus:border-transparent sm:text-sm transition-colors"
-                placeholder="Enter your email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-[#1a365d] mb-1">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="new-password"
-                  required
-                  className="appearance-none relative block w-full px-3 py-2 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a365d] focus:border-transparent sm:text-sm transition-colors"
-                  placeholder="Create a password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                />
-                <button
-                  type="button"
-                  className="absolute right-2 top-2 text-gray-500"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  tabIndex={-1}
-                >
-                  {showPassword ? "Hide" : "Show"}
-                </button>
-              </div>
-            </div>
-            <div>
-              <label htmlFor="confirm-password" className="block text-sm font-medium text-[#1a365d] mb-1">
-                Confirm Password
-              </label>
-              <div className="relative">
-                <input
-                  id="confirm-password"
-                  name="confirm-password"
-                  type={showConfirmPassword ? "text" : "password"}
-                  autoComplete="new-password"
-                  required
-                  className="appearance-none relative block w-full px-3 py-2 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a365d] focus:border-transparent sm:text-sm transition-colors"
-                  placeholder="Confirm your password"
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                />
-                <button
-                  type="button"
-                  className="absolute right-2 top-2 text-gray-500"
-                  onClick={() => setShowConfirmPassword((prev) => !prev)}
-                  tabIndex={-1}
-                >
-                  {showConfirmPassword ? "Hide" : "Show"}
-                </button>
-              </div>
-            </div>
-            {formData.accountType === 'eit' && (
-              <>
+        <AnimatePresence mode="wait">
+          {step === 1 && (
+            <motion.form
+              key="step1"
+              initial={{ opacity: 0, x: 40 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -40 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
+              onSubmit={e => { e.preventDefault(); setStep(2); }}
+            >
+              {error && (
+                <div className="rounded-lg bg-red-50 p-4 border border-red-100">
+                  <div className="text-sm text-red-700">{error}</div>
+                </div>
+              )}
+              <div className="space-y-4">
                 <div>
-                  <label htmlFor="organization" className="block text-sm font-medium text-[#1a365d] mb-1">
-                    Organization (Optional)
-                  </label>
+                  <label className="block text-base font-semibold text-[#1a365d] mb-1">Email</label>
                   <input
-                    id="organization"
-                    name="organization"
-                    type="text"
-                    className="appearance-none relative block w-full px-3 py-2 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a365d] focus:border-transparent sm:text-sm transition-colors"
-                    placeholder="Enter your organization"
-                    value={formData.organization}
-                    onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
+                    type="email"
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 bg-slate-50 text-lg"
+                    value={formData.email}
+                    onChange={e => setFormData({ ...formData, email: e.target.value })}
+                    required
+                    placeholder="you@email.com"
+                    autoComplete="email"
                   />
                 </div>
-                <div className="card p-4 mb-2 bg-blue-50/50 border border-blue-100 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                    <span className="font-semibold text-blue-800">Program Timeline</span>
+                <div>
+                  <label className="block text-base font-semibold text-[#1a365d] mb-1">Password</label>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 bg-slate-50 text-lg"
+                    value={formData.password}
+                    onChange={e => setFormData({ ...formData, password: e.target.value })}
+                    required
+                    placeholder="Password"
+                  />
+                  <button type="button" className="text-xs text-teal-600 mt-1" onClick={() => setShowPassword(v => !v)}>{showPassword ? 'Hide' : 'Show'} Password</button>
+                </div>
+                <div>
+                  <label className="block text-base font-semibold text-[#1a365d] mb-1">Confirm Password</label>
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 bg-slate-50 text-lg"
+                    value={formData.confirmPassword}
+                    onChange={e => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    required
+                    placeholder="Confirm Password"
+                  />
+                  <button type="button" className="text-xs text-teal-600 mt-1" onClick={() => setShowConfirmPassword(v => !v)}>{showConfirmPassword ? 'Hide' : 'Show'} Password</button>
+                </div>
+                <div className="flex justify-center gap-3 mt-2">
+                  <button
+                    type="button"
+                    className={`px-4 py-2 rounded-lg border font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#1a365d] ${formData.accountType === 'eit' ? 'bg-[#1a365d] text-white scale-105 shadow-lg' : 'bg-white text-[#1a365d] border-[#1a365d] hover:scale-105 hover:brightness-95'}`}
+                    onClick={() => setFormData({ ...formData, accountType: 'eit' })}
+                  >
+                    EIT
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-4 py-2 rounded-lg border font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#1a365d] ${formData.accountType === 'supervisor' ? 'bg-[#1a365d] text-white scale-105 shadow-lg' : 'bg-white text-[#1a365d] border-[#1a365d] hover:scale-105 hover:brightness-95'}`}
+                    onClick={() => setFormData({ ...formData, accountType: 'supervisor' })}
+                  >
+                    Supervisor
+                  </button>
+                </div>
+              </div>
+              <div className="flex justify-end mt-6">
+                <button type="submit" className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-6 rounded-xl shadow-md transition-all duration-150 text-lg">Next</button>
+              </div>
+            </motion.form>
+          )}
+          {step === 2 && (
+            <motion.form
+              key="step2"
+              initial={{ opacity: 0, x: 40 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -40 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
+              onSubmit={handleSignUp}
+            >
+              {error && (
+                <div className="rounded-lg bg-red-50 p-4 border border-red-100">
+                  <div className="text-sm text-red-700">{error}</div>
+                </div>
+              )}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-base font-semibold text-[#1a365d] mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 bg-slate-50 text-lg"
+                    value={formData.fullName}
+                    onChange={e => setFormData({ ...formData, fullName: e.target.value })}
+                    required
+                    placeholder="Your full name"
+                  />
+                </div>
+                {formData.accountType === 'supervisor' && (
+                  <div>
+                    <label className="block text-base font-semibold text-[#1a365d] mb-1">Organization</label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 bg-slate-50 text-lg"
+                      value={formData.organization}
+                      onChange={e => setFormData({ ...formData, organization: e.target.value })}
+                      required
+                      placeholder="Your organization"
+                    />
                   </div>
-                  <p className="text-xs text-blue-700 mb-3">Set your program start and expected end date for personalized progress tracking. (Optional)</p>
-                  <div className="flex flex-col gap-3">
-                    <div>
-                      <label className="block text-xs font-medium text-blue-900 mb-1">Start Date</label>
+                )}
+                {formData.accountType === 'eit' && (
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <label className="block text-base font-semibold text-[#1a365d] mb-1">Start Date (optional)</label>
                       <input
                         type="date"
-                        className="w-full border border-blue-200 rounded px-3 py-2 text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 bg-slate-50 text-lg"
                         value={formData.startDate}
                         onChange={e => setFormData({ ...formData, startDate: e.target.value })}
                       />
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium text-blue-900 mb-1">Expected End Date</label>
+                    <div className="flex-1">
+                      <label className="block text-base font-semibold text-[#1a365d] mb-1">Target Date (optional)</label>
                       <input
                         type="date"
-                        className="w-full border border-blue-200 rounded px-3 py-2 text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 bg-slate-50 text-lg"
                         value={formData.targetDate}
                         onChange={e => setFormData({ ...formData, targetDate: e.target.value })}
                       />
                     </div>
                   </div>
-                </div>
-              </>
-            )}
-          </div>
-
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-[#1a365d] hover:bg-[#2c5282] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1a365d] transition-all duration-300 transform hover:scale-105 disabled:opacity-75 disabled:cursor-not-allowed"
+                )}
+              </div>
+              <div className="flex justify-between mt-6">
+                <button type="button" onClick={() => setStep(1)} className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-6 rounded-xl shadow-sm transition-all duration-150 text-lg">Back</button>
+                <button type="submit" disabled={loading} className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-6 rounded-xl shadow-md transition-all duration-150 text-lg">{loading ? 'Creating...' : 'Create Account'}</button>
+              </div>
+            </motion.form>
+          )}
+        </AnimatePresence>
+        <div className="text-center mt-6">
+          <p className="text-sm text-[#4a5568]">
+            Already have an account?{' '}
+            <Link to="/login" className="font-medium text-[#1a365d] hover:text-[#2c5282] transition-colors">
+              Sign in
+            </Link>
+          </p>
+        </div>
+        <AnimatePresence>
+          {showProModal && createdUser && (
+            <motion.div
+              key="pro-modal"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.25 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
             >
-              {loading ? 'Creating account...' : 'Create account'}
-            </button>
-          </div>
-
-          <div className="text-center">
-            <p className="text-sm text-[#4a5568]">
-              Already have an account?{' '}
-              <Link to="/login" className="font-medium text-[#1a365d] hover:text-[#2c5282] transition-colors">
-                Sign in
-              </Link>
-            </p>
-          </div>
-        </form>
+              <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative flex flex-col items-center">
+                <button
+                  className="absolute top-2 right-2 text-slate-400 hover:text-slate-600 text-2xl"
+                  onClick={() => { setShowProModal(false); navigate('/login', { state: { message: 'Please check your email to confirm your account. You can now sign in.' } }) }}
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+                <h2 className="text-2xl font-bold text-teal-700 mb-2 text-center">Upgrade to Pro?</h2>
+                <p className="text-slate-600 mb-6 text-center">Would you like to upgrade your new account to Pro now? Choose a plan below to unlock unlimited features.</p>
+                <div className="flex flex-col gap-4 w-full">
+                  <button
+                    className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-xl shadow-md transition-all duration-150 text-lg"
+                    onClick={() => handleStripeCheckout('pro_monthly', createdUser.id, createdUser.email)}
+                  >
+                    Upgrade to Pro Monthly ($19.99/mo)
+                  </button>
+                  <button
+                    className="w-full bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 rounded-xl shadow-md transition-all duration-150 text-lg"
+                    onClick={() => handleStripeCheckout('pro_yearly', createdUser.id, createdUser.email)}
+                  >
+                    Upgrade to Pro Yearly ($17.49/mo billed yearly)
+                  </button>
+                  <button
+                    className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl shadow-sm transition-all duration-150 text-lg mt-2"
+                    onClick={() => { setShowProModal(false); navigate('/login', { state: { message: 'Please check your email to confirm your account. You can now sign in.' } }) }}
+                  >
+                    Maybe Later
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </div>
   )

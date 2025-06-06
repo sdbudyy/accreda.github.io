@@ -53,19 +53,19 @@ const WaitlistForm: React.FC = () => {
   }
 
   return (
-    <div className="max-w-md mx-auto bg-white border-2 border-teal-400 shadow-2xl rounded-3xl p-10 animate-fade-in">
+    <div className="max-w-lg mx-auto bg-white border border-teal-100 shadow-lg rounded-3xl p-10 animate-fade-in">
       <div className="flex flex-col items-center mb-8">
-        <div className="bg-teal-100 rounded-full p-4 mb-3"><UserPlus className="text-teal-600 w-8 h-8" /></div>
-        <h3 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Waitlist Signup</h3>
+        <div className="bg-teal-50 rounded-full p-4 mb-3"><UserPlus className="text-teal-600 w-8 h-8" /></div>
+        <h3 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Join the Waitlist</h3>
         <p className="text-slate-500 text-base">Be the first to know when Accreda launches in your province!</p>
       </div>
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-8">
         <div>
-          <label htmlFor="waitlist-email" className="block text-base font-medium text-slate-700 mb-1">Email</label>
+          <label htmlFor="waitlist-email" className="block text-base font-semibold text-slate-700 mb-2">Email</label>
           <input
             id="waitlist-email"
             type="email"
-            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 bg-slate-50 text-lg"
+            className="w-full px-5 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 bg-slate-50 text-lg shadow-sm"
             value={email}
             onChange={e => setEmail(e.target.value)}
             required
@@ -75,10 +75,10 @@ const WaitlistForm: React.FC = () => {
           <span className="text-xs text-slate-400 mt-1 block">We'll only use this to notify you about your province.</span>
         </div>
         <div>
-          <label htmlFor="waitlist-province" className="block text-base font-medium text-slate-700 mb-1">Province</label>
+          <label htmlFor="waitlist-province" className="block text-base font-semibold text-slate-700 mb-2">Province</label>
           <select
             id="waitlist-province"
-            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 bg-slate-50 text-lg"
+            className="w-full px-5 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 bg-slate-50 text-lg shadow-sm"
             value={province}
             onChange={e => setProvince(e.target.value)}
             required
@@ -90,18 +90,18 @@ const WaitlistForm: React.FC = () => {
           </select>
         </div>
         <div>
-          <label className="block text-base font-medium text-slate-700 mb-1">I am a:</label>
+          <label className="block text-base font-semibold text-slate-700 mb-2">I am a:</label>
           <div className="flex gap-4 mt-2 justify-center">
             <button
               type="button"
-              className={`px-6 py-2 rounded-full border text-base font-semibold transition-all duration-150 shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-400 ${userType === 'eit' ? 'bg-teal-500 text-white border-teal-500 scale-105' : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-teal-50'}`}
+              className={`px-6 py-2 rounded-full border text-base font-semibold transition-all duration-150 shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-400 ${userType === 'eit' ? 'bg-teal-500 text-white border-teal-500 scale-105' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-teal-50'}`}
               onClick={() => setUserType('eit')}
             >
               EIT
             </button>
             <button
               type="button"
-              className={`px-6 py-2 rounded-full border text-base font-semibold transition-all duration-150 shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-400 ${userType === 'supervisor' ? 'bg-teal-500 text-white border-teal-500 scale-105' : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-teal-50'}`}
+              className={`px-6 py-2 rounded-full border text-base font-semibold transition-all duration-150 shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-400 ${userType === 'supervisor' ? 'bg-teal-500 text-white border-teal-500 scale-105' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-teal-50'}`}
               onClick={() => setUserType('supervisor')}
             >
               Supervisor/Enterprise
@@ -111,7 +111,7 @@ const WaitlistForm: React.FC = () => {
         {error && <div className="bg-red-50 text-red-700 rounded-md px-3 py-2 text-base text-center font-medium border border-red-200">{error}</div>}
         <button
           type="submit"
-          className="w-full bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600 text-white font-extrabold py-3 rounded-xl shadow-lg transition-all duration-150 text-xl tracking-wide focus:outline-none focus:ring-2 focus:ring-teal-400"
+          className="w-full bg-teal-600 hover:bg-teal-700 text-white font-extrabold py-3 rounded-xl shadow-md transition-all duration-150 text-xl tracking-wide focus:outline-none focus:ring-2 focus:ring-teal-400 mt-2"
         >
           Join Waitlist
         </button>

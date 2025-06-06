@@ -88,7 +88,7 @@
 .highlight-item {
   animation: highlight-pulse 2s ease-out;
   border-color: rgb(20, 184, 166) !important;
-  background-color: rgb(240, 253, 250) !important;
+  /* background-color: rgb(240, 253, 250) !important; */
   transition: all 0.3s ease-in-out;
 }
 
@@ -104,13 +104,13 @@ html {
 /* Add highlight animation */
 @keyframes highlight {
   0% {
-    background-color: transparent;
+    /* background-color: transparent; */
   }
   50% {
-    background-color: rgba(20, 184, 166, 0.1);
+    /* background-color: rgba(20, 184, 166, 0.1); */
   }
   100% {
-    background-color: transparent;
+    /* background-color: transparent; */
   }
 }
 

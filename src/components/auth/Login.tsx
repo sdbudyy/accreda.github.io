@@ -48,7 +48,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1a365d] to-[#0f2942] py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f6fbff] to-[#e3f0fa] py-12 px-4 sm:px-6 lg:px-8">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -59,7 +59,7 @@ export default function Login() {
           <img
             src={AccredaLogo}
             alt="Accreda Logo"
-            className="h-24 w-auto mb-6 cursor-pointer"
+            className="h-20 w-auto mb-4 cursor-pointer"
             onClick={() => navigate('/')}
           />
           <h2 className="text-2xl font-bold text-[#1a365d]">
