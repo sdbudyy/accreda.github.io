@@ -467,12 +467,12 @@ function MarqueeDemo() {
   );
 }
 
-function GlobeDemo() {
+function GlobeDemo({ label = "Globe" }: { label?: string }) {
   return (
     <div className="relative flex size-full max-w-lg items-center justify-center overflow-hidden rounded-lg border bg-background px-8 py-4 h-[20rem]">
       <Globe className="top-28" />
       <span className="pointer-events-none absolute inset-0 flex items-center justify-center z-10 whitespace-pre-wrap bg-gradient-to-b from-black to-gray-300/80 bg-clip-text text-center text-4xl font-semibold leading-none text-transparent dark:from-white dark:to-slate-900/10">
-        Globe
+        {label}
       </span>
       <div className="pointer-events-none absolute inset-0 h-full bg-[radial-gradient(circle_at_50%_200%,rgba(0,0,0,0.2),rgba(255,255,255,0))]" />
     </div>
@@ -527,17 +527,17 @@ const Landing: React.FC = () => {
       Icon: FileTextIcon,
       name: "Save your files",
       description: "We automatically save your files as you type.",
-      href: "/",
-      cta: "Learn more",
-      background: <GlobeDemo />,
+      href: "",
+      cta: "",
+      background: <GlobeDemo label="Access from anywhere" />,
       className: "",
     },
     {
       Icon: GlobeIcon,
       name: "Integrations",
       description: "Connects between multiple apps.",
-      href: "/",
-      cta: "Learn more",
+      href: "",
+      cta: "",
       background: <AnimatedBeamMultipleOutputDemo />,
       className: "",
     },
@@ -546,8 +546,8 @@ const Landing: React.FC = () => {
       name: "Notifications",
       description:
         "Get notified when something happens.",
-      href: "/",
-      cta: "Learn more",
+      href: "",
+      cta: "",
       background: <AnimatedListDemo />,
       className: "",
     },
@@ -555,13 +555,21 @@ const Landing: React.FC = () => {
 
   function BentoDemo() {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-16">
-        <BentoGrid className="grid grid-cols-3 grid-rows-1 auto-rows-[20rem] gap-6">
-          {bentoFeatures.map((feature) => (
-            <BentoCard key={feature.name} {...feature} />
-          ))}
-        </BentoGrid>
-      </div>
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16 my-8 md:my-16">
+        {/* Background accent */}
+        <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-slate-50 via-white to-slate-100 opacity-80 pointer-events-none rounded-3xl z-0" style={{filter: 'blur(2px)'}} />
+        <div className="relative z-10">
+          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2 text-center">Why Accreda?</h2>
+          <p className="text-lg text-slate-600 mb-8 text-center">Everything you need to accelerate your engineering journey, all in one place.</p>
+          <BentoGrid className="grid grid-cols-1 md:grid-cols-3 grid-rows-1 auto-rows-[20rem] gap-6">
+            {bentoFeatures.map((feature, i) => (
+              <div key={feature.name} className="animate-fade-in-up" style={{animationDelay: `${i * 0.1 + 0.2}s`, animationFillMode: 'both'}}>
+                <BentoCard {...feature} />
+              </div>
+            ))}
+          </BentoGrid>
+        </div>
+      </section>
     );
   }
 
@@ -648,7 +656,7 @@ const Landing: React.FC = () => {
               Save time &<br />
               <WordRotate
                 className="text-6xl md:text-7xl font-bold text-teal-600 inline-block"
-                words={["Engineering Excellence", "Professional Growth", "Career Success"]}
+                words={["Money", "Frustration", "Confusion", "Guesswork"]}
               />
             </h1>
             <p className="text-2xl text-slate-600 mb-8 max-w-2xl mx-auto">
@@ -972,19 +980,18 @@ const Landing: React.FC = () => {
               </p>
             </div>
             <div>
-              <h3 className="text-lg font-semibold mb-4">Product</h3>
+              <h3 className="text-lg font-semibold mb-4 text-white">Product</h3>
               <ul className="space-y-2">
-                <li><Link to="/features" className="text-slate-400 hover:text-white transition-colors">Features</Link></li>
-                <li><Link to="/pricing" className="text-slate-400 hover:text-white transition-colors">Pricing</Link></li>
+                <li><a href="#" onClick={e => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-slate-400 hover:text-white transition-colors">Features</a></li>
+                <li><a href="#" onClick={e => { e.preventDefault(); const pricingSection = document.getElementById('pricing'); if (pricingSection) { pricingSection.scrollIntoView({ behavior: 'smooth' }); }}} className="text-slate-400 hover:text-white transition-colors">Pricing</a></li>
                 <li><Link to="/enterprise" className="text-slate-400 hover:text-white transition-colors">Enterprise</Link></li>
               </ul>
             </div>
             <div>
-              <h3 className="text-lg font-semibold mb-4">Company</h3>
+              <h3 className="text-lg font-semibold mb-4 text-white">Company</h3>
               <ul className="space-y-2">
                 <li><Link to="/about" className="text-slate-400 hover:text-white transition-colors">About</Link></li>
-                <li><Link to="/contact" className="text-slate-400 hover:text-white transition-colors">Contact</Link></li>
-                <li><Link to="/careers" className="text-slate-400 hover:text-white transition-colors">Careers</Link></li>
+                <li><a href="mailto:accreda.info@gmail.com" className="text-slate-400 hover:text-white transition-colors">accreda.info@gmail.com</a></li>
               </ul>
             </div>
           </div>
