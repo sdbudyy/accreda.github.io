@@ -19,13 +19,10 @@ export default function ReferenceApprovalPage() {
     position: "",
     relation: "",
   });
-  const [approved, setApproved] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [cardVisible, setCardVisible] = useState(false);
 
   useEffect(() => {
-    setTimeout(() => setCardVisible(true), 200); // Fade-in animation
     const fetchReferenceData = async () => {
       try {
         const { data: tokenData, error: tokenError } = await supabase
@@ -60,7 +57,6 @@ export default function ReferenceApprovalPage() {
     setSubmitting(true);
     setError(null);
     try {
-      // Update reference with provided information
       const { error: updateError } = await supabase
         .from("job_references")
         .update({
@@ -68,17 +64,12 @@ export default function ReferenceApprovalPage() {
           email: formData.email,
           position: formData.position,
           relation: formData.relation,
-          validation_status: approved ? "validated" : "rejected",
+          validation_status: "validated",
           validated_at: new Date().toISOString(),
         })
         .eq("id", referenceData.referenceId);
       if (updateError) throw updateError;
-      // Delete the used token
-      const { error: deleteError } = await supabase
-        .from("reference_tokens")
-        .delete()
-        .eq("token", token);
-      if (deleteError) throw deleteError;
+      await supabase.from("reference_tokens").delete().eq("token", token);
       setSubmitted(true);
     } catch (err: any) {
       setError(err.message || "An error occurred");
@@ -88,64 +79,54 @@ export default function ReferenceApprovalPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-[#f8fafc] font-sans">
+    <div className="min-h-screen w-full bg-gradient-to-br from-[#e6f0f7] via-[#f8fafc] to-[#e6f0f7] flex flex-col">
       {/* Hero Section */}
-      <section className="w-full bg-gradient-to-br from-[#1a365d] via-[#2563eb] to-[#38bdf8] py-12 px-4 flex flex-col items-center justify-center relative overflow-hidden shadow-lg">
-        <div className="absolute inset-0 opacity-10 pointer-events-none select-none" style={{background: 'url(/grid.svg) repeat'}}></div>
-        <div className="relative z-10 flex flex-col items-center gap-4">
-          <Image src="/accreda-logo.png" alt="Accreda Logo" width={56} height={56} className="rounded-xl shadow-md" />
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight text-center drop-shadow-lg">Reference Approval</h1>
-          <p className="text-lg sm:text-xl text-blue-100 text-center max-w-2xl mt-2">Help us verify the work experience of an EIT. Your response is confidential and only used for validation.</p>
-        </div>
+      <section className="w-full bg-gradient-to-br from-[#1a365d] via-[#2563eb] to-[#38bdf8] py-12 px-4 flex flex-col items-center justify-center">
+        <Image src="/accreda-logo.png" alt="Accreda Logo" width={60} height={60} className="mb-4 rounded-xl shadow-lg" />
+        <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight text-center mb-2 drop-shadow-lg">Reference Approval</h1>
+        <p className="text-lg sm:text-xl text-blue-100 text-center max-w-2xl mb-2">Help us verify the work experience of an EIT. Your response is confidential and only used for validation.</p>
       </section>
 
-      {/* Main Content Sectors */}
       <main className="flex-1 w-full flex flex-col items-center justify-center px-2 py-10 gap-10">
         {/* Reference Details Card */}
-        <section className={`w-full max-w-2xl transition-all duration-700 ${cardVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'} ease-out`}>
-          <div className="bg-gradient-to-br from-[#e6f0f7] via-white to-[#e6f0f7] rounded-2xl shadow-xl border border-slate-100 p-8 md:p-10 flex flex-col gap-4">
-            <div className="flex items-center gap-3 mb-2">
-              <svg className="w-7 h-7 text-[#1a365d]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-              <h2 className="text-2xl font-bold text-[#1a365d] tracking-tight">Reference Details</h2>
-            </div>
-            <div className="text-slate-700 text-base grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
-              <div><span className="font-medium">EIT Name:</span> {referenceData?.eit_profiles.full_name}</div>
-              <div><span className="font-medium">EIT Email:</span> {referenceData?.eit_profiles.email}</div>
-              <div><span className="font-medium">Job Title:</span> {referenceData?.title}</div>
-              <div><span className="font-medium">Company:</span> {referenceData?.company}</div>
-            </div>
-            {referenceData?.description && (
-              <div className="mt-3 p-4 bg-[#f0f6ff] border border-blue-100 rounded-xl">
-                <div className="font-medium text-[#2563eb] mb-1">EIT's Reference Description:</div>
-                <div className="text-slate-700 whitespace-pre-line">{referenceData.description}</div>
+        <div className="w-full max-w-2xl">
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8 md:p-10 mb-8">
+            <h2 className="text-2xl font-bold text-[#1a365d] mb-4 flex items-center gap-2">
+              <span className="inline-block w-6 h-6 bg-[#e6f0f7] rounded-full flex items-center justify-center">
+                <span className="text-[#1a365d] font-bold">i</span>
+              </span>
+              Reference Details
+            </h2>
+            {loading ? (
+              <div className="text-[#1a365d] text-lg py-8 text-center">Loading...</div>
+            ) : error ? (
+              <div className="text-center text-red-600 font-semibold py-4 text-lg bg-red-50 border border-red-200 rounded-xl">{error}</div>
+            ) : (
+              <div className="text-slate-700 text-base grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+                <div><span className="font-medium">EIT Name:</span> {referenceData?.eit_profiles.full_name}</div>
+                <div><span className="font-medium">EIT Email:</span> {referenceData?.eit_profiles.email}</div>
+                <div><span className="font-medium">Job Title:</span> {referenceData?.title}</div>
+                <div><span className="font-medium">Company:</span> {referenceData?.company}</div>
+                {referenceData?.description && (
+                  <div className="col-span-2 mt-4 p-4 bg-[#f0f6ff] border border-blue-100 rounded-xl">
+                    <div className="font-medium text-[#2563eb] mb-1">EIT's Reference Description:</div>
+                    <div className="text-slate-700 whitespace-pre-line">{referenceData.description}</div>
+                  </div>
+                )}
               </div>
             )}
           </div>
-        </section>
+        </div>
 
         {/* Form Card */}
-        <section className={`w-full max-w-2xl transition-all duration-700 ${cardVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'} ease-out`}>
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-8 md:p-10 animate-fade-in flex flex-col gap-6">
-            {loading ? (
-              <div className="flex flex-col items-center py-8">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1a365d]"></div>
-                <span className="mt-4 text-[#1a365d] text-lg">Loading reference request...</span>
-              </div>
-            ) : error ? (
-              <div className="text-center text-red-600 font-semibold py-4 text-lg animate-fade-in bg-red-50 border border-red-200 rounded-xl">{error}</div>
-            ) : submitted ? (
-              <div className="text-center animate-fade-in flex flex-col items-center gap-2">
-                <svg className="w-16 h-16 text-green-500 mb-2" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                <h1 className="text-2xl font-semibold text-[#1a365d] mb-1">Thank You!</h1>
-                <p className="text-slate-600">Your reference has been submitted successfully.</p>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-6 animate-fade-in">
+        {!loading && !error && !submitted && (
+          <div className="w-full max-w-2xl">
+            <div className="bg-gradient-to-br from-[#e6f0f7] via-white to-[#e6f0f7] rounded-2xl shadow-2xl border border-slate-100 p-8 md:p-10">
+              <h3 className="text-xl font-semibold text-[#1a365d] mb-6">Your Information</h3>
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label htmlFor="fullName" className="block text-sm font-medium text-[#1a365d] mb-1">
-                      Your Full Name
-                    </label>
+                    <label htmlFor="fullName" className="block text-sm font-medium text-[#1a365d] mb-1">Your Full Name</label>
                     <input
                       type="text"
                       id="fullName"
@@ -157,9 +138,7 @@ export default function ReferenceApprovalPage() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-[#1a365d] mb-1">
-                      Your Email
-                    </label>
+                    <label htmlFor="email" className="block text-sm font-medium text-[#1a365d] mb-1">Your Email</label>
                     <input
                       type="email"
                       id="email"
@@ -171,9 +150,7 @@ export default function ReferenceApprovalPage() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="position" className="block text-sm font-medium text-[#1a365d] mb-1">
-                      Your Position
-                    </label>
+                    <label htmlFor="position" className="block text-sm font-medium text-[#1a365d] mb-1">Your Position</label>
                     <input
                       type="text"
                       id="position"
@@ -185,9 +162,7 @@ export default function ReferenceApprovalPage() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="relation" className="block text-sm font-medium text-[#1a365d] mb-1">
-                      Your Relation to the EIT
-                    </label>
+                    <label htmlFor="relation" className="block text-sm font-medium text-[#1a365d] mb-1">Your Relation to the EIT</label>
                     <input
                       type="text"
                       id="relation"
@@ -210,21 +185,23 @@ export default function ReferenceApprovalPage() {
                     ) : 'Approve Reference'}
                   </button>
                 </div>
+                {error && <div className="text-center text-red-600 font-semibold py-2 text-sm animate-fade-in bg-red-50 border border-red-200 rounded-xl mt-2">{error}</div>}
               </form>
-            )}
+            </div>
           </div>
-        </section>
+        )}
+        {/* Success Message */}
+        {submitted && (
+          <div className="w-full max-w-2xl">
+            <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-8 md:p-10 text-center flex flex-col items-center">
+              <div className="text-green-500 text-6xl mb-4">✓</div>
+              <h1 className="text-2xl font-semibold text-[#1a365d] mb-2">Thank You!</h1>
+              <p className="text-slate-600">Your reference has been submitted successfully.</p>
+            </div>
+          </div>
+        )}
       </main>
       <footer className="w-full text-center text-xs text-slate-400 py-6 mt-8 border-t border-slate-100 bg-[#f8fafc]">&copy; {new Date().getFullYear()} Accreda. All rights reserved.</footer>
-      <style jsx global>{`
-        @keyframes fade-in {
-          from { opacity: 0; transform: translateY(24px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.7s cubic-bezier(0.4,0,0.2,1) both;
-        }
-      `}</style>
     </div>
   );
 } 
