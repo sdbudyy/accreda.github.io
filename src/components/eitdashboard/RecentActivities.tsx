@@ -140,13 +140,17 @@ const RecentActivities: React.FC = () => {
         ...(recentSAOs || []).map(sao => ({
           id: sao.id,
           type: 'essay' as const,
-          title: `Updated "${sao.title}" SAO`,
+          title: sao.created_at === sao.updated_at 
+            ? `Created "${sao.title}" SAO`
+            : `Updated "${sao.title}" SAO`,
           timestamp: sao.updated_at
         })),
         ...(recentDocs || []).map(doc => ({
           id: doc.id,
           type: 'document' as const,
-          title: `Updated "${doc.title}" document`,
+          title: doc.created_at === doc.updated_at
+            ? `Created "${doc.title}" document`
+            : `Updated "${doc.title}" document`,
           timestamp: doc.updated_at
         })),
         ...(recentSkills || []).map(skill => ({
@@ -158,19 +162,25 @@ const RecentActivities: React.FC = () => {
         ...(recentJobs || []).map(job => ({
           id: job.id,
           type: 'job' as const,
-          title: `Updated "${job.title}" at ${job.company}`,
+          title: job.created_at === job.updated_at
+            ? `Added "${job.title}" at ${job.company}`
+            : `Updated "${job.title}" at ${job.company}`,
           timestamp: job.updated_at
         })),
         ...(recentRefs || []).map(ref => ({
           id: ref.id,
           type: 'reference' as const,
-          title: `Added reference from ${ref.full_name}`,
+          title: ref.created_at === ref.updated_at
+            ? `Added reference from ${ref.full_name}`
+            : `Updated reference from ${ref.full_name}`,
           timestamp: ref.updated_at
         })),
         ...(recentValidators || []).map(validator => ({
           id: validator.id,
           type: 'validator' as const,
-          title: `Added validator ${validator.full_name}`,
+          title: validator.created_at === validator.updated_at
+            ? `Added validator ${validator.full_name}`
+            : `Updated validator ${validator.full_name}`,
           timestamp: validator.updated_at
         }))
       ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())

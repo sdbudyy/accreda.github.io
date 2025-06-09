@@ -73,7 +73,7 @@ interface ReferencePopupProps {
   job: Job;
   referenceNumber: number;
   existingReference?: Reference;
-  onSave: () => void;
+  onSave: (newReferenceId?: string) => void;
 }
 
 const ValidatorPopup: React.FC<ValidatorPopupProps> = ({ 
@@ -309,15 +309,13 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
     }
   }, [isOpen, existingReference]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Save reference (returns the reference object)
+  const saveReference = async (statusOverride?: 'unsent' | 'pending') => {
     setLoading(true);
     setError(null);
-
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No authenticated user');
-
       const referenceData = {
         job_id: job.id,
         full_name: formData.fullName,
@@ -325,44 +323,56 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
         description: formData.referenceText,
         reference_number: referenceNumber,
         eit_id: user.id,
-        validation_status: existingReference?.validation_status || 'unsent'
+        validation_status: statusOverride || existingReference?.validation_status || 'unsent'
       };
-
+      let refId = existingReference?.id;
+      let refObj = null;
       if (existingReference) {
-        // Update existing reference
-        const { error: updateError } = await supabase
+        const { data: updateData, error: updateError } = await supabase
           .from('job_references')
           .update(referenceData)
-          .eq('id', existingReference.id);
-
+          .eq('id', existingReference.id)
+          .select();
         if (updateError) throw updateError;
+        refObj = updateData && updateData[0];
+        refId = refObj?.id;
       } else {
-        // Create new reference
-        const { error: insertError } = await supabase
+        const { data: insertData, error: insertError } = await supabase
           .from('job_references')
-          .insert([referenceData]);
-
+          .insert([referenceData])
+          .select();
         if (insertError) throw insertError;
+        refObj = insertData && insertData[0];
+        refId = refObj?.id;
       }
-
-      onSave();
-      onClose();
+      return refObj;
     } catch (err) {
-      console.error('ReferencePopup error:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
-      toast.error(err instanceof Error ? err.message : 'Error submitting reference');
+      toast.error(err instanceof Error ? err.message : 'Error saving reference');
+      throw err;
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSendReference = async () => {
-    if (!existingReference) return;
-    
+  // Save as unsent
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const refObj = await saveReference('unsent');
+      onSave(refObj?.id);
+      onClose();
+    } catch {}
+  };
+
+  // Save and send (set to pending, call send endpoint)
+  const handleSaveAndSend = async () => {
     setSending(true);
     setError(null);
-
     try {
+      // Save as pending
+      const refObj = await saveReference('pending');
+      if (!refObj) throw new Error('Reference not found after save');
       // Call the Edge Function to send the magic link
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-reference`, {
         method: 'POST',
@@ -371,50 +381,22 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
         },
         body: JSON.stringify({
-          reference_id: existingReference.id,
-          email: existingReference.email
+          reference_id: refObj.id,
+          email: refObj.email
         })
       });
-
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to send reference');
       }
-
-      onSave();
+      onSave(refObj.id);
       onClose();
       toast.success('Reference request sent successfully');
     } catch (err) {
-      console.error('Error sending reference:', err);
       setError(err instanceof Error ? err.message : 'An error occurred while sending the reference');
       toast.error(err instanceof Error ? err.message : 'Error sending reference');
     } finally {
       setSending(false);
-    }
-  };
-
-  const handleCancelReference = async () => {
-    if (!existingReference) return;
-    
-    setLoading(true);
-    setError(null);
-
-    try {
-      const { error: updateError } = await supabase
-        .from('job_references')
-        .update({ validation_status: 'unsent' })
-        .eq('id', existingReference.id);
-
-      if (updateError) throw updateError;
-
-      onSave();
-      onClose();
-    } catch (err) {
-      console.error('Error canceling reference:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred while canceling the reference');
-      toast.error(err instanceof Error ? err.message : 'Error canceling reference');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -441,7 +423,7 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSave} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
               Full Name
@@ -484,26 +466,6 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
           </div>
 
           <div className="flex justify-end gap-2 mt-6">
-            {existingReference && existingReference.validation_status === 'pending' && (
-              <button
-                type="button"
-                onClick={handleCancelReference}
-                className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg"
-                disabled={loading || sending}
-              >
-                Cancel Reference
-              </button>
-            )}
-            {existingReference && existingReference.validation_status === 'unsent' && (
-              <button
-                type="button"
-                onClick={handleSendReference}
-                className="px-4 py-2 text-sm font-medium text-teal-600 hover:bg-teal-50 rounded-lg"
-                disabled={loading || sending}
-              >
-                {sending ? 'Sending...' : 'Send Reference'}
-              </button>
-            )}
             <button
               type="button"
               onClick={onClose}
@@ -513,13 +475,23 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
               Close
             </button>
             {existingReference?.validation_status !== 'validated' && (
-              <button
-                type="submit"
-                className="px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg disabled:opacity-50"
-                disabled={loading || sending}
-              >
-                {loading ? 'Saving...' : existingReference ? 'Update Reference' : 'Add Reference'}
-              </button>
+              <>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium text-white bg-slate-500 hover:bg-slate-600 rounded-lg disabled:opacity-50"
+                  disabled={loading || sending}
+                >
+                  {loading ? 'Saving...' : 'Save'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveAndSend}
+                  className="px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg disabled:opacity-50"
+                  disabled={loading || sending}
+                >
+                  {sending ? 'Sending...' : 'Send'}
+                </button>
+              </>
             )}
           </div>
         </form>
@@ -777,8 +749,31 @@ const References: React.FC = () => {
     loadValidators();
   };
 
-  const handleReferenceSave = () => {
-    loadReferences();
+  const handleReferenceSave = async (newReferenceId?: string) => {
+    await loadReferences();
+    if (newReferenceId) {
+      // Find the job and reference number for the new reference
+      let foundJob: Job | null = null;
+      let foundReference: Reference | null = null;
+      let foundRefNum: number | null = null;
+      for (const job of jobs) {
+        const jobRefs = references[job.id] || [];
+        for (const ref of jobRefs) {
+          if (ref.id === newReferenceId) {
+            foundJob = job;
+            foundReference = ref;
+            foundRefNum = ref.reference_number;
+            break;
+          }
+        }
+        if (foundReference) break;
+      }
+      if (foundJob && foundReference && foundRefNum) {
+        setSelectedJob(foundJob);
+        setSelectedReference(foundReference);
+        setSelectedReferenceNumber(foundRefNum);
+      }
+    }
   };
 
   const handleValidateReference = async (reference: Reference, status: 'validated' | 'rejected') => {
@@ -800,7 +795,7 @@ const References: React.FC = () => {
 
       setSelectedReferenceForValidation(null);
       setValidationNotes('');
-      loadReferences();
+      handleReferenceSave();
       toast.success(`Reference ${status === 'validated' ? 'validated' : 'rejected'} successfully`);
     } catch (error) {
       console.error('Error validating reference:', error);
@@ -817,7 +812,7 @@ const References: React.FC = () => {
 
       if (error) throw error;
 
-      loadReferences();
+      handleReferenceSave();
       toast.success('Reference unsent successfully');
     } catch (error) {
       console.error('Error unsending reference:', error);

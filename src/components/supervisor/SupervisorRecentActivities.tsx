@@ -27,7 +27,7 @@ const SupervisorRecentActivities: React.FC = () => {
       // Fetch recent skill validations (actions taken by this supervisor)
       const { data: skillValidations, error: skillValidationsError } = await supabase
         .from('skill_validations')
-        .select(`id, validated_at, feedback, eit_id, skill_id, score, eit_profiles (full_name), skills (name)`)
+        .select(`id, validated_at, feedback, eit_id, skill_id, score, skills (name)`)
         .eq('validator_id', supervisorId)
         .order('validated_at', { ascending: false })
         .limit(limit);
@@ -36,7 +36,7 @@ const SupervisorRecentActivities: React.FC = () => {
       // Fetch recent SAO feedback (actions taken by this supervisor)
       const { data: saoFeedback, error: saoFeedbackError } = await supabase
         .from('sao_feedback')
-        .select(`id, sao_id, feedback, status, updated_at, sao:saos (title), eit_profiles (full_name)`)
+        .select(`id, sao_id, feedback, status, updated_at, sao:saos (title)`)
         .eq('supervisor_id', supervisorId)
         .order('updated_at', { ascending: false })
         .limit(limit);
@@ -45,7 +45,7 @@ const SupervisorRecentActivities: React.FC = () => {
       // Fetch recent validator actions (where supervisor is assigned as validator and status is not pending)
       const { data: validatorActions, error: validatorActionsError } = await supabase
         .from('validators')
-        .select('id, updated_at, status, skill_id, eit_id, description, score, skills (name), eit_profiles (full_name)')
+        .select('id, updated_at, status, skill_id, eit_id, description, score, skills (name)')
         .eq('email', supervisorEmail)
         .neq('status', 'pending')
         .order('updated_at', { ascending: false })
@@ -62,39 +62,36 @@ const SupervisorRecentActivities: React.FC = () => {
       const allActivities: Activity[] = [
         ...(skillValidations || []).map(v => {
           const skillName = getFirstString(v.skills, 'name', v.skill_id);
-          const eitName = getFirstString(v.eit_profiles, 'full_name', v.eit_id);
           return {
             id: v.id,
             type: 'validation' as const,
-            title: `Validated "${skillName}" for ${eitName}`,
+            title: `Validated "${skillName}"`,
             timestamp: v.validated_at ? String(v.validated_at) : '',
-            eitName: eitName,
+            eitName: v.eit_id,
             eitId: v.eit_id,
             status: v.score ? `Score: ${v.score}` : undefined
           };
         }),
         ...(saoFeedback || []).map(fb => {
           const saoTitle = getFirstString(fb.sao, 'title', fb.sao_id);
-          const eitName = getFirstString(fb.eit_profiles, 'full_name', '');
           return {
             id: fb.id,
             type: 'feedback' as const,
             title: `Provided SAO feedback for "${saoTitle}"`,
             timestamp: fb.updated_at ? String(fb.updated_at) : '',
-            eitName: eitName,
+            eitName: undefined,
             eitId: undefined,
             status: fb.status
           };
         }),
         ...(validatorActions || []).map(v => {
           const skillName = getFirstString(v.skills, 'name', v.skill_id);
-          const eitName = getFirstString(v.eit_profiles, 'full_name', v.eit_id);
           return {
             id: v.id,
             type: 'validation' as const,
-            title: `Scored "${skillName}" for ${eitName}`,
+            title: `Scored "${skillName}"`,
             timestamp: v.updated_at ? String(v.updated_at) : '',
-            eitName: eitName,
+            eitName: v.eit_id,
             eitId: v.eit_id,
             status: v.score ? `Score: ${v.score}` : v.status
           };
@@ -124,13 +121,46 @@ const SupervisorRecentActivities: React.FC = () => {
         }
         // Initial fetch
         await fetchActivities(user.id, user.email || '');
-        // (Optional) Set up real-time subscriptions for these tables if needed
+
+        // Set up real-time subscriptions
+        const skillValidationsSub = supabase
+          .channel('skill-validations-changes')
+          .on('postgres_changes', 
+            { event: '*', schema: 'public', table: 'skill_validations', filter: `validator_id=eq.${user.id}` },
+            (payload) => { if (mounted) fetchActivities(user.id, user.email || ''); }
+          )
+          .subscribe();
+
+        const saoFeedbackSub = supabase
+          .channel('sao-feedback-changes')
+          .on('postgres_changes', 
+            { event: '*', schema: 'public', table: 'sao_feedback', filter: `supervisor_id=eq.${user.id}` },
+            (payload) => { if (mounted) fetchActivities(user.id, user.email || ''); }
+          )
+          .subscribe();
+
+        const validatorsSub = supabase
+          .channel('validators-changes')
+          .on('postgres_changes', 
+            { event: '*', schema: 'public', table: 'validators', filter: `email=eq.${user.email}` },
+            (payload) => { if (mounted) fetchActivities(user.id, user.email || ''); }
+          )
+          .subscribe();
+
+        subscriptions = [skillValidationsSub, saoFeedbackSub, validatorsSub];
       } catch (error) {
         console.error('❌ Error setting up subscriptions:', error);
       }
     };
+
     setupSubscriptions();
-    return () => { mounted = false; };
+
+    return () => {
+      mounted = false;
+      subscriptions.forEach(sub => {
+        try { sub.unsubscribe(); } catch (e) {}
+      });
+    };
   }, []);
 
   const typeIcons = {
