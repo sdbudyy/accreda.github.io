@@ -6,6 +6,7 @@ import AccredaLogo from '../assets/accreda-logo.png';
 
 interface RoleAwareSidebarProps {
   onClose?: () => void;
+  onCollapseChange?: (collapsed: boolean) => void;
 }
 
 const SidebarSkeleton: React.FC = () => (
@@ -25,7 +26,7 @@ const SidebarSkeleton: React.FC = () => (
   </aside>
 );
 
-const RoleAwareSidebar: React.FC<RoleAwareSidebarProps> = ({ onClose }) => {
+const RoleAwareSidebar: React.FC<RoleAwareSidebarProps> = ({ onClose, onCollapseChange }) => {
   const [role, setRole] = useState<'eit' | 'supervisor' | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -56,7 +57,7 @@ const RoleAwareSidebar: React.FC<RoleAwareSidebarProps> = ({ onClose }) => {
 
   if (loading) return <SidebarSkeleton />;
   if (role === 'supervisor') return <SupervisorSidebar onClose={onClose} />;
-  return <Sidebar onClose={onClose} />;
+  return <Sidebar onClose={onClose} onCollapseChange={onCollapseChange} />;
 };
 
 export default RoleAwareSidebar; 

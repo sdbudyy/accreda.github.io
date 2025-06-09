@@ -12,12 +12,13 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ appLoaded }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
   return (
     <div className="min-h-screen bg-[#F5F7FA]">
       {/* Sidebar - hidden on mobile */}
       <div className="hidden md:block">
-        <RoleAwareSidebar />
+        <RoleAwareSidebar onCollapseChange={setSidebarCollapsed} />
       </div>
       
       {/* Mobile sidebar - only visible when toggled */}
@@ -34,7 +35,7 @@ const Layout: React.FC<LayoutProps> = ({ appLoaded }) => {
       )}
       
       {/* Main content */}
-      <div className="md:pl-64 flex flex-col min-h-screen">
+      <div className="flex flex-col min-h-screen transition-all duration-300 md:pl-[60px]">
         <Header onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 p-4 md:p-6 pt-20 md:pt-24 pb-20 md:pb-6">
           <Outlet context={{ appLoaded }} />

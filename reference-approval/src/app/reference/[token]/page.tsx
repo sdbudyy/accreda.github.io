@@ -30,9 +30,9 @@ export default function ReferenceApprovalPage() {
           .select(`*, job_references:reference_id ( id, description, jobs ( title, company, eit_profiles ( full_name, email ) ) )`)
           .eq("token", token)
           .single();
-        if (tokenError) throw tokenError;
+        if (tokenError || !tokenData) throw new Error("This reference link has expired or has already been completed.");
         if (new Date(tokenData.expires_at) < new Date()) {
-          throw new Error("This reference link has expired");
+          throw new Error("This reference link has expired. Please request a new one if needed.");
         }
         setReferenceData({
           ...tokenData.job_references.jobs,
@@ -97,7 +97,7 @@ export default function ReferenceApprovalPage() {
         </p>
       </section>
       <main className="flex-1 w-full flex flex-col items-center justify-center px-2 py-10 gap-10">
-        {/* Reference Details Card */}
+        {/* Reference Details Card or Error Card */}
         <div className="w-full max-w-2xl">
           <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8 md:p-10 mb-8">
             <h2 className="text-xl font-bold text-[#1a365d] mb-4 flex items-center gap-2">
@@ -109,7 +109,11 @@ export default function ReferenceApprovalPage() {
             {loading ? (
               <div className="text-[#1a365d] text-lg py-8 text-center">Loading...</div>
             ) : error ? (
-              <div className="text-center text-red-600 font-semibold py-4 text-lg bg-red-50 border border-red-200 rounded-xl">{error}</div>
+              <div className="w-full flex flex-col items-center justify-center">
+                <div className="w-full bg-red-50 border border-red-200 text-red-700 rounded-xl p-6 text-center font-semibold text-lg">
+                  {error}
+                </div>
+              </div>
             ) : (
               <div className="text-slate-700 text-base grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
                 <div><span className="font-medium">EIT Name:</span> {referenceData?.eit_profiles.full_name}</div>
