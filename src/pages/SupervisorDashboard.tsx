@@ -178,8 +178,8 @@ const SupervisorDashboard: React.FC = () => {
         const documentedExperiences = expRes.count || 0;
         const supervisorApprovals = apprRes.count || 0;
         const skillsProgress = completedSkills / 22;
-        const experiencesProgress = documentedExperiences / 24;
-        const approvalsProgress = supervisorApprovals / 24;
+        const experiencesProgress = documentedExperiences / 22;
+        const approvalsProgress = supervisorApprovals / 22;
         const overallProgress = Math.round(((skillsProgress + experiencesProgress + approvalsProgress) / 3) * 100);
         return [eitId, overallProgress];
       })

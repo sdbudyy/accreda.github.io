@@ -71,6 +71,11 @@ function App() {
     }
   }, [session, loadProgress, loadSkills, loadEssays])
 
+  useEffect(() => {
+    // Always initialize notifications on app load or after login
+    useNotificationsStore.getState().initialize();
+  }, []);
+
   return (
     <>
       {session && <RealtimeNotifications userId={session.user.id} />}

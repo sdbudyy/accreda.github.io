@@ -66,7 +66,7 @@ const EITDashboard: React.FC = () => {
           .from('experiences')
           .select('*')
           .eq('eit_id', user.id)
-          .order('created_at', { ascending: false })
+          .order('updated_at', { ascending: false })
           .limit(5);
 
         if (activitiesError) throw activitiesError;
@@ -147,7 +147,7 @@ const EITDashboard: React.FC = () => {
           </div>
           <div className="bg-white p-6 rounded-lg shadow">
             <h3 className="text-lg font-semibold mb-2">Experiences Documented</h3>
-            <p className="text-3xl font-bold text-teal-600">{documentedExperiences}/24</p>
+            <p className="text-3xl font-bold text-teal-600">{documentedExperiences}/22</p>
           </div>
         </div>
 

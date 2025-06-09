@@ -66,7 +66,7 @@ const EITDashboard: React.FC = () => {
         .from('experiences')
         .select('*')
         .eq('eit_id', user.id)
-        .order('created_at', { ascending: false })
+        .order('updated_at', { ascending: false })
         .limit(5);
 
       if (activitiesError) throw activitiesError;
@@ -127,11 +127,11 @@ const EITDashboard: React.FC = () => {
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300">
           <h3 className="text-lg font-semibold mb-2 text-[#2C3E50]">Experiences Documented</h3>
-          <p className="text-3xl font-bold text-[#3498DB]">{documentedExperiences}/24</p>
+          <p className="text-3xl font-bold text-[#3498DB]">{documentedExperiences}/22</p>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300">
           <h3 className="text-lg font-semibold mb-2 text-[#2C3E50]">Supervisor Approvals</h3>
-          <p className="text-3xl font-bold text-[#3498DB]">{supervisorApprovals}/24</p>
+          <p className="text-3xl font-bold text-[#3498DB]">{supervisorApprovals}/22</p>
         </div>
       </div>
 

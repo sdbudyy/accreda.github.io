@@ -77,7 +77,7 @@ const Support: React.FC = () => {
     {
       id: 'experiences',
       question: 'How many experiences do I need to document?',
-      answer: 'You need to document at least 24 experiences (SAOs) across different skills. Each experience should demonstrate your competency in specific skills. Make sure to provide detailed descriptions of situations, your actions, and the outcomes achieved.'
+      answer: 'You need to document at least 22 experiences (SAOs) across different skills. Each experience should demonstrate your competency in specific skills. Make sure to provide detailed descriptions of situations, your actions, and the outcomes achieved.'
     }
   ];
 

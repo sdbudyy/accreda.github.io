@@ -563,6 +563,7 @@ const References: React.FC = () => {
   const [isSkillsModalOpen, setIsSkillsModalOpen] = useState(false);
   const [isEditJobModalOpen, setIsEditJobModalOpen] = useState(false);
   const [editJob, setEditJob] = useState<Job | null>(null);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   const selectedSkills = skillCategories
     .flatMap(cat => cat.skills)
@@ -1638,12 +1639,80 @@ const References: React.FC = () => {
                 <label className="block text-sm font-medium mb-1">Description</label>
                 <textarea className="w-full border rounded px-3 py-2" value={editJob.description || ''} onChange={e => setEditJob(j => j ? { ...j, description: e.target.value } : j)} rows={3} />
               </div>
-              <div className="flex justify-end gap-2 mt-4">
-                <button type="button" className="btn btn-secondary" onClick={() => { setIsEditJobModalOpen(false); setEditJob(null); }} disabled={addJobLoading}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={addJobLoading}>{addJobLoading ? 'Saving...' : 'Save'}</button>
+              <div className="flex justify-between gap-2 mt-4">
+                <button 
+                  type="button" 
+                  className="btn btn-danger" 
+                  onClick={() => setIsDeleteConfirmOpen(true)}
+                  disabled={addJobLoading}
+                >
+                  Delete Experience
+                </button>
+                <div className="flex gap-2">
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary" 
+                    onClick={() => { setIsEditJobModalOpen(false); setEditJob(null); }} 
+                    disabled={addJobLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary" 
+                    disabled={addJobLoading}
+                  >
+                    {addJobLoading ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
               </div>
               {addJobError && <div className="text-red-600 mt-2">{addJobError}</div>}
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteConfirmOpen && editJob && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold mb-4">Delete Experience</h3>
+            <p className="text-slate-600 mb-6">
+              Are you sure you want to delete this experience? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setIsDeleteConfirmOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={async () => {
+                  try {
+                    const { error } = await supabase
+                      .from('jobs')
+                      .delete()
+                      .eq('id', editJob.id);
+                    
+                    if (error) throw error;
+                    
+                    setIsDeleteConfirmOpen(false);
+                    setIsEditJobModalOpen(false);
+                    setEditJob(null);
+                    await loadJobs();
+                    toast.success('Experience deleted successfully');
+                  } catch (err: any) {
+                    toast.error(err.message || 'Failed to delete experience');
+                  }
+                }}
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -31,26 +31,31 @@ export const useNotificationsStore = create<NotificationsState>((set, get) => ({
 
   initialize: async () => {
     try {
+      console.log('[Notifications] initialize called');
       set({ loading: true });
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
+      if (!user) {
+        console.log('[Notifications] No user found during initialize');
+        return;
+      }
+      console.log('[Notifications] Current user ID:', user.id);
       // Fetch existing notifications
       const { data: notifications, error } = await supabase
         .from('notifications')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
+      if (error) {
+        console.error('[Notifications] Error fetching notifications:', error);
+        throw error;
+      }
+      console.log('[Notifications] Notifications fetched:', notifications);
       set({
         notifications: notifications || [],
         unreadCount: notifications?.filter(n => !n.read).length || 0,
         loading: false,
         initialized: true
       });
-
       // Setup real-time subscriptions
       await get().setupRealtimeSubscriptions();
     } catch (error) {

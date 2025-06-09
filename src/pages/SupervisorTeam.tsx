@@ -65,8 +65,8 @@ const fetchEITProgress = async (eitId: string): Promise<EITProgress> => {
     const documentedExperiences = expRes.count || 0;
     const supervisorApprovals = apprRes.count || 0;
     const skillsProgress = completedSkills / 22;
-    const experiencesProgress = documentedExperiences / 24;
-    const approvalsProgress = supervisorApprovals / 24;
+    const experiencesProgress = documentedExperiences / 22;
+    const approvalsProgress = supervisorApprovals / 22;
     const overallProgress = Math.round(((skillsProgress + experiencesProgress + approvalsProgress) / 3) * 100);
     return { overallProgress, completedSkills, documentedExperiences, supervisorApprovals };
   } catch (error) {
@@ -432,8 +432,8 @@ const SupervisorTeam: React.FC = () => {
                             <div className="flex flex-col gap-1 mt-2">
                               <div className="flex gap-4 text-xs text-slate-500">
                                 <span>Skills: {progress.completedSkills}/22</span>
-                                <span>Experiences: {progress.documentedExperiences}/24</span>
-                                <span>Approvals: {progress.supervisorApprovals}/24</span>
+                                <span>Experiences: {progress.documentedExperiences}/22</span>
+                                <span>Approvals: {progress.supervisorApprovals}/22</span>
                               </div>
                               {expectedProgress !== null && (
                                 <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">

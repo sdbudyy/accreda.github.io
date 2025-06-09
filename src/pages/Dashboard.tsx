@@ -142,8 +142,8 @@ const Dashboard: React.FC = () => {
     { 
       title: 'Completed SAOs', 
       value: completedSAOs.length,
-      total: 24,
-      description: `${24 - completedSAOs.length} SAOs remaining to complete`,
+      total: 22,
+      description: `${22 - completedSAOs.length} SAOs remaining to complete`,
       color: 'indigo' 
     },
   ];

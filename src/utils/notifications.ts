@@ -13,6 +13,7 @@ export async function sendNotification({
   message?: string;
   data?: Record<string, any>;
 }) {
+  console.log('Sending notification to userId:', userId);
   const { error } = await supabase
     .from('notifications')
     .insert({
@@ -24,17 +25,26 @@ export async function sendNotification({
       read: false,
       created_at: new Date().toISOString()
     });
-  if (error) throw error;
+  if (error) {
+    console.error('Error inserting notification:', error);
+  } else {
+    console.log('Notification inserted successfully');
+  }
 }
 
 export async function fetchNotifications(userId: string) {
-  const { data, error } = await supabase
+  console.log('Fetching notifications for user:', userId);
+  const { data: notifications, error } = await supabase
     .from('notifications')
     .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
-  if (error) throw error;
-  return data;
+  if (error) {
+    console.error('Error fetching notifications:', error);
+  } else {
+    console.log('Fetched notifications:', notifications);
+  }
+  return notifications;
 }
 
 export async function markNotificationRead(notificationId: string) {
@@ -103,5 +113,15 @@ export const sendSAOValidationRequestNotification = async (supervisorId: string,
     title: 'New SAO Validation Request',
     message: `${eitName} has requested your validation for SAO: "${saoTitle}".`,
     data: { type: 'sao_validation_request', saoTitle }
+  });
+};
+
+export const sendNudgeNotification = async (userId: string, senderName: string) => {
+  return sendNotification({
+    userId,
+    type: 'nudge',
+    title: 'You have been nudged!',
+    message: `${senderName} sent you a nudge.`,
+    data: { type: 'nudge' }
   });
 }; 

@@ -711,62 +711,12 @@ const Settings: React.FC = () => {
                 {tier === 'free' ? (
                   <span className="inline-block bg-blue-100 text-blue-800 px-4 py-2 rounded-full font-semibold text-sm shadow">Current Plan</span>
                 ) : (
-                  <>
-                    <button 
-                      onClick={() => setShowDowngradeModal(true)}
-                      className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-semibold text-sm shadow transition-colors"
-                    >
-                      Downgrade
-                    </button>
-                    {showDowngradeModal && (
-                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-                        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full relative">
-                          <button
-                            className="absolute top-2 right-2 text-slate-400 hover:text-slate-600"
-                            onClick={() => setShowDowngradeModal(false)}
-                            aria-label="Close"
-                          >
-                            ×
-                          </button>
-                          <h2 className="text-xl font-bold mb-4 text-blue-800">Downgrade to Free</h2>
-                          <p className="mb-6 text-slate-700">Are you sure you want to downgrade to the Free plan? You will lose access to Pro features.</p>
-                          <div className="flex justify-end gap-2">
-                            <button
-                              className="btn btn-secondary"
-                              onClick={() => setShowDowngradeModal(false)}
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              className="btn btn-danger"
-                              onClick={async () => {
-                                setShowDowngradeModal(false);
-                                if (!user) return;
-                                try {
-                                  const response = await fetch('/api/cancel-stripe-subscription', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ userId: user.id }),
-                                  });
-                                  const data = await response.json();
-                                  if (response.ok) {
-                                    setMessage({ type: 'success', text: 'Subscription cancelled. You are now on the Free plan.' });
-                                    fetchSubscription();
-                                  } else {
-                                    setMessage({ type: 'error', text: data.error || 'Failed to cancel subscription.' });
-                                  }
-                                } catch (err) {
-                                  setMessage({ type: 'error', text: 'Failed to cancel subscription.' });
-                                }
-                              }}
-                            >
-                              Confirm Downgrade
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </>
+                  <button 
+                    onClick={() => setShowContactModal(true)}
+                    className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-semibold text-sm shadow transition-colors"
+                  >
+                    Contact to Downgrade
+                  </button>
                 )}
               </div>
 
@@ -1242,10 +1192,10 @@ const Settings: React.FC = () => {
             >
               ×
             </button>
-            <h2 className="text-xl font-bold mb-4 text-purple-800">Contact Us</h2>
+            <h2 className="text-xl font-bold mb-4 text-blue-800">Request Plan Downgrade</h2>
             {contactSuccess ? (
               <div className="p-3 bg-green-50 text-green-700 rounded-md text-sm mb-4">
-                Your message has been sent successfully. We'll get back to you soon!
+                Your downgrade request has been sent successfully. We'll get back to you soon!
               </div>
             ) : (
               <form
@@ -1255,7 +1205,7 @@ const Settings: React.FC = () => {
                   setContactError(null);
                   setContactSuccess(false);
                   try {
-                    const response = await fetch('/api/send-support-email', {
+                    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-support-email`, {
                       method: 'POST',
                       headers: {
                         'Content-Type': 'application/json',
@@ -1263,9 +1213,9 @@ const Settings: React.FC = () => {
                       },
                       body: JSON.stringify({
                         email: contactEmail,
-                        subject: 'Enterprise Plan Inquiry',
-                        message: `Name: ${contactName}\nCorporation: ${contactCorporation}\n\n${contactMessage}`,
-                        issueType: 'enterprise',
+                        subject: 'Plan Downgrade Request',
+                        message: `Name: ${contactName}\nEmail: ${contactEmail}\nCurrent Plan: ${tier}\n\nReason for Downgrade:\n${contactMessage}`,
+                        issueType: 'downgrade',
                         mode: 'help',
                       }),
                     });
@@ -1276,7 +1226,6 @@ const Settings: React.FC = () => {
                     setContactSuccess(true);
                     setContactName('');
                     setContactEmail('');
-                    setContactCorporation('');
                     setContactMessage('');
                   } catch (err) {
                     setContactError(err instanceof Error ? err.message : 'Failed to send message. Please try again later.');
@@ -1309,25 +1258,14 @@ const Settings: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Corporation Name</label>
-                  <input
-                    type="text"
-                    className="input"
-                    value={contactCorporation}
-                    onChange={e => setContactCorporation(e.target.value)}
-                    required
-                    disabled={contactLoading}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Message</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Reason for Downgrade (Optional)</label>
                   <textarea
                     className="input"
                     rows={4}
                     value={contactMessage}
                     onChange={e => setContactMessage(e.target.value)}
-                    required
                     disabled={contactLoading}
+                    placeholder="Please let us know why you'd like to downgrade your plan..."
                   />
                 </div>
                 {contactError && (
@@ -1335,27 +1273,13 @@ const Settings: React.FC = () => {
                     {contactError}
                   </div>
                 )}
-                <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => {
-                      setShowContactModal(false);
-                      setContactSuccess(false);
-                      setContactError(null);
-                    }}
-                    disabled={contactLoading}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn btn-primary"
-                    disabled={contactLoading}
-                  >
-                    {contactLoading ? 'Sending...' : 'Send Message'}
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  className="btn btn-primary w-full"
+                  disabled={contactLoading}
+                >
+                  {contactLoading ? 'Sending...' : 'Submit Request'}
+                </button>
               </form>
             )}
           </div>
