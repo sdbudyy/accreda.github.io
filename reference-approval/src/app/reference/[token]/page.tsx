@@ -79,19 +79,28 @@ export default function ReferenceApprovalPage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-[#e6f0f7] via-[#f8fafc] to-[#e6f0f7] flex flex-col">
+    <div className="min-h-screen w-full bg-gradient-to-br from-[#e6f0f7] via-[#f8fafc] to-[#e6f0f7] flex flex-col font-sans">
+      {/* Header */}
+      <header className="w-full flex items-center justify-between px-8 py-6 bg-white/80 border-b border-slate-100 shadow-sm">
+        <div className="flex items-center gap-3">
+          <Image src="/accreda-logo.png" alt="Accreda Logo" width={40} height={40} />
+        </div>
+        <div></div>
+      </header>
       {/* Hero Section */}
-      <section className="w-full bg-gradient-to-br from-[#1a365d] via-[#2563eb] to-[#38bdf8] py-12 px-4 flex flex-col items-center justify-center">
-        <Image src="/accreda-logo.png" alt="Accreda Logo" width={60} height={60} className="mb-4 rounded-xl shadow-lg" />
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight text-center mb-2 drop-shadow-lg">Reference Approval</h1>
-        <p className="text-lg sm:text-xl text-blue-100 text-center max-w-2xl mb-2">Help us verify the work experience of an EIT. Your response is confidential and only used for validation.</p>
+      <section className="w-full flex flex-col items-center justify-center py-16 px-4 bg-white">
+        <h1 className="text-4xl sm:text-5xl font-extrabold text-[#1a365d] tracking-tight text-center mb-4">
+          Reference <span className="text-[#1cc8ae]">Approval</span>
+        </h1>
+        <p className="text-lg sm:text-xl text-slate-600 text-center max-w-2xl mb-2">
+          Help us verify the work experience of an EIT. Your response is confidential and only used for validation.
+        </p>
       </section>
-
       <main className="flex-1 w-full flex flex-col items-center justify-center px-2 py-10 gap-10">
         {/* Reference Details Card */}
         <div className="w-full max-w-2xl">
           <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8 md:p-10 mb-8">
-            <h2 className="text-2xl font-bold text-[#1a365d] mb-4 flex items-center gap-2">
+            <h2 className="text-xl font-bold text-[#1a365d] mb-4 flex items-center gap-2">
               <span className="inline-block w-6 h-6 bg-[#e6f0f7] rounded-full flex items-center justify-center">
                 <span className="text-[#1a365d] font-bold">i</span>
               </span>
@@ -117,12 +126,11 @@ export default function ReferenceApprovalPage() {
             )}
           </div>
         </div>
-
         {/* Form Card */}
         {!loading && !error && !submitted && (
           <div className="w-full max-w-2xl">
-            <div className="bg-gradient-to-br from-[#e6f0f7] via-white to-[#e6f0f7] rounded-2xl shadow-2xl border border-slate-100 p-8 md:p-10">
-              <h3 className="text-xl font-semibold text-[#1a365d] mb-6">Your Information</h3>
+            <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8 md:p-10">
+              <h3 className="text-lg font-semibold text-[#1a365d] mb-6">Your Information</h3>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -133,7 +141,7 @@ export default function ReferenceApprovalPage() {
                       required
                       value={formData.fullName}
                       onChange={e => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
-                      className="mt-1 block w-full border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-[#2563eb] transition bg-[#f8fafc] text-slate-900 placeholder:text-slate-400"
+                      className="mt-1 block w-full border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#1cc8ae] focus:border-[#1cc8ae] transition bg-[#f8fafc] text-slate-900 placeholder:text-slate-400"
                       placeholder="Enter your full name"
                     />
                   </div>
@@ -145,7 +153,7 @@ export default function ReferenceApprovalPage() {
                       required
                       value={formData.email}
                       onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                      className="mt-1 block w-full border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-[#2563eb] transition bg-[#f8fafc] text-slate-900 placeholder:text-slate-400"
+                      className="mt-1 block w-full border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#1cc8ae] focus:border-[#1cc8ae] transition bg-[#f8fafc] text-slate-900 placeholder:text-slate-400"
                       placeholder="Enter your email"
                     />
                   </div>
@@ -157,7 +165,7 @@ export default function ReferenceApprovalPage() {
                       required
                       value={formData.position}
                       onChange={e => setFormData(prev => ({ ...prev, position: e.target.value }))}
-                      className="mt-1 block w-full border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-[#2563eb] transition bg-[#f8fafc] text-slate-900 placeholder:text-slate-400"
+                      className="mt-1 block w-full border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#1cc8ae] focus:border-[#1cc8ae] transition bg-[#f8fafc] text-slate-900 placeholder:text-slate-400"
                       placeholder="Enter your position"
                     />
                   </div>
@@ -169,7 +177,7 @@ export default function ReferenceApprovalPage() {
                       required
                       value={formData.relation}
                       onChange={e => setFormData(prev => ({ ...prev, relation: e.target.value }))}
-                      className="mt-1 block w-full border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-[#2563eb] transition bg-[#f8fafc] text-slate-900 placeholder:text-slate-400"
+                      className="mt-1 block w-full border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#1cc8ae] focus:border-[#1cc8ae] transition bg-[#f8fafc] text-slate-900 placeholder:text-slate-400"
                       placeholder="e.g. Supervisor, Manager, Colleague"
                     />
                   </div>
@@ -178,7 +186,7 @@ export default function ReferenceApprovalPage() {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-md text-lg font-semibold text-white bg-gradient-to-r from-[#2563eb] to-[#1a365d] hover:from-[#1a365d] hover:to-[#2563eb] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2563eb] disabled:opacity-50 transition-all duration-200"
+                    className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-md text-lg font-semibold text-white bg-[#1cc8ae] hover:bg-[#179e8c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1cc8ae] disabled:opacity-50 transition-all duration-200"
                   >
                     {submitting ? (
                       <span className="flex items-center gap-2"><span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></span>Submitting...</span>
