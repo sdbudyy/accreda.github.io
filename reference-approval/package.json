@@ -12,11 +12,12 @@
     "@supabase/supabase-js": "^2.49.8",
     "@vercel/analytics": "^1.2.0",
     "@vercel/speed-insights": "^1.0.0",
-    "autoprefixer": "^10.4.21",
+    "autoprefixer": "^X.X.X",
     "next": "^13.5.11",
     "nodemailer": "^7.0.3",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "tailwindcss": "^X.X.X"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -27,7 +28,6 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.3.2",
-    "tailwindcss": "^4.1.8",
     "typescript": "^5"
   }
 }
