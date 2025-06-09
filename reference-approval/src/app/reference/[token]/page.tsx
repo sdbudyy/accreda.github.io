@@ -22,8 +22,10 @@ export default function ReferenceApprovalPage() {
   const [approved, setApproved] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [cardVisible, setCardVisible] = useState(false);
 
   useEffect(() => {
+    setTimeout(() => setCardVisible(true), 200); // Fade-in animation
     const fetchReferenceData = async () => {
       try {
         const { data: tokenData, error: tokenError } = await supabase
@@ -86,7 +88,7 @@ export default function ReferenceApprovalPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f8fafc] to-[#e6f0f7] flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-[#e6f0f7] via-[#f8fafc] to-[#e6f0f7] flex flex-col">
       {/* Header */}
       <header className="w-full bg-white shadow-sm py-4 px-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -96,12 +98,13 @@ export default function ReferenceApprovalPage() {
       </header>
       {/* Main Content */}
       <main className="flex-1 flex items-center justify-center py-8 px-2">
-        <div className="w-full max-w-xl">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
-            <h2 className="text-2xl font-extrabold text-slate-900 text-center mb-2">Reference Approval</h2>
+        <div className={`w-full max-w-xl transition-all duration-700 ${cardVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'} ease-out`}>
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 p-10 animate-fade-in">
+            <h2 className="text-3xl font-extrabold text-slate-900 text-center mb-2 tracking-tight">Reference Approval</h2>
+            <p className="text-center text-slate-500 mb-8">Help us verify the work experience of an EIT. Your response is confidential and only used for validation.</p>
             <div className="mb-8">
               <h3 className="text-lg font-semibold text-slate-900 mb-2">Reference Details</h3>
-              <div className="text-slate-700 text-sm space-y-1">
+              <div className="text-slate-700 text-base space-y-1">
                 <div><span className="font-medium">EIT Name:</span> {referenceData?.eit_profiles.full_name}</div>
                 <div><span className="font-medium">EIT Email:</span> {referenceData?.eit_profiles.email}</div>
                 <div><span className="font-medium">Job Title:</span> {referenceData?.title}</div>
@@ -115,23 +118,23 @@ export default function ReferenceApprovalPage() {
               </div>
             </div>
             {loading ? (
-              <div className="flex justify-center items-center py-8">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-600"></div>
-                <span className="ml-4 text-gray-600">Loading reference request...</span>
+              <div className="flex flex-col items-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
+                <span className="mt-4 text-gray-600 text-lg">Loading reference request...</span>
               </div>
             ) : error ? (
-              <div className="text-center text-red-600 font-semibold py-4">{error}</div>
+              <div className="text-center text-red-600 font-semibold py-4 text-lg animate-fade-in">{error}</div>
             ) : submitted ? (
-              <div className="text-center">
-                <div className="text-green-500 text-5xl mb-4">✓</div>
-                <h1 className="text-xl font-semibold text-gray-900 mb-2">Thank You!</h1>
+              <div className="text-center animate-fade-in">
+                <div className="text-green-500 text-6xl mb-4">✓</div>
+                <h1 className="text-2xl font-semibold text-gray-900 mb-2">Thank You!</h1>
                 <p className="text-gray-600">Your reference has been submitted successfully.</p>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <form onSubmit={handleSubmit} className="space-y-6 animate-fade-in">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label htmlFor="fullName" className="block text-sm font-medium text-slate-700">
+                    <label htmlFor="fullName" className="block text-sm font-medium text-slate-700 mb-1">
                       Your Full Name
                     </label>
                     <input
@@ -140,11 +143,11 @@ export default function ReferenceApprovalPage() {
                       required
                       value={formData.fullName}
                       onChange={e => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
-                      className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+                      className="mt-1 block w-full border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#1a365d] focus:border-[#1a365d] transition"
                     />
                   </div>
                   <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-slate-700">
+                    <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
                       Your Email
                     </label>
                     <input
@@ -153,11 +156,11 @@ export default function ReferenceApprovalPage() {
                       required
                       value={formData.email}
                       onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                      className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+                      className="mt-1 block w-full border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#1a365d] focus:border-[#1a365d] transition"
                     />
                   </div>
                   <div>
-                    <label htmlFor="position" className="block text-sm font-medium text-slate-700">
+                    <label htmlFor="position" className="block text-sm font-medium text-slate-700 mb-1">
                       Your Position
                     </label>
                     <input
@@ -166,11 +169,11 @@ export default function ReferenceApprovalPage() {
                       required
                       value={formData.position}
                       onChange={e => setFormData(prev => ({ ...prev, position: e.target.value }))}
-                      className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+                      className="mt-1 block w-full border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#1a365d] focus:border-[#1a365d] transition"
                     />
                   </div>
                   <div>
-                    <label htmlFor="relation" className="block text-sm font-medium text-slate-700">
+                    <label htmlFor="relation" className="block text-sm font-medium text-slate-700 mb-1">
                       Your Relation to the EIT
                     </label>
                     <input
@@ -179,7 +182,7 @@ export default function ReferenceApprovalPage() {
                       required
                       value={formData.relation}
                       onChange={e => setFormData(prev => ({ ...prev, relation: e.target.value }))}
-                      className="mt-1 block w-full border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+                      className="mt-1 block w-full border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#1a365d] focus:border-[#1a365d] transition"
                     />
                   </div>
                 </div>
@@ -187,9 +190,11 @@ export default function ReferenceApprovalPage() {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-base font-semibold text-white bg-[#1a365d] hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-50 transition"
+                    className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-md text-lg font-semibold text-white bg-[#1a365d] hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-50 transition-all duration-200"
                   >
-                    {submitting ? 'Submitting...' : 'Approve Reference'}
+                    {submitting ? (
+                      <span className="flex items-center gap-2"><span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></span>Submitting...</span>
+                    ) : 'Approve Reference'}
                   </button>
                 </div>
               </form>
@@ -197,6 +202,15 @@ export default function ReferenceApprovalPage() {
           </div>
         </div>
       </main>
+      <style jsx global>{`
+        @keyframes fade-in {
+          from { opacity: 0; transform: translateY(24px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.7s cubic-bezier(0.4,0,0.2,1) both;
+        }
+      `}</style>
     </div>
   );
 } 
