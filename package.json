@@ -45,7 +45,6 @@
     "@types/diff": "^7.0.2",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/lodash": "^4.17.16",
-    "@types/mongoose": "^5.11.96",
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
     "axios": "^1.9.0",
@@ -82,6 +81,8 @@
   },
   "devDependencies": {
     "@types/cors": "^2.8.18",
+    "@types/express": "^5.0.3",
+    "@types/mongoose": "^5.11.96",
     "@types/node": "^20.11.16",
     "@types/pdfjs-dist": "^2.10.377",
     "@types/react": "^18.3.21",
