@@ -9,6 +9,7 @@ import { useNotificationsStore } from '../store/notifications';
 import DOMPurify from 'dompurify';
 import ScrollToTop from '../components/ScrollToTop';
 import { useSAOsStore } from '../store/saos';
+import { useLocation } from 'react-router-dom';
 
 // --- Skill Validation Types ---
 interface Validator {
@@ -257,6 +258,8 @@ const SupervisorReviews: React.FC = () => {
   const { notifications, markAsRead } = useNotificationsStore();
   const { submitFeedback } = useSAOsStore();
 
+  const location = useLocation();
+
   // Filter validators and SAOs based on selected EIT
   const filteredValidators = selectedEIT === 'all' 
     ? pendingValidators 
@@ -489,6 +492,38 @@ const SupervisorReviews: React.FC = () => {
   };
 
   // --- UI ---
+  useEffect(() => {
+    if (location.state) {
+      if (location.state.tab) setTab(location.state.tab);
+      if (location.state.showHistory) setShowHistoryMode(true);
+      // For skills
+      if (location.state.scrollToEitId && location.state.scrollToSkillId) {
+        setSelectedEIT(location.state.scrollToEitId);
+        setTimeout(() => {
+          const selector = `[data-validator-id="${location.state.scrollToEitId}_${location.state.scrollToSkillId}"]`;
+          const el = document.querySelector(selector);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.add('highlight-item');
+            setTimeout(() => el.classList.remove('highlight-item'), 2000);
+          }
+        }, 700);
+      }
+      // For SAOs
+      if (location.state.scrollToId && location.state.scrollToType === 'sao') {
+        setTimeout(() => {
+          const selector = `[data-sao-id="${location.state.scrollToId}"]`;
+          const el = document.querySelector(selector);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.add('highlight-item');
+            setTimeout(() => el.classList.remove('highlight-item'), 2000);
+          }
+        }, 700);
+      }
+    }
+  }, [location]);
+
   return (
     <>
       <div className="max-w-4xl mx-auto p-6">
@@ -641,6 +676,7 @@ const SupervisorReviews: React.FC = () => {
                   return (
                     <div
                       key={key}
+                      data-validator-id={`${latest.eit_id}_${latest.skill_id}`}
                       className="bg-white rounded-lg shadow p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 transition-all duration-300"
                     >
                       <div>
@@ -763,7 +799,8 @@ const SupervisorReviews: React.FC = () => {
               <div className="space-y-4">
                 {allSAOs.filter((req) => req.status === 'submitted').map((req) => (
                   <div 
-                    key={req.id} 
+                    key={req.id}
+                    data-sao-id={req.id}
                     className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow cursor-pointer"
                     onClick={() => {
                       setSelectedSAO(req);

@@ -79,7 +79,7 @@ const LinksPopup: React.FC<LinksPopupProps> = ({ isOpen, onClose, skillName, sao
                     </div>
                     <div
                       className="text-sm text-slate-600 prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(sao.content) }}
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(`${sao.situation}\n\n${sao.action}\n\n${sao.outcome}`) }}
                     />
                     {sao.feedback && sao.feedback.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-slate-200">
