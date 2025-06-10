@@ -75,12 +75,48 @@ const Documents: React.FC = () => {
   const handleImportGoogleDrive = async () => {
     setImportMenuOpen(false);
     await loadGoogleApi();
-    // TODO: Implement OAuth and Picker logic here
-    // See: https://developers.google.com/picker/docs/
-    alert('Google Drive picker scaffolded. Add credentials and logic when ready.');
-    // Simulate import for now
-    setImportedContent('Imported content from Google Drive (simulated).');
-    setShowImportModal(true);
+    window.gapi.load('client:auth2', async () => {
+      await window.gapi.client.init({
+        apiKey: GOOGLE_API_KEY,
+        clientId: GOOGLE_CLIENT_ID,
+        discoveryDocs: GOOGLE_DISCOVERY_DOCS,
+        scope: GOOGLE_SCOPES,
+      });
+      const GoogleAuth = window.gapi.auth2.getAuthInstance();
+      GoogleAuth.signIn().then(() => {
+        const oauthToken = GoogleAuth.currentUser.get().getAuthResponse().access_token;
+        if (!window.google || !window.google.picker) {
+          alert('Google Picker API not loaded.');
+          return;
+        }
+        const view = new window.google.picker.DocsView()
+          .setIncludeFolders(true)
+          .setSelectFolderEnabled(false);
+        const picker = new window.google.picker.PickerBuilder()
+          .addView(view)
+          .setOAuthToken(oauthToken)
+          .setDeveloperKey(GOOGLE_API_KEY)
+          .setCallback(async (data: any) => {
+            if (data.action === window.google.picker.Action.PICKED) {
+              const file = data.docs[0];
+              try {
+                const fileId = file.id;
+                const response = await window.gapi.client.drive.files.get({
+                  fileId,
+                  alt: 'media',
+                });
+                setImportedContent(response.body || 'No content found.');
+                setShowImportModal(true);
+              } catch (err) {
+                setImportedContent('Failed to fetch file content.');
+                setShowImportModal(true);
+              }
+            }
+          })
+          .build();
+        picker.setVisible(true);
+      });
+    });
   };
 
   // --- ONEDRIVE IMPORT SCAFFOLD ---
