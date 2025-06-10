@@ -604,11 +604,11 @@ const Landing: React.FC = () => {
           <div className="flex justify-between items-center h-20">
             {window.location.pathname === '/' ? (
               <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-                <img src={accredaLogo} alt="Accreda" className="h-12 w-auto" />
+                <img src={accredaSmall} alt="Accreda" className="h-16 w-auto" />
               </button>
             ) : (
               <Link to="/">
-                <img src={accredaLogo} alt="Accreda" className="h-12 w-auto" />
+                <img src={accredaSmall} alt="Accreda" className="h-16 w-auto" />
               </Link>
             )}
             <div className="hidden md:flex items-center space-x-8">

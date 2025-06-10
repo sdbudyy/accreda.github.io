@@ -65,11 +65,14 @@ function App() {
 
   useEffect(() => {
     if (session) {
-      loadProgress()
-      loadSkills()
-      loadEssays()
+      const progressStore = useProgressStore.getState();
+      progressStore.initialize(true).then(() => {
+        progressStore.setupRealtimeSubscriptions();
+      });
+      loadSkills();
+      loadEssays();
     }
-  }, [session, loadProgress, loadSkills, loadEssays])
+  }, [session, loadSkills, loadEssays]);
 
   useEffect(() => {
     // Always initialize notifications on app load or after login

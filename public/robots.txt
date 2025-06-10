@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 
 # Sitemap location
-Sitemap: https://sdbudyy.github.io/accreda.github.io/sitemap.xml 
+Sitemap: https://accreda.ca/sitemap.xml 

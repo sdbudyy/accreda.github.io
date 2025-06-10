@@ -114,6 +114,8 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
       const skillsStore = useSkillsStore.getState();
       if (skillsStore.skillCategories.length === 0) {
         await skillsStore.loadUserSkills();
+        // Wait a bit to ensure skills are processed
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
 
       // Get skills progress from skills store
@@ -144,6 +146,14 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
       const approvalsProgress = (approvals?.length || 0) / 24;
       const overallProgress = Math.round(((skillsProgress + experiencesProgress + approvalsProgress) / 3) * 100);
 
+      console.log('Progress initialization calculation:', {
+        completedSkills,
+        skillsProgress,
+        experiencesProgress,
+        approvalsProgress,
+        overallProgress
+      });
+
       // Update state with all progress data
       set({
         overallProgress,
@@ -155,12 +165,13 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
         totalApprovals: 24,
         lastUpdated: new Date().toISOString(),
         lastFetched: now,
-        loading: false
+        loading: false,
+        initialized: true
       });
 
     } catch (error) {
       console.error('Error initializing progress:', error);
-      set({ loading: false });
+      set({ loading: false, initialized: false });
       throw error;
     }
   },
@@ -182,10 +193,9 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
       const skillsStore = useSkillsStore.getState();
       if (skillsStore.skillCategories.length === 0) {
         await skillsStore.loadUserSkills();
+        // Wait a bit to ensure skills are processed
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
-
-      // Wait a bit to ensure skills are processed
-      await new Promise(resolve => setTimeout(resolve, 100));
 
       // Get skills progress from skills store
       const completedSkills = skillsStore.skillCategories.reduce((acc, category) => {
@@ -230,11 +240,12 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
         supervisorApprovals: approvals?.length || 0,
         lastUpdated: new Date().toISOString(),
         loading: false,
-        lastFetched: now
+        lastFetched: now,
+        initialized: true
       });
     } catch (error) {
       console.error('Error updating progress:', error);
-      set({ loading: false });
+      set({ loading: false, initialized: false });
     }
   }
 }));

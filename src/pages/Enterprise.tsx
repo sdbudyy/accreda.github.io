@@ -2,33 +2,53 @@ import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import accredaLogo from '../assets/accreda-logo.png';
-import { Users, BarChart3, FileText, CheckCircle2, Clock, Menu } from 'lucide-react';
+import accredaSmall from '../assets/accreda-small.webp';
+import smallSkill from '../assets/small-skill.png';
+import eitSkills from '../assets/eit-skills.png';
+import { Users, BarChart3, FileText, CheckCircle2, Clock, Menu, Award, Bell, MessageSquare, TrendingUp } from 'lucide-react';
 
 const features = [
   {
     icon: 'Users',
-    title: 'Supervisor Dashboard',
-    description: 'Supervisors can easily monitor the progress of all their EITs, review documentation, and provide timely feedback.'
+    title: 'Team Overview Dashboard',
+    description: 'Get a bird\'s eye view of your entire team\'s progress. Monitor completion rates, skill assessments, and documentation status at a glance.',
+    image: smallSkill,
+    imageAlt: 'Team progress overview showing skill comparisons'
   },
   {
     icon: 'BarChart3',
-    title: 'Organization-wide Insights',
-    description: "Gain actionable insights into your team's development, skill gaps, and compliance with regulatory requirements."
+    title: 'Skill Comparison Analytics',
+    description: 'Compare EIT self-assessments with your evaluations. Track progress against required mean scores and identify areas for improvement with detailed analytics.',
+    image: eitSkills,
+    imageAlt: 'EIT skills comparison showing average scores and required means'
   },
   {
     icon: 'FileText',
-    title: 'Centralized Documentation',
-    description: 'All EIT documentation and SAOs are securely stored and easily accessible for audits and reviews.'
+    title: 'Streamlined Documentation Review',
+    description: 'Review and approve EIT documentation efficiently. Our structured templates ensure consistency and compliance with regulatory requirements.',
+    image: smallSkill,
+    imageAlt: 'Documentation review interface'
   },
   {
     icon: 'CheckCircle2',
-    title: 'Automated Compliance',
-    description: 'Ensure your organization meets all engineering regulatory requirements with automated reminders and progress tracking.'
+    title: 'Automated Progress Tracking',
+    description: 'Track progress across 22 required skills and competencies. Get automated alerts for pending reviews and approvals.',
+    image: smallSkill,
+    imageAlt: 'Progress tracking dashboard'
   },
   {
     icon: 'Clock',
-    title: 'Time Savings',
-    description: 'Streamline onboarding, documentation, and review processes to save valuable time for both supervisors and EITs.'
+    title: 'Time-Saving Workflows',
+    description: 'Reduce administrative overhead with automated reminders, bulk actions, and streamlined approval processes.',
+    image: smallSkill,
+    imageAlt: 'Time-saving workflow interface'
+  },
+  {
+    icon: 'Bell',
+    title: 'Smart Notifications',
+    description: 'Stay informed with intelligent notifications for pending reviews, approvals, and important milestones.',
+    image: smallSkill,
+    imageAlt: 'Notification system interface'
   }
 ];
 
@@ -38,6 +58,7 @@ const iconMap: Record<string, React.ReactNode> = {
   FileText: <FileText className="w-8 h-8 text-teal-600" />,
   CheckCircle2: <CheckCircle2 className="w-8 h-8 text-teal-600" />,
   Clock: <Clock className="w-8 h-8 text-teal-600" />,
+  Bell: <Bell className="w-8 h-8 text-teal-600" />
 };
 
 const Enterprise: React.FC = () => {
@@ -66,7 +87,7 @@ const Enterprise: React.FC = () => {
                 className="focus:outline-none"
                 style={{ background: 'none', border: 'none', padding: 0 }}
               >
-                <img src={accredaLogo} alt="Accreda" className="h-12 w-auto" />
+                <img src={accredaSmall} alt="Accreda" className="h-16 w-auto" />
               </button>
             </div>
             <div className="hidden md:flex items-center space-x-8">
@@ -111,33 +132,84 @@ const Enterprise: React.FC = () => {
             transition={{ duration: 0.8 }}
           >
             <h1 className="text-6xl md:text-7xl font-bold text-slate-900 leading-tight mb-6">
-              Accreda for Enterprise
+              Empower Your Engineering Team
             </h1>
             <p className="text-2xl text-slate-600 mb-8 max-w-2xl mx-auto">
-              Empower your organization with the most advanced EIT management platform. Designed for corporations and supervisors to streamline professional development, compliance, and oversight.
+              Streamline EIT development, ensure compliance, and drive team success with our comprehensive supervisor platform.
             </p>
           </motion.div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full">
+        </div>
+      </div>
+      <div className="py-20 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
             {features.map((feature, idx) => (
               <motion.div
                 key={feature.title}
-                className="bg-slate-50 rounded-xl p-8 shadow-sm hover:shadow-md transition-shadow flex flex-col items-center"
+                className="bg-white rounded-2xl p-8 shadow-sm hover:shadow-md transition-shadow"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: idx * 0.1 }}
               >
-                <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center mb-6 shadow-sm">
-                  {iconMap[feature.icon]}
+                <div className="flex items-start gap-6">
+                  <div className="w-16 h-16 bg-slate-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                    {iconMap[feature.icon]}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-2xl font-bold text-slate-900 mb-4">{feature.title}</h3>
+                    <p className="text-lg text-slate-600 mb-6">{feature.description}</p>
+                    <div className="rounded-lg overflow-hidden border border-slate-200">
+                      <img 
+                        src={feature.image} 
+                        alt={feature.imageAlt}
+                        className="w-full h-auto"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900 mb-4">{feature.title}</h3>
-                <p className="text-lg text-slate-600">{feature.description}</p>
               </motion.div>
             ))}
           </div>
         </div>
       </div>
-      <div className="py-20 bg-white text-slate-900 mt-16">
+      <div className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <motion.div
+              className="text-center"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="text-4xl font-bold text-teal-600 mb-2">22</div>
+              <p className="text-lg text-slate-600">Required Skills Tracked</p>
+            </motion.div>
+            <motion.div
+              className="text-center"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
+              <div className="text-4xl font-bold text-teal-600 mb-2">50%</div>
+              <p className="text-lg text-slate-600">Time Saved on Reviews</p>
+            </motion.div>
+            <motion.div
+              className="text-center"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <div className="text-4xl font-bold text-teal-600 mb-2">100%</div>
+              <p className="text-lg text-slate-600">Compliance Guaranteed</p>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+      <div className="py-20 bg-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -146,7 +218,7 @@ const Enterprise: React.FC = () => {
             transition={{ duration: 0.8 }}
           >
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              Ready to transform your organization?
+              Ready to transform your team?
             </h2>
             <p className="text-xl text-slate-600 mb-8 max-w-2xl mx-auto">
               Book a personalized demo and see how Accreda can help your supervisors and EITs achieve more, together.

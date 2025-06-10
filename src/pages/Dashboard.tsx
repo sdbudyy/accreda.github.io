@@ -37,9 +37,10 @@ const Dashboard: React.FC = () => {
     supervisorApprovals,
     totalApprovals,
     lastUpdated,
-    loading,
+    loading: progressLoading,
     updateProgress,
-    initialize
+    initialize,
+    initialized
   } = useProgressStore();
   const startWriting = useEssayStore(state => state.startWriting);
   const essayLoading = useEssayStore(state => state.loading);
@@ -54,8 +55,10 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     const initializeData = async () => {
       try {
+        setRoleLoading(true);
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
+
         // Fetch profile name from eit_profiles or supervisor_profiles
         let profileName = '';
         const [eitProfile, supervisorProfile] = await Promise.all([
@@ -72,22 +75,20 @@ const Dashboard: React.FC = () => {
           setUserName(user.email?.split('@')[0] || 'User');
         }
 
-        // Parallel data fetching
-        const [
-          skillsData,
-          progressData,
-          saosData
-        ] = await Promise.all([
-          loadUserSkills(),
-          initialize(),
-          saos.length === 0 && !saosLoading ? loadUserSAOs() : Promise.resolve()
-        ]);
-
         // Cache user profile data
         setUserProfileCache({
           eitProfile: eitProfile.data,
           supervisorProfile: supervisorProfile.data
         });
+
+        // First load skills, then initialize progress
+        await loadUserSkills();
+        await initialize(true);
+        
+        // Load SAOs if needed
+        if (saos.length === 0 && !saosLoading) {
+          await loadUserSAOs();
+        }
 
       } catch (error) {
         console.error('Error initializing dashboard data:', error);
@@ -157,7 +158,8 @@ const Dashboard: React.FC = () => {
     return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  if (roleLoading && appLoaded) {
+  // Show loading state if either role is loading or progress is not initialized
+  if ((roleLoading || !initialized || progressLoading) && appLoaded) {
     return <LoadingSpinner />;
   }
 
