@@ -124,4 +124,34 @@ export const sendNudgeNotification = async (userId: string, senderName: string) 
     message: `${senderName} sent you a nudge.`,
     data: { type: 'nudge' }
   });
+};
+
+export const sendSAOFeedbackNotification = async (eitId: string, saoTitle: string) => {
+  return sendNotification({
+    userId: eitId,
+    type: 'sao_feedback',
+    title: 'New SAO Feedback',
+    message: `You received feedback on your SAO: "${saoTitle}".`,
+    data: { type: 'sao_feedback', saoTitle }
+  });
+};
+
+export const sendDocumentSharedNotification = async (recipientId: string, documentName: string, senderName: string) => {
+  return sendNotification({
+    userId: recipientId,
+    type: 'document_shared',
+    title: 'Document Shared',
+    message: `${senderName} shared a document with you: "${documentName}".`,
+    data: { type: 'document_shared', documentName, senderName }
+  });
+};
+
+export const sendCustomValidationRequestNotification = async (supervisorId: string, eitName: string, skillName: string) => {
+  return sendNotification({
+    userId: supervisorId,
+    type: 'custom_validation_request',
+    title: 'New Validation Request',
+    message: `${eitName} has requested validation for the skill: "${skillName}".`,
+    data: { type: 'custom_validation_request', skillName, eitName }
+  });
 }; 

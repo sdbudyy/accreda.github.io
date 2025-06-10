@@ -31,6 +31,7 @@ import { AnimatedBeam } from "../components/magicui/animated-beam";
 import { Marquee } from "../components/magicui/marquee";
 import { Globe } from "../components/magicui/globe";
 import { WordRotate } from "../components/magicui/word-rotate";
+import accredaSmall from '../assets/accreda-small.webp';
 
 const provinces = [
   'Alberta (APEGA)',
@@ -180,8 +181,13 @@ function AnimatedBeamMultipleOutputDemo({ className }: { className?: string }) {
           </Circle>
         </div>
         <div className="flex flex-col justify-center">
-          <Circle ref={div6Ref} className="size-8">
-            <Icons.openai />
+          <Circle ref={div6Ref} className="size-14">
+            <img
+              src={accredaSmall}
+              alt="Accreda Logo"
+              className="w-full h-full object-contain"
+              style={{ maxWidth: '100%', maxHeight: '100%' }}
+            />
           </Circle>
         </div>
         <div className="flex flex-col justify-center">

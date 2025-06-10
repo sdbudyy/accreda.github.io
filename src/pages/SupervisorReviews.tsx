@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import { useNotificationsStore } from '../store/notifications';
 import DOMPurify from 'dompurify';
 import ScrollToTop from '../components/ScrollToTop';
+import { useSAOsStore } from '../store/saos';
 
 // --- Skill Validation Types ---
 interface Validator {
@@ -254,6 +255,7 @@ const SupervisorReviews: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const { notifications, markAsRead } = useNotificationsStore();
+  const { submitFeedback } = useSAOsStore();
 
   // Filter validators and SAOs based on selected EIT
   const filteredValidators = selectedEIT === 'all' 
@@ -459,11 +461,7 @@ const SupervisorReviews: React.FC = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      await supabase
-        .from('sao_feedback')
-        .update({ feedback, status: 'submitted' })
-        .eq('sao_id', saoId)
-        .eq('supervisor_id', user.id);
+      await submitFeedback(saoId, feedback);
       setAllSAOs((prev) =>
         prev.map((f) =>
           f.sao_id === saoId ? { ...f, feedback, status: 'submitted' } : f

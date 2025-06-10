@@ -4,6 +4,7 @@ import { Home, BookOpen, FileText, Settings, HelpCircle, LogOut, FileEdit, Bookm
 import { supabase } from '../lib/supabase';
 import { useProgressStore } from '../store/progress';
 import AccredaLogo from '../assets/accreda-logo.png';
+import WhiteAccredaLogo from '../assets/white-accreda.png';
 
 interface SidebarProps {
   onClose?: () => void;
@@ -53,13 +54,22 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose, onCollapseChange }) => {
       onMouseLeave={handleMouseLeave}
       style={{ minWidth: collapsed ? 60 : 256, width: collapsed ? 60 : 256, height: '100vh' }}
     >
-      {/* Logo area always present, only show logo when expanded */}
-      <div className="p-4 border-b border-slate-800 flex items-center justify-center transition-all duration-300" style={{ height: '7rem' }}>
-        {!collapsed && (
-          <NavLink to="/dashboard" className="cursor-pointer">
-            <img src={AccredaLogo} alt="Accreda Logo" className="h-28 w-auto transition-all duration-300 mx-auto" />
-          </NavLink>
-        )}
+      {/* Logo area always present, show small logo when collapsed, full logo when expanded */}
+      <div className="p-4 border-b border-slate-800 flex items-center justify-center transition-all duration-300 relative" style={{ height: '7rem' }}>
+        <NavLink to="/dashboard" className="cursor-pointer block w-full h-full">
+          <img
+            src={WhiteAccredaLogo}
+            alt="Accreda Small Logo"
+            className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ${collapsed ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'}`}
+            style={{ width: collapsed ? '44px' : 32, height: 'auto', maxWidth: '90%', maxHeight: '90%' }}
+          />
+          <img
+            src={AccredaLogo}
+            alt="Accreda Logo"
+            className={`transition-all duration-300 mx-auto ${collapsed ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'}`}
+            style={{ height: '7rem', width: 'auto' }}
+          />
+        </NavLink>
       </div>
 
       {/* Navigation */}

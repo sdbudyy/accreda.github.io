@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import { Skill } from './skills';
-import { sendSAOScoreNotification, sendSAOValidationRequestNotification } from '../utils/notifications';
+import { sendSAOScoreNotification, sendSAOValidationRequestNotification, sendSAOFeedbackNotification } from '../utils/notifications';
 import { SAOAnnotation } from '../types/sao';
 
 export interface SAOFeedback {
@@ -361,7 +361,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
         .eq('supervisor_id', user.id);
       // Notify EIT
       if (sao?.eit_id) {
-        await sendSAOScoreNotification(sao.eit_id, sao?.title || 'SAO', 1); // You may want to pass the actual score if available
+        await sendSAOFeedbackNotification(sao.eit_id, sao?.title || 'SAO');
       }
       // Reload SAOs to get updated feedback
       await get().loadUserSAOs(true);

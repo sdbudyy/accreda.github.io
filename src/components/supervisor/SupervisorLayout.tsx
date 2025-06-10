@@ -29,7 +29,7 @@ const SupervisorLayout: React.FC<SupervisorLayoutProps> = ({ appLoaded }) => {
         </div>
       )}
       {/* Main content */}
-      <div className="md:pl-64 flex flex-col min-h-screen">
+      <div className="flex flex-col min-h-screen md:pl-[60px]">
         <SupervisorHeader onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 p-4 md:p-6 pt-20 md:pt-24 pb-20 md:pb-6">
           <Outlet context={{ appLoaded }} />

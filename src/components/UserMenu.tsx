@@ -12,14 +12,24 @@ const UserMenu: React.FC = () => {
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const getUserProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserEmail(user.email || '');
-        let profileName = '';
-        let avatar = user.user_metadata?.avatar_url || '';
-        // Try EIT profile first
+  const fetchUserProfile = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      setUserEmail(user.email || '');
+      let profileName = '';
+      let avatar = user.user_metadata?.avatar_url || '';
+      // Try supervisor profile first
+      const { data: supervisorProfile } = await supabase
+        .from('supervisor_profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+      if (supervisorProfile && supervisorProfile.full_name) {
+        profileName = supervisorProfile.full_name;
+        setUserRole('supervisor');
+      }
+      // Try EIT profile if not supervisor
+      if (!profileName) {
         const { data: eitProfile } = await supabase
           .from('eit_profiles')
           .select('full_name')
@@ -29,25 +39,22 @@ const UserMenu: React.FC = () => {
           profileName = eitProfile.full_name;
           setUserRole('eit');
         }
-        // Try supervisor profile if not EIT
-        if (!profileName) {
-          const { data: supervisorProfile } = await supabase
-            .from('supervisor_profiles')
-            .select('full_name')
-            .eq('id', user.id)
-            .single();
-          if (supervisorProfile && supervisorProfile.full_name) {
-            profileName = supervisorProfile.full_name;
-            setUserRole('supervisor');
-          }
-        }
-        setUserName(profileName || user.email?.split('@')[0] || 'User');
-        setAvatarUrl(avatar);
       }
-    };
+      setUserName(profileName || user.email?.split('@')[0] || 'User');
+      setAvatarUrl(avatar);
+    }
+  };
 
-    getUserProfile();
+  useEffect(() => {
+    fetchUserProfile();
   }, []);
+
+  const handleMenuToggle = () => {
+    if (!isOpen) {
+      fetchUserProfile();
+    }
+    setIsOpen(!isOpen);
+  };
 
   // Close the menu when clicking outside
   useEffect(() => {
@@ -91,7 +98,7 @@ const UserMenu: React.FC = () => {
     <div className="relative" ref={menuRef}>
       <button
         className="flex items-center space-x-2 focus:outline-none"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleMenuToggle}
       >
         {avatarUrl ? (
           <img

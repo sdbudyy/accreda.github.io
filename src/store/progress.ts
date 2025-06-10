@@ -116,9 +116,6 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
         await skillsStore.loadUserSkills();
       }
 
-      // Wait a bit to ensure skills are processed
-      await new Promise(resolve => setTimeout(resolve, 100));
-
       // Get skills progress from skills store
       const completedSkills = skillsStore.skillCategories.reduce((acc, category) => {
         return acc + category.skills.filter(skill => skill.rank !== undefined).length;
@@ -147,33 +144,24 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
       const approvalsProgress = (approvals?.length || 0) / 24;
       const overallProgress = Math.round(((skillsProgress + experiencesProgress + approvalsProgress) / 3) * 100);
 
-      console.log('Progress calculation:', {
-        completedSkills,
-        skillsProgress,
-        experiencesProgress,
-        approvalsProgress,
-        overallProgress
-      });
-
+      // Update state with all progress data
       set({
         overallProgress,
         completedSkills,
+        totalSkills: 22,
         documentedExperiences: experiences?.length || 0,
+        totalExperiences: 24,
         supervisorApprovals: approvals?.length || 0,
+        totalApprovals: 24,
         lastUpdated: new Date().toISOString(),
-        loading: false,
-        initialized: true,
-        lastFetched: now
+        lastFetched: now,
+        loading: false
       });
 
-      // Setup real-time subscriptions
-      await get().setupRealtimeSubscriptions();
     } catch (error) {
       console.error('Error initializing progress:', error);
-      set({
-        loading: false,
-        initialized: false
-      });
+      set({ loading: false });
+      throw error;
     }
   },
 

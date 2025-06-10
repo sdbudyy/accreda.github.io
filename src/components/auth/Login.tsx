@@ -3,6 +3,8 @@ import { supabase } from '../../lib/supabase'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import AccredaLogo from '../../assets/accreda-logo.png'
 import { motion } from 'framer-motion'
+import { useProgressStore } from '../../store/progress'
+import { useSkillsStore } from '../../store/skills'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -13,6 +15,8 @@ export default function Login() {
   const navigate = useNavigate()
   const location = useLocation()
   const message = location.state?.message
+  const initialize = useProgressStore(state => state.initialize)
+  const loadUserSkills = useSkillsStore(state => state.loadUserSkills)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -28,6 +32,10 @@ export default function Login() {
       if (error) throw error
 
       if (data?.user) {
+        await Promise.all([
+          initialize(true),
+          loadUserSkills()
+        ])
         navigate('/dashboard')
       }
     } catch (err) {
