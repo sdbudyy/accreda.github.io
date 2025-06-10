@@ -7,6 +7,7 @@ interface SAOAnnotationProps {
   saoId: string;
   content: string;
   readOnly?: boolean;
+  section?: string;
 }
 
 interface Highlight {
@@ -19,7 +20,7 @@ interface Highlight {
 const HIGHLIGHT_COLOR = '#fff3bf';
 const HIGHLIGHT_ACTIVE = '#ffe066';
 
-const SAOAnnotation: React.FC<SAOAnnotationProps> = ({ saoId, content, readOnly }) => {
+const SAOAnnotation: React.FC<SAOAnnotationProps> = ({ saoId, content, readOnly, section }) => {
   const {
     fetchAnnotations,
     addAnnotation,
@@ -48,7 +49,7 @@ const SAOAnnotation: React.FC<SAOAnnotationProps> = ({ saoId, content, readOnly 
   // Fetch annotations and their replies
   useEffect(() => {
     const loadAnnotations = async () => {
-      const anns = await fetchAnnotations(saoId);
+      const anns = await fetchAnnotations(saoId, section);
       setAnnotations(anns);
       // Fetch replies for each annotation
       const repliesObj: Record<string, any[]> = {};
@@ -60,7 +61,7 @@ const SAOAnnotation: React.FC<SAOAnnotationProps> = ({ saoId, content, readOnly 
       setResolved(resolvedObj);
     };
     loadAnnotations();
-  }, [saoId, fetchAnnotations, fetchReplies]);
+  }, [saoId, section, fetchAnnotations, fetchReplies]);
 
   // Convert SAOAnnotation to Highlight
   const highlights: (Highlight & { author_role?: string; author_name?: string })[] = annotations.map(a => ({
@@ -264,7 +265,7 @@ const SAOAnnotation: React.FC<SAOAnnotationProps> = ({ saoId, content, readOnly 
                       return;
                     }
                     await resolveAnnotation(a.id);
-                    const anns = await fetchAnnotations(saoId);
+                    const anns = await fetchAnnotations(saoId, section);
                     setAnnotations(anns);
                     setResolved(r => ({ ...r, [a.id]: true }));
                     if (selected === a.id) setSelected(null);
@@ -278,7 +279,7 @@ const SAOAnnotation: React.FC<SAOAnnotationProps> = ({ saoId, content, readOnly 
                       return;
                     }
                     await deleteAnnotation(a.id);
-                    const anns = await fetchAnnotations(saoId);
+                    const anns = await fetchAnnotations(saoId, section);
                     setAnnotations(anns);
                     if (popover === a.id) setPopover(null);
                     if (selected === a.id) setSelected(null);
@@ -300,13 +301,13 @@ const SAOAnnotation: React.FC<SAOAnnotationProps> = ({ saoId, content, readOnly 
     setSaving(true);
     setError(null);
     try {
-      await addAnnotation(saoId, pendingRange, comment);
+      await addAnnotation(saoId, pendingRange, comment, section);
       setComment('');
       setPendingRange(null);
       setShowInput(false);
       setShowAddBtn(null);
       // Refresh annotations
-      const anns = await fetchAnnotations(saoId);
+      const anns = await fetchAnnotations(saoId, section);
       setAnnotations(anns);
     } catch (e: any) {
       setError(e.message || 'Failed to save annotation');
@@ -457,7 +458,7 @@ const SAOAnnotation: React.FC<SAOAnnotationProps> = ({ saoId, content, readOnly 
                       return;
                     }
                     await resolveAnnotation(a.id);
-                    const anns = await fetchAnnotations(saoId);
+                    const anns = await fetchAnnotations(saoId, section);
                     setAnnotations(anns);
                     setResolved(r => ({ ...r, [a.id]: true }));
                     if (selected === a.id) setSelected(null);
@@ -471,7 +472,7 @@ const SAOAnnotation: React.FC<SAOAnnotationProps> = ({ saoId, content, readOnly 
                       return;
                     }
                     await deleteAnnotation(a.id);
-                    const anns = await fetchAnnotations(saoId);
+                    const anns = await fetchAnnotations(saoId, section);
                     setAnnotations(anns);
                     if (popover === a.id) setPopover(null);
                     if (selected === a.id) setSelected(null);

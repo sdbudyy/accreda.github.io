@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle2, FileText, UserCheck, Edit3, X, Briefcase, Users, MessageSquare } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-interface Activity {
+type ActivityBase = {
   id: string;
   type: 'approval' | 'feedback' | 'validation' | 'review' | 'comment';
   title: string;
@@ -11,17 +11,20 @@ interface Activity {
   eitName?: string;
   eitId?: string;
   status?: string;
-}
+  skillId?: string;
+};
+
+type Activity = ActivityBase;
 
 const SupervisorRecentActivities: React.FC = () => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const fetchActivities = async (supervisorId: string, supervisorEmail: string, limit: number = 5) => {
     try {
-      console.log('🔄 Starting fetchActivities for supervisor:', supervisorId);
       setLoading(true);
 
       // Fetch recent skill validations (actions taken by this supervisor)
@@ -36,7 +39,7 @@ const SupervisorRecentActivities: React.FC = () => {
       // Fetch recent SAO feedback (actions taken by this supervisor)
       const { data: saoFeedback, error: saoFeedbackError } = await supabase
         .from('sao_feedback')
-        .select(`id, sao_id, feedback, status, updated_at, sao:saos (title)`)
+        .select(`id, sao_id, feedback, status, updated_at, sao:saos (title, eit_id)`)
         .eq('supervisor_id', supervisorId)
         .order('updated_at', { ascending: false })
         .limit(limit);
@@ -45,59 +48,113 @@ const SupervisorRecentActivities: React.FC = () => {
       // Fetch recent validator actions (where supervisor is assigned as validator and status is not pending)
       const { data: validatorActions, error: validatorActionsError } = await supabase
         .from('validators')
-        .select('id, updated_at, status, skill_id, eit_id, description, score, skills (name)')
+        .select('id, updated_at, status, skill_id, eit_id, description, score')
         .eq('email', supervisorEmail)
         .neq('status', 'pending')
         .order('updated_at', { ascending: false })
         .limit(limit);
       if (validatorActionsError) throw validatorActionsError;
 
-      // Combine and sort all activities
-      const getFirstString = (val: any, key: string, fallback: string) => {
-        if (Array.isArray(val) && val.length > 0 && typeof val[0][key] === 'string') return val[0][key];
-        if (val && typeof val[key] === 'string') return val[key];
-        return fallback;
-      };
-
-      const allActivities: Activity[] = [
+      // Combine all activities and collect unique EIT IDs and skill IDs
+      const allActivitiesRaw = [
         ...(skillValidations || []).map(v => {
-          const skillName = getFirstString(v.skills, 'name', v.skill_id);
+          let skillName = v.skill_id;
+          if (v.skills && typeof v.skills === 'object' && !Array.isArray(v.skills) && (v.skills as Record<string, any>).name) {
+            skillName = (v.skills as Record<string, any>).name;
+          }
           return {
             id: v.id,
             type: 'validation' as const,
             title: `Validated "${skillName}"`,
             timestamp: v.validated_at ? String(v.validated_at) : '',
-            eitName: v.eit_id,
             eitId: v.eit_id,
+            skillId: v.skill_id,
             status: v.score ? `Score: ${v.score}` : undefined
           };
         }),
         ...(saoFeedback || []).map(fb => {
-          const saoTitle = getFirstString(fb.sao, 'title', fb.sao_id);
+          let saoTitle = fb.sao_id;
+          let eitId = undefined;
+          if (fb.sao && typeof fb.sao === 'object' && !Array.isArray(fb.sao)) {
+            saoTitle = (fb.sao as Record<string, any>).title || fb.sao_id;
+            eitId = (fb.sao as Record<string, any>).eit_id;
+          }
           return {
             id: fb.id,
             type: 'feedback' as const,
             title: `Provided SAO feedback for "${saoTitle}"`,
             timestamp: fb.updated_at ? String(fb.updated_at) : '',
-            eitName: undefined,
-            eitId: undefined,
+            eitId: eitId,
+            skillId: undefined,
             status: fb.status
           };
         }),
         ...(validatorActions || []).map(v => {
-          const skillName = getFirstString(v.skills, 'name', v.skill_id);
           return {
             id: v.id,
             type: 'validation' as const,
-            title: `Scored "${skillName}"`,
+            title: `Scored "${v.skill_id}"`,
             timestamp: v.updated_at ? String(v.updated_at) : '',
-            eitName: v.eit_id,
             eitId: v.eit_id,
+            skillId: v.skill_id,
             status: v.score ? `Score: ${v.score}` : v.status
           };
         }),
-      ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-       .slice(0, limit);
+      ];
+
+      // Sort and slice to limit
+      const allActivitiesSorted = allActivitiesRaw.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, limit);
+
+      // Collect unique EIT IDs and skill IDs
+      const eitIds = Array.from(new Set(allActivitiesSorted.map(a => a.eitId).filter(Boolean)));
+      const skillIds = Array.from(new Set(allActivitiesSorted.map(a => a.skillId).filter(Boolean)));
+
+      // Fetch EIT names for these IDs
+      let eitNameMap: Record<string, string> = {};
+      if (eitIds.length > 0) {
+        const { data: eitProfiles, error: eitProfilesError } = await supabase
+          .from('eit_profiles')
+          .select('id, full_name')
+          .in('id', eitIds);
+        if (!eitProfilesError && eitProfiles) {
+          eitNameMap = eitProfiles.reduce((acc, curr) => {
+            acc[curr.id] = curr.full_name;
+            return acc;
+          }, {} as Record<string, string>);
+        }
+      }
+
+      // Fetch skill names for these IDs
+      let skillNameMap: Record<string, string> = {};
+      if (skillIds.length > 0) {
+        const { data: skills, error: skillsError } = await supabase
+          .from('skills')
+          .select('id, name')
+          .in('id', skillIds);
+        if (!skillsError && skills) {
+          skillNameMap = skills.reduce((acc, curr) => {
+            acc[curr.id] = curr.name;
+            return acc;
+          }, {} as Record<string, string>);
+        }
+      }
+
+      // Type guard for validation activities
+      function isValidationActivity(a: any): a is Activity & { skillId: string } {
+        return a.type === 'validation' && 'skillId' in a && !!a.skillId;
+      }
+
+      const allActivities: Activity[] = allActivitiesSorted.map(a => {
+        let title = a.title;
+        if (isValidationActivity(a)) {
+          title = a.title.replace(/".*"/, `"${skillNameMap[a.skillId] || a.skillId}"`);
+        }
+        return {
+          ...a,
+          eitName: a.eitId ? eitNameMap[a.eitId] : undefined,
+          title
+        };
+      });
 
       setActivities(allActivities);
     } catch (error) {
@@ -190,11 +247,24 @@ const SupervisorRecentActivities: React.FC = () => {
 
   const handleView = (activity: Activity) => {
     if (activity.type === 'feedback') {
-      navigate(`/supervisor/saos?saoId=${activity.id}`);
+      navigate('/dashboard/supervisor/reviews', {
+        state: {
+          tab: 'saos',
+          showHistory: true,
+          scrollToId: activity.id,
+          scrollToType: 'sao'
+        }
+      });
     } else if (activity.type === 'validation') {
-      navigate(`/supervisor/validations?validationId=${activity.id}`);
-    } else if (activity.type === 'review') {
-      navigate(`/supervisor/reviews?experienceId=${activity.id}`);
+      navigate('/dashboard/supervisor/reviews', {
+        state: {
+          tab: 'skills',
+          showHistory: true,
+          scrollToEitId: activity.eitId,
+          scrollToSkillId: activity.skillId,
+          scrollToType: 'validator'
+        }
+      });
     }
   };
 

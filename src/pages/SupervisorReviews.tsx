@@ -819,16 +819,27 @@ const SupervisorReviews: React.FC = () => {
                     </div>
                   </div>
                   <div className="text-xs text-slate-500 mb-2">Highlight text below to add a comment (plain text only)</div>
-                  {selectedSAO.sao_id && selectedSAO.sao && ((('situation' in selectedSAO.sao) && ((selectedSAO.sao as any).situation || (selectedSAO.sao as any).action || (selectedSAO.sao as any).outcome) || selectedSAO.sao.content)) && (
+                  <div className="mb-4">
+                    <div className="font-semibold mb-1">Situation</div>
                     <SAOAnnotation
                       saoId={selectedSAO.sao_id}
-                      content={
-                        htmlToPlainText((selectedSAO.sao as any).situation || '') + '\n' +
-                        htmlToPlainText((selectedSAO.sao as any).action || '') + '\n' +
-                        htmlToPlainText((selectedSAO.sao as any).outcome || '')
-                      }
+                      content={htmlToPlainText((selectedSAO.sao as any).situation || '')}
                     />
-                  )}
+                  </div>
+                  <div className="mb-4">
+                    <div className="font-semibold mb-1">Action</div>
+                    <SAOAnnotation
+                      saoId={selectedSAO.sao_id}
+                      content={htmlToPlainText((selectedSAO.sao as any).action || '')}
+                    />
+                  </div>
+                  <div>
+                    <div className="font-semibold mb-1">Outcome</div>
+                    <SAOAnnotation
+                      saoId={selectedSAO.sao_id}
+                      content={htmlToPlainText((selectedSAO.sao as any).outcome || '')}
+                    />
+                  </div>
                 </div>
 
                 <SAOFeedbackComponent

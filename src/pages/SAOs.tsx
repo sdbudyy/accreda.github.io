@@ -341,14 +341,27 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
               </div>
             </div>
             <div className="text-xs text-slate-500 mb-2">Highlight text below to add a comment (plain text only)</div>
-            <SAOAnnotation
-              saoId={editSAO.id}
-              content={
-                htmlToPlainText(editSAO.situation || '') + '\n' +
-                htmlToPlainText(editSAO.action || '') + '\n' +
-                htmlToPlainText(editSAO.outcome || '')
-              }
-            />
+            <div className="mb-4">
+              <div className="font-semibold mb-1">Situation</div>
+              <SAOAnnotation
+                saoId={editSAO.id}
+                content={htmlToPlainText(editSAO.situation || '')}
+              />
+            </div>
+            <div className="mb-4">
+              <div className="font-semibold mb-1">Action</div>
+              <SAOAnnotation
+                saoId={editSAO.id}
+                content={htmlToPlainText(editSAO.action || '')}
+              />
+            </div>
+            <div>
+              <div className="font-semibold mb-1">Outcome</div>
+              <SAOAnnotation
+                saoId={editSAO.id}
+                content={htmlToPlainText(editSAO.outcome || '')}
+              />
+            </div>
             {/* Feedback history (toggle) */}
             {showHistory && feedbackToShow.length > 1 && (
               <div className="mt-4">
@@ -396,31 +409,25 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
             />
           </div>
           <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Situation</label>
+            <div className="bg-slate-100 border border-slate-200 rounded-lg p-4 mb-2">
+              <div className="font-semibold mb-1 text-lg text-slate-800">Situation</div>
               <RichTextEditor
                 content={situation}
                 onChange={val => setSituation(val)}
-                onSave={() => {}}
-                onCancel={() => {}}
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Action</label>
+            <div className="bg-slate-100 border border-slate-200 rounded-lg p-4 mb-2">
+              <div className="font-semibold mb-1 text-lg text-slate-800">Action</div>
               <RichTextEditor
                 content={action}
                 onChange={val => setAction(val)}
-                onSave={() => {}}
-                onCancel={() => {}}
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Outcome</label>
+            <div className="bg-slate-100 border border-slate-200 rounded-lg p-4">
+              <div className="font-semibold mb-1 text-lg text-slate-800">Outcome</div>
               <RichTextEditor
                 content={outcome}
                 onChange={val => setOutcome(val)}
-                onSave={() => {}}
-                onCancel={() => {}}
               />
             </div>
           </div>

@@ -216,17 +216,17 @@ const SupervisorDashboard: React.FC = () => {
 
   return (
     <>
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 pt-0 pb-4">
         <WeeklyDigest />
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-800 flex items-center gap-2">
-              Welcome back, {supervisorName}!
-              <span className="ml-2 px-2 py-0.5 rounded text-xs font-semibold bg-purple-100 text-purple-800">SUPERVISOR</span>
-            </h1>
-            <p className="text-slate-500 mt-1">Here's an overview of your team's progress</p>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+          <div className="flex flex-col gap-2 w-full md:w-auto">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-800">Welcome back, {supervisorName}!</h1>
+              <span className="px-2 py-0.5 rounded text-xs font-semibold bg-purple-100 text-purple-800">SUPERVISOR</span>
+            </div>
+            <p className="text-slate-500 mt-1 text-base">Here's an overview of your team's progress</p>
           </div>
-          <div className="flex items-center space-x-2 mt-4 md:mt-0">
+          <div className="flex items-center space-x-2 mt-4 md:mt-0 w-full md:w-auto justify-end">
             <span className="text-sm text-slate-500 flex items-center">
               <Clock size={14} className="mr-1" />
               Last updated: {formatLastUpdated(lastUpdated)}

@@ -7,8 +7,8 @@ import type { CKEditorEvent, CKEditor5Editor } from '@ckeditor/ckeditor5-react';
 interface RichTextEditorProps {
   content: string;
   onChange: (content: string) => void;
-  onSave: () => void;
-  onCancel: () => void;
+  onSave?: () => void;
+  onCancel?: () => void;
 }
 
 const editorStyle = {
@@ -57,20 +57,22 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           }}
         />
       </div>
-      <div className="flex justify-end gap-2 mt-4">
-        <button
-          onClick={onCancel}
-          className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg flex items-center"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={onSave}
-          className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 flex items-center"
-        >
-          Save
-        </button>
-      </div>
+      {onSave && onCancel && (
+        <div className="flex justify-end gap-2 mt-4">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg flex items-center"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onSave}
+            className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 flex items-center"
+          >
+            Save
+          </button>
+        </div>
+      )}
       <style>{`
         .ck-editor__editable_inline {
           border-radius: 0.5rem !important;

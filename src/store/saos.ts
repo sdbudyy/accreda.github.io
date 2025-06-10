@@ -40,8 +40,8 @@ interface SAOsState {
   requestFeedback: (saoId: string, supervisorId: string) => Promise<void>;
   submitFeedback: (saoId: string, feedback: string) => Promise<void>;
   resolveFeedback: (feedbackId: string) => Promise<void>;
-  fetchAnnotations: (saoId: string) => Promise<SAOAnnotation[]>;
-  addAnnotation: (saoId: string, location: any, annotation: string) => Promise<void>;
+  fetchAnnotations: (saoId: string, section?: string) => Promise<SAOAnnotation[]>;
+  addAnnotation: (saoId: string, location: any, annotation: string, section?: string) => Promise<void>;
   fetchReplies: (annotationId: string) => Promise<any[]>;
   addReply: (annotationId: string, content: string) => Promise<void>;
   resolveAnnotation: (annotationId: string) => Promise<void>;
@@ -473,14 +473,18 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
     }
   },
 
-  fetchAnnotations: async (saoId: string) => {
+  fetchAnnotations: async (saoId: string, section?: string) => {
     set({ loading: true, error: null });
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('sao_annotation')
         .select('*')
         .eq('sao_id', saoId)
         .order('created_at', { ascending: true });
+      if (section) {
+        query = query.eq('status', section);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data as SAOAnnotation[];
     } catch (error: any) {
@@ -491,7 +495,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
     }
   },
 
-  addAnnotation: async (saoId: string, location: any, annotation: string) => {
+  addAnnotation: async (saoId: string, location: any, annotation: string, section?: string) => {
     set({ loading: true, error: null });
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -527,7 +531,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
             author_role: 'supervisor',
             location,
             annotation,
-            status: 'active',
+            status: section || 'active',
           }
         ]);
       if (error) throw error;
