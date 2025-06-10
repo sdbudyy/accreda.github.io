@@ -84,16 +84,22 @@ const SAOCard: React.FC<SAOCardProps> = ({ sao, onEdit, onDelete }) => {
           </button>
         </div>
       </div>
-      
-      <p className="text-sm text-slate-600 mt-2">{sao.description}</p>
-      <div
-        className="text-slate-600 whitespace-pre-wrap mb-4 prose prose-sm max-w-none"
-        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(sao.content) }}
-      />
-
+      <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <div className="font-semibold text-slate-700 mb-1">Situation</div>
+          <div className="text-slate-600 whitespace-pre-wrap prose prose-sm max-w-none">{sao.situation}</div>
+        </div>
+        <div>
+          <div className="font-semibold text-slate-700 mb-1">Action</div>
+          <div className="text-slate-600 whitespace-pre-wrap prose prose-sm max-w-none">{sao.action}</div>
+        </div>
+        <div>
+          <div className="font-semibold text-slate-700 mb-1">Outcome</div>
+          <div className="text-slate-600 whitespace-pre-wrap prose prose-sm max-w-none">{sao.outcome}</div>
+        </div>
+      </div>
       {/* Annotation UI for both EIT and Supervisor */}
-      <SAOAnnotation saoId={sao.id} content={sao.content} />
-
+      <SAOAnnotation saoId={sao.id} content={sao.situation + '\n' + sao.action + '\n' + sao.outcome} />
       {sao.feedback && (
         <SAOFeedbackComponent
           feedback={sao.feedback}
@@ -102,7 +108,6 @@ const SAOCard: React.FC<SAOCardProps> = ({ sao, onEdit, onDelete }) => {
           isSupervisor={isSupervisor}
         />
       )}
-
       <div className="mt-4 text-sm text-slate-500">
         Created: {new Date(sao.created_at).toLocaleDateString()}
       </div>

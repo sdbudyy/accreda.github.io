@@ -354,7 +354,7 @@ const SupervisorReviews: React.FC = () => {
       if (!user) throw new Error('No authenticated user');
       const { data, error } = await supabase
         .from('sao_feedback')
-        .select(`*, sao:saos (title, content, created_at, eit_id)`)
+        .select(`*, sao:saos (title, situation, action, outcome, content, created_at, eit_id)`)
         .eq('supervisor_id', user.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -808,12 +808,26 @@ const SupervisorReviews: React.FC = () => {
                 
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-slate-800 mb-2">SAO Content</h3>
-                  <div className="bg-slate-50 rounded-lg p-4 mb-4 prose prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedSAO.sao?.content || '') }}
-                  />
-                  {/* Annotation UI for supervisors */}
-                  {selectedSAO.sao_id && selectedSAO.sao?.content && (
-                    <SAOAnnotation saoId={selectedSAO.sao_id} content={htmlToPlainText(selectedSAO.sao.content)} />
+                  <div className="bg-slate-50 rounded-lg p-4 mb-4 prose prose-sm max-w-none">
+                    <div>
+                      <div className="font-semibold mb-1">Situation</div>
+                      <div className="mb-3" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedSAO.sao && ('situation' in selectedSAO.sao ? (selectedSAO.sao as any).situation : (selectedSAO.sao.content ? selectedSAO.sao.content.split('---')[0] : '')) || '') }} />
+                      <div className="font-semibold mb-1">Action</div>
+                      <div className="mb-3" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedSAO.sao && ('action' in selectedSAO.sao ? (selectedSAO.sao as any).action : (selectedSAO.sao.content ? selectedSAO.sao.content.split('---')[1] : '')) || '') }} />
+                      <div className="font-semibold mb-1">Outcome</div>
+                      <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedSAO.sao && ('outcome' in selectedSAO.sao ? (selectedSAO.sao as any).outcome : (selectedSAO.sao.content ? selectedSAO.sao.content.split('---')[2] : '')) || '') }} />
+                    </div>
+                  </div>
+                  <div className="text-xs text-slate-500 mb-2">Highlight text below to add a comment (plain text only)</div>
+                  {selectedSAO.sao_id && selectedSAO.sao && ((('situation' in selectedSAO.sao) && ((selectedSAO.sao as any).situation || (selectedSAO.sao as any).action || (selectedSAO.sao as any).outcome) || selectedSAO.sao.content)) && (
+                    <SAOAnnotation
+                      saoId={selectedSAO.sao_id}
+                      content={
+                        htmlToPlainText((selectedSAO.sao as any).situation || '') + '\n' +
+                        htmlToPlainText((selectedSAO.sao as any).action || '') + '\n' +
+                        htmlToPlainText((selectedSAO.sao as any).outcome || '')
+                      }
+                    />
                   )}
                 </div>
 

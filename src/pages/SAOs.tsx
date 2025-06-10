@@ -50,7 +50,9 @@ function htmlToPlainText(html: string): string {
 
 const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated, initialContent, onInitialContentUsed }) => {
   const [title, setTitle] = useState('');
-  const [sao, setSao] = useState('');
+  const [situation, setSituation] = useState('');
+  const [action, setAction] = useState('');
+  const [outcome, setOutcome] = useState('');
   const [selectedSkills, setSelectedSkills] = useState<Skill[]>([]);
   const [status, setStatus] = useState<'draft' | 'complete'>('draft');
   const [isSkillsModalOpen, setIsSkillsModalOpen] = useState(false);
@@ -110,12 +112,16 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
   useEffect(() => {
     if (isOpen && editSAO) {
       setTitle(editSAO.title);
-      setSao(editSAO.content);
+      setSituation(editSAO.situation || '');
+      setAction(editSAO.action || '');
+      setOutcome(editSAO.outcome || '');
       setSelectedSkills(editSAO.skills);
       setStatus(editSAO.status || 'draft');
     } else if (isOpen) {
       setTitle('');
-      setSao('');
+      setSituation('');
+      setAction('');
+      setOutcome('');
       setSelectedSkills([]);
       setStatus('draft');
     }
@@ -124,7 +130,7 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
   // Set initial content if provided
   useEffect(() => {
     if (isOpen && initialContent) {
-      setSao(initialContent);
+      setSituation(initialContent);
       if (onInitialContentUsed) onInitialContentUsed();
     }
   }, [isOpen, initialContent, onInitialContentUsed]);
@@ -152,11 +158,11 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
   const handleSendForValidation = async () => {
     try {
       if (editSAO) {
-        await updateSAO(editSAO.id, title, sao, selectedSkills, status);
+        await updateSAO(editSAO.id, title, situation, action, outcome, selectedSkills, status);
         await requestFeedback(editSAO.id, selectedSupervisor);
       } else {
         // If creating, first create the SAO, then send for validation
-        await createSAO(title, sao, selectedSkills, status);
+        await createSAO(title, situation, action, outcome, selectedSkills, status);
         // Optionally, you may want to reload SAOs and get the new ID, but for now just call requestFeedback with a placeholder or skip
       }
       toast.success('SAO sent to supervisor for validation!');
@@ -180,12 +186,14 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
         }
       }
       if (editSAO) {
-        await updateSAO(editSAO.id, title, sao, selectedSkills, status);
+        await updateSAO(editSAO.id, title, situation, action, outcome, selectedSkills, status);
       } else {
-        await createSAO(title, sao, selectedSkills, status);
+        await createSAO(title, situation, action, outcome, selectedSkills, status);
       }
       setTitle('');
-      setSao('');
+      setSituation('');
+      setAction('');
+      setOutcome('');
       setSelectedSkills([]);
       setSelectedSupervisor('');
       onClose();
@@ -197,12 +205,12 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
   };
 
   const handleEnhanceWithAI = async () => {
-    if (!sao.trim()) return;
+    if (!situation.trim() && !action.trim() && !outcome.trim()) return;
     
     setIsEnhancing(true);
     try {
       console.log('Starting enhancement process...');
-      const enhanced = await enhanceSAO(sao);
+      const enhanced = await enhanceSAO(situation + '\n' + action + '\n' + outcome);
       console.log('Enhancement completed:', enhanced);
       setEnhancedText(enhanced);
     } catch (error) {
@@ -216,7 +224,9 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
 
   const handleAcceptEnhancement = () => {
     if (enhancedText) {
-      setSao(enhancedText);
+      setSituation(enhancedText.split('\n')[0]);
+      setAction(enhancedText.split('\n')[1]);
+      setOutcome(enhancedText.split('\n')[2]);
       setEnhancedText(null);
     }
   };
@@ -319,12 +329,26 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
             <div className="text-xs text-slate-500 mb-1">
               The preview below shows your formatting. Comments and highlights are made on the plain text version.
             </div>
-            <div
-              className="bg-slate-50 rounded-lg p-4 mb-4 prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(editSAO.content) }}
+            {/* Formatted preview */}
+            <div className="bg-slate-50 rounded-lg p-4 mb-4 prose prose-sm max-w-none">
+              <div>
+                <div className="font-semibold mb-1">Situation</div>
+                <div className="mb-3" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(editSAO.situation || '') }} />
+                <div className="font-semibold mb-1">Action</div>
+                <div className="mb-3" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(editSAO.action || '') }} />
+                <div className="font-semibold mb-1">Outcome</div>
+                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(editSAO.outcome || '') }} />
+              </div>
+            </div>
+            <div className="text-xs text-slate-500 mb-2">Highlight text below to add a comment (plain text only)</div>
+            <SAOAnnotation
+              saoId={editSAO.id}
+              content={
+                htmlToPlainText(editSAO.situation || '') + '\n' +
+                htmlToPlainText(editSAO.action || '') + '\n' +
+                htmlToPlainText(editSAO.outcome || '')
+              }
             />
-            {/* Pass plain text to annotation system for correct comment selection */}
-            <SAOAnnotation saoId={editSAO.id} content={htmlToPlainText(editSAO.content)} />
             {/* Feedback history (toggle) */}
             {showHistory && feedbackToShow.length > 1 && (
               <div className="mt-4">
@@ -371,17 +395,30 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
               disabled={loading}
             />
           </div>
-
-          <div>
-            <label htmlFor="sao" className="block text-sm font-medium text-slate-700 mb-2">
-              Situation-Action-Outcome
-            </label>
-            <div className="relative">
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Situation</label>
               <RichTextEditor
-                content={enhancedText || sao}
-                onChange={val => {
-                  if (!enhancedText) setSao(val);
-                }}
+                content={situation}
+                onChange={val => setSituation(val)}
+                onSave={() => {}}
+                onCancel={() => {}}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Action</label>
+              <RichTextEditor
+                content={action}
+                onChange={val => setAction(val)}
+                onSave={() => {}}
+                onCancel={() => {}}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Outcome</label>
+              <RichTextEditor
+                content={outcome}
+                onChange={val => setOutcome(val)}
                 onSave={() => {}}
                 onCancel={() => {}}
               />
@@ -666,7 +703,7 @@ const SAOCard: React.FC<{
       </div>
       <div
         className="text-slate-600 whitespace-pre-wrap mb-4 prose prose-sm max-w-none"
-        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(sao.content) }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(sao.situation + '\n' + sao.action + '\n' + sao.outcome) }}
       />
       <div className="flex flex-wrap gap-2">
         {sao.skills.map((skill) => (

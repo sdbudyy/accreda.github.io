@@ -17,7 +17,9 @@ export interface SAOFeedback {
 export interface SAO {
   id: string;
   title: string;
-  content: string;
+  situation: string;
+  action: string;
+  outcome: string;
   created_at: string;
   updated_at: string;
   status: 'draft' | 'complete';
@@ -30,8 +32,8 @@ interface SAOsState {
   loading: boolean;
   error: string | null;
   lastFetched: number | null;
-  createSAO: (title: string, content: string, skills: Skill[], status: 'draft' | 'complete') => Promise<void>;
-  updateSAO: (id: string, title: string, content: string, skills: Skill[], status: 'draft' | 'complete') => Promise<void>;
+  createSAO: (title: string, situation: string, action: string, outcome: string, skills: Skill[], status: 'draft' | 'complete') => Promise<void>;
+  updateSAO: (id: string, title: string, situation: string, action: string, outcome: string, skills: Skill[], status: 'draft' | 'complete') => Promise<void>;
   deleteSAO: (id: string) => Promise<void>;
   loadUserSAOs: (force?: boolean) => Promise<void>;
   clearState: () => void;
@@ -61,7 +63,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
     lastFetched: null
   }),
 
-  createSAO: async (title: string, content: string, skills: Skill[], status: 'draft' | 'complete') => {
+  createSAO: async (title: string, situation: string, action: string, outcome: string, skills: Skill[], status: 'draft' | 'complete') => {
     set({ loading: true, error: null });
     try {
       console.log('Creating new SAO...');
@@ -81,7 +83,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
           email: user.email || ''
         });
 
-      console.log('Creating SAO:', { title, content, skills, eit_id: user.id });
+      console.log('Creating SAO:', { title, situation, action, outcome, skills, eit_id: user.id });
 
       // First, create the SAO with draft status
       const { data: sao, error: saoError } = await supabase
@@ -90,7 +92,9 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
           {
             eit_id: user.id,
             title,
-            content,
+            situation,
+            action,
+            outcome,
             status
           }
         ])
@@ -112,7 +116,9 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
       await supabase.from('sao_versions').insert({
         sao_id: sao.id,
         title: sao.title,
-        content: sao.content
+        situation: sao.situation,
+        action: sao.action,
+        outcome: sao.outcome
       });
 
       // Then, create the SAO skills relationships
@@ -157,10 +163,10 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
     }
   },
 
-  updateSAO: async (id: string, title: string, content: string, skills: Skill[], status: 'draft' | 'complete') => {
+  updateSAO: async (id: string, title: string, situation: string, action: string, outcome: string, skills: Skill[], status: 'draft' | 'complete') => {
     set({ loading: true, error: null });
     try {
-      console.log('Updating SAO:', { id, title, content, skills });
+      console.log('Updating SAO:', { id, title, situation, action, outcome, skills });
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError) {
         console.error('Auth error:', authError);
@@ -171,7 +177,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
       // Update the SAO
       const { error: saoError } = await supabase
         .from('saos')
-        .update({ title, content, status })
+        .update({ title, situation, action, outcome, status })
         .eq('id', id)
         .eq('eit_id', user.id);
 
@@ -184,7 +190,9 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
       await supabase.from('sao_versions').insert({
         sao_id: id,
         title,
-        content
+        situation,
+        action,
+        outcome
       });
 
       // Delete existing SAO skills
@@ -218,7 +226,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
       set(state => ({
         saos: state.saos.map(sao => 
           sao.id === id 
-            ? { ...sao, title, content, status, skills }
+            ? { ...sao, title, situation, action, outcome, status, skills }
             : sao
         )
       }));
@@ -442,7 +450,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
         ...sao,
         skills: sao.sao_skills.map((skill: any) => ({
           id: skill.skill_id,
-          name: '', // Name not available directly, can be looked up if needed
+          name: '',
           category_name: skill.category_name,
           status: 'not-started'
         })),

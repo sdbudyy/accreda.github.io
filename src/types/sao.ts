@@ -16,8 +16,9 @@ export interface SAOAnnotation {
 export interface SAO {
   id: string;
   title: string;
-  description: string;
-  content: string;
+  situation: string;
+  action: string;
+  outcome: string;
   status: 'draft' | 'complete';
   eit_id: string;
   created_at: string;
