@@ -1,5 +1,5 @@
 import React, { useEffect, useState, Suspense } from 'react';
-import { Clock, Calendar, Award, BarChart3, ArrowRight } from 'lucide-react';
+import { Clock, Calendar, Award, BarChart3, ArrowRight, Link } from 'lucide-react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useProgressStore } from '../store/progress';
@@ -12,7 +12,7 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 // Lazy load heavy dashboard components
 const ProgressCard = React.lazy(() => import('../components/eitdashboard/ProgressCard'));
 const RecentActivities = React.lazy(() => import('../components/eitdashboard/RecentActivities'));
-const UpcomingDeadlines = React.lazy(() => import('../components/eitdashboard/UpcomingDeadlines'));
+const QuickLinks = React.lazy(() => import('../components/eitdashboard/QuickLinks'));
 const SkillsOverview = React.lazy(() => import('../components/eitdashboard/SkillsOverview'));
 
 type ProgressStat = {
@@ -45,11 +45,6 @@ const Dashboard: React.FC = () => {
   const essayLoading = useEssayStore(state => state.loading);
   const loadUserSkills = useSkillsStore(state => state.loadUserSkills);
   const { saos, loading: saosLoading, loadUserSAOs } = useSAOsStore();
-  const [googleToken, setGoogleToken] = useState<string | null>(null);
-  const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
-  const [calendarLoading, setCalendarLoading] = useState(false);
-  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-  console.log('Google Client ID (from import.meta.env):', GOOGLE_CLIENT_ID);
   const [roleLoading, setRoleLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -103,24 +98,6 @@ const Dashboard: React.FC = () => {
 
     initializeData();
   }, [loadUserSkills, initialize, saos.length, saosLoading, loadUserSAOs]);
-
-  // Fetch Google Calendar events when token changes
-  useEffect(() => {
-    if (googleToken) {
-      setCalendarLoading(true);
-      fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?maxResults=5&orderBy=startTime&singleEvents=true&timeMin=' + new Date().toISOString(), {
-        headers: {
-          Authorization: `Bearer ${googleToken}`,
-        },
-      })
-        .then(res => res.json())
-        .then(data => {
-          setCalendarEvents(data.items || []);
-        })
-        .catch(() => setCalendarEvents([]))
-        .finally(() => setCalendarLoading(false));
-    }
-  }, [googleToken]);
 
   const completedSAOs = saos.filter(sao => sao.status === 'complete');
   const progressStats: ProgressStat[] = [
@@ -185,8 +162,8 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+    <div className="space-y-6 pt-2 md:pt-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-2">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-slate-800 flex items-center gap-2">
             Welcome back, {userName || 'Engineer'}!
@@ -273,10 +250,13 @@ const Dashboard: React.FC = () => {
           <div className="card">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold flex items-center">
-                <Award size={18} className="mr-2 text-teal-600" />
-                Upcoming Deadlines
+                <Link size={18} className="mr-2 text-teal-600" />
+                Quick Links
               </h2>
             </div>
+            <Suspense fallback={<div className="p-6 text-center text-slate-400">Loading quick links...</div>}>
+              <QuickLinks />
+            </Suspense>
           </div>
         </div>
 

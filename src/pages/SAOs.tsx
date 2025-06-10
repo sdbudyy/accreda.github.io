@@ -21,6 +21,7 @@ declare global {
   interface Window {
     gapi?: any;
     OneDrive?: any;
+    google?: any;
   }
 }
 
@@ -746,21 +747,26 @@ const SAOs: React.FC = () => {
 
   // --- GOOGLE DRIVE IMPORT SCAFFOLD ---
   // TODO: Replace with your credentials when you have a domain
-  const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID';
-  const GOOGLE_API_KEY = 'YOUR_GOOGLE_API_KEY';
+  const GOOGLE_CLIENT_ID = '521009491275-0m5p9k9vm29fc1v6v919k25v4godaem.apps.googleusercontent.com'; // <-- Your real client ID
+  const GOOGLE_API_KEY = 'AIzaSyAb5WFdzFEplkP4nktf8KNvoHBUxOC0dDQ'; // <-- Fill in your API key from Google Cloud Console
   const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
   const GOOGLE_DISCOVERY_DOCS = [
     'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
   ];
 
-  // Loads the Google API script
+  // Loads the Google API script and Picker script
   const loadGoogleApi = () => {
-    if (window.gapi) return Promise.resolve();
     return new Promise((resolve) => {
-      const script = document.createElement('script');
-      script.src = 'https://apis.google.com/js/api.js';
-      script.onload = resolve;
-      document.body.appendChild(script);
+      if (window.gapi && window.google && window.google.picker) return resolve(undefined);
+      const gapiScript = document.createElement('script');
+      gapiScript.src = 'https://apis.google.com/js/api.js';
+      gapiScript.onload = () => {
+        const pickerScript = document.createElement('script');
+        pickerScript.src = 'https://apis.google.com/js/api_pickers.js';
+        pickerScript.onload = resolve;
+        document.body.appendChild(pickerScript);
+      };
+      document.body.appendChild(gapiScript);
     });
   };
 
@@ -768,12 +774,49 @@ const SAOs: React.FC = () => {
   const handleImportGoogleDrive = async () => {
     setImportMenuOpen(false);
     await loadGoogleApi();
-    // TODO: Implement OAuth and Picker logic here
-    // See: https://developers.google.com/picker/docs/
-    alert('Google Drive picker scaffolded. Add credentials and logic when ready.');
-    // Simulate import for now
-    setImportedContent('Imported content from Google Drive (simulated).');
-    setShowImportModal(true);
+    window.gapi.load('client:auth2', async () => {
+      await window.gapi.client.init({
+        apiKey: GOOGLE_API_KEY,
+        clientId: GOOGLE_CLIENT_ID,
+        discoveryDocs: GOOGLE_DISCOVERY_DOCS,
+        scope: GOOGLE_SCOPES,
+      });
+      const GoogleAuth = window.gapi.auth2.getAuthInstance();
+      GoogleAuth.signIn().then(() => {
+        const oauthToken = GoogleAuth.currentUser.get().getAuthResponse().access_token;
+        if (!window.google || !window.google.picker) {
+          alert('Google Picker API not loaded.');
+          return;
+        }
+        const view = new window.google.picker.DocsView()
+          .setIncludeFolders(true)
+          .setSelectFolderEnabled(false);
+        const picker = new window.google.picker.PickerBuilder()
+          .addView(view)
+          .setOAuthToken(oauthToken)
+          .setDeveloperKey(GOOGLE_API_KEY)
+          .setCallback(async (data: any) => {
+            if (data.action === window.google.picker.Action.PICKED) {
+              const file = data.docs[0];
+              // Fetch file content using Drive API
+              try {
+                const fileId = file.id;
+                const response = await window.gapi.client.drive.files.get({
+                  fileId,
+                  alt: 'media',
+                });
+                setImportedContent(response.body || 'No content found.');
+                setShowImportModal(true);
+              } catch (err) {
+                setImportedContent('Failed to fetch file content.');
+                setShowImportModal(true);
+              }
+            }
+          })
+          .build();
+        picker.setVisible(true);
+      });
+    });
   };
 
   // --- ONEDRIVE IMPORT SCAFFOLD ---

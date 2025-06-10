@@ -8,6 +8,7 @@ import { supervisorService, SupervisorCategoryAverage } from '../services/superv
 import SupervisorRecentActivities from '../components/supervisor/SupervisorRecentActivities';
 import WeeklyDigest from '../components/dashboard/WeeklyDigest';
 import ScrollToTop from '../components/ScrollToTop';
+import QuickLinks from '../components/eitdashboard/QuickLinks';
 
 interface EIT {
   id: string;
@@ -289,33 +290,47 @@ const SupervisorDashboard: React.FC = () => {
             ))}
           </div>
         )}
-        {/* Team Members */}
-        {eits.length > 0 && (
-          <div className="card mb-8">
+        {/* Main Dashboard Content: Team Members, Recent Activities, Quick Links */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Team Members */}
+          <div className="card">
             <div className="p-6">
               <h2 className="text-xl font-semibold mb-4">Team Members</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {eits.map((eit) => (
-                  <div key={eit.id} className="border-b border-gray-200 pb-4 last:border-0">
-                    <div>
-                      <p className="text-sm text-gray-500">Name</p>
-                      <p className="font-medium">{eit.full_name}</p>
+              {eits.length > 0 ? (
+                <div className="grid grid-cols-1 gap-4">
+                  {eits.map((eit) => (
+                    <div key={eit.id} className="border-b border-gray-200 pb-4 last:border-0">
+                      <div>
+                        <p className="text-sm text-gray-500">Name</p>
+                        <p className="font-medium">{eit.full_name}</p>
+                      </div>
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-500">Email</p>
+                        <p className="font-medium">{eit.email}</p>
+                      </div>
                     </div>
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-500">Email</p>
-                      <p className="font-medium">{eit.email}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-slate-500">No team members found.</p>
+              )}
             </div>
           </div>
-        )}
-        {/* Recent Activities */}
-        <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300">
-          <div className="p-6">
-            <h2 className="text-xl font-semibold mb-4 text-[#2C3E50]">Recent Activities</h2>
-            <SupervisorRecentActivities />
+          {/* Recent Activities */}
+          <div className="card">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-4 text-[#2C3E50]">Recent Activities</h2>
+              <SupervisorRecentActivities />
+            </div>
+          </div>
+          {/* Quick Links */}
+          <div className="card">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold flex items-center">Quick Links</h2>
+              </div>
+              <QuickLinks />
+            </div>
           </div>
         </div>
       </div>

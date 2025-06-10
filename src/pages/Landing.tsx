@@ -144,7 +144,7 @@ function AnimatedListDemo({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "relative flex h-[20rem] w-full flex-col overflow-hidden p-2",
+        "relative flex h-[20rem] w-full flex-col overflow-hidden p-2 bg-white",
         className,
       )}
     >
@@ -153,7 +153,7 @@ function AnimatedListDemo({ className }: { className?: string }) {
           <Notification {...item} key={idx} />
         ))}
       </AnimatedList>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/4 bg-gradient-to-t from-background"></div>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/4 bg-gradient-to-t from-white"></div>
     </div>
   );
 }
@@ -481,15 +481,15 @@ function MarqueeDemo() {
           <ReviewCard key={review.username} {...review} />
         ))}
       </Marquee>
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-background"></div>
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-1/4 bg-gradient-to-l from-background"></div>
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-white"></div>
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-1/4 bg-gradient-to-l from-white"></div>
     </div>
   );
 }
 
 function GlobeDemo({ label = "Globe" }: { label?: string }) {
   return (
-    <div className="relative flex size-full max-w-lg items-center justify-center overflow-hidden rounded-lg border bg-background px-8 py-4 h-[20rem]">
+    <div className="relative flex size-full max-w-lg items-center justify-center overflow-hidden rounded-lg border bg-white px-8 py-4 h-[20rem]">
       <Globe className="top-28" />
       <span className="pointer-events-none absolute inset-0 flex items-center justify-center z-10 whitespace-pre-wrap bg-gradient-to-b from-black to-gray-300/80 bg-clip-text text-center text-4xl font-semibold leading-none text-transparent dark:from-white dark:to-slate-900/10">
         {label}
@@ -683,8 +683,10 @@ const Landing: React.FC = () => {
               Track, document, and manage your professional development journey towards becoming an Engineer in Training (EIT).
             </p>
             <div className="flex justify-center">
-              <Link 
-                to="/signup" 
+              <a
+                href="https://cal.com/accreda"
+                target="_blank"
+                rel="noopener"
                 className="relative group bg-black text-white text-lg px-8 py-4 rounded-lg inline-flex items-center justify-center overflow-hidden"
                 style={{ minWidth: 180 }}
               >
@@ -701,7 +703,7 @@ const Landing: React.FC = () => {
                   style={{ borderRadius: '0.5rem' }}
                 />
                 <span className="absolute left-0 top-0 h-full w-full group-hover:bg-lime-400/80 transition-all duration-300 z-0 rounded-lg" style={{ pointerEvents: 'none', opacity: 0 }} />
-              </Link>
+              </a>
             </div>
           </motion.div>
           <motion.div 

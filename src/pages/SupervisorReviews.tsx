@@ -269,11 +269,30 @@ const SupervisorReviews: React.FC = () => {
     ? pendingSAOs
     : pendingSAOs.filter(s => s.sao?.eit_id === selectedEIT);
 
+  // Add 2-week limit for history
+  const twoWeeksAgo = new Date();
+  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+
   const filteredHistory = selectedEIT === 'all'
-    ? history
+    ? Object.fromEntries(
+        Object.entries(history).filter(([_, entries]) => 
+          entries.some(entry => new Date(entry.validated_at) >= twoWeeksAgo)
+        )
+      )
     : Object.fromEntries(
-        Object.entries(history).filter(([key]) => key.startsWith(selectedEIT + '_'))
+        Object.entries(history)
+          .filter(([key, entries]) => 
+            key.startsWith(selectedEIT + '_') && 
+            entries.some(entry => new Date(entry.validated_at) >= twoWeeksAgo)
+          )
       );
+
+  // Filter SAOs history to show only last 2 weeks
+  const filteredSAOHistory = allSAOs.filter(req => 
+    req.status === 'submitted' && 
+    new Date(req.created_at) >= twoWeeksAgo &&
+    (selectedEIT === 'all' || req.sao?.eit_id === selectedEIT)
+  );
 
   // --- Fetch Skill Validation Requests ---
   useEffect(() => {
@@ -662,11 +681,11 @@ const SupervisorReviews: React.FC = () => {
         {/* History Mode */}
         {tab === 'skills' && showHistoryMode && (
           <div>
-            <div className="text-xl font-bold mb-4">History</div>
+            <div className="text-xl font-bold mb-4">History (Last 2 weeks)</div>
             {loadingSkills ? (
               <div>Loading...</div>
             ) : Object.keys(filteredHistory).length === 0 ? (
-              <div>No history available.</div>
+              <div className="text-slate-500">No skill history available for the last 2 weeks.</div>
             ) : (
               <div className="space-y-4">
                 {Object.entries(filteredHistory).map(([key, entries]) => {
@@ -790,14 +809,14 @@ const SupervisorReviews: React.FC = () => {
         )}
         {tab === 'saos' && showHistoryMode && (
           <div>
-            <div className="text-xl font-bold mb-4">History</div>
+            <div className="text-xl font-bold mb-4">History (Last 2 weeks)</div>
             {loadingSAOs ? (
               <div>Loading...</div>
-            ) : allSAOs.filter((req) => req.status === 'submitted').length === 0 ? (
-              <div className="text-slate-500">No SAO history available.</div>
+            ) : filteredSAOHistory.length === 0 ? (
+              <div className="text-slate-500">No SAO history available for the last 2 weeks.</div>
             ) : (
               <div className="space-y-4">
-                {allSAOs.filter((req) => req.status === 'submitted').map((req) => (
+                {filteredSAOHistory.map((req) => (
                   <div 
                     key={req.id}
                     data-sao-id={req.id}
