@@ -11,7 +11,8 @@ import SkillSelectModal from '../components/common/SkillSelectModal';
 
 interface Validator {
   id: string;
-  full_name: string;
+  first_name: string;
+  last_name: string;
   email: string;
   description: string;
   status: string;
@@ -87,7 +88,8 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
   loadValidators
 }) => {
   const [formData, setFormData] = useState({
-    fullName: existingValidator?.full_name || '',
+    firstName: existingValidator?.first_name || '',
+    lastName: existingValidator?.last_name || '',
     email: existingValidator?.email || '',
     description: existingValidator?.description || ''
   });
@@ -98,13 +100,15 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
     if (isOpen) {
       if (existingValidator) {
         setFormData({
-          fullName: existingValidator.full_name,
+          firstName: existingValidator.first_name,
+          lastName: existingValidator.last_name,
           email: existingValidator.email,
           description: existingValidator.description
         });
       } else {
         setFormData({
-          fullName: '',
+          firstName: '',
+          lastName: '',
           email: '',
           description: ''
         });
@@ -124,7 +128,7 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
       // Get EIT profile for notification
       const { data: eitProfile, error: eitError } = await supabase
         .from('eit_profiles')
-        .select('full_name')
+        .select('first_name, last_name, full_name')
         .eq('id', user.id)
         .single();
 
@@ -144,7 +148,8 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
         const { error: updateError } = await supabase
           .from('validators')
           .update({
-            full_name: formData.fullName,
+            first_name: formData.firstName,
+            last_name: formData.lastName,
             email: formData.email,
             description: formData.description
           })
@@ -158,7 +163,8 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
           .insert([{
             eit_id: user.id,
             skill_id: skillId,
-            full_name: formData.fullName,
+            first_name: formData.firstName,
+            last_name: formData.lastName,
             email: formData.email,
             description: formData.description,
             status: 'pending'
@@ -169,7 +175,9 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
         // Send notification to supervisor
         await sendValidationRequestNotification(
           supervisorProfile.id,
-          eitProfile.full_name,
+          (eitProfile?.first_name && eitProfile?.last_name)
+            ? `${eitProfile.first_name} ${eitProfile.last_name}`
+            : (eitProfile?.full_name || user.email),
           skillName
         );
       }
@@ -199,32 +207,38 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
             onClick={onClose}
             className="text-slate-400 hover:text-slate-600"
           >
-            <X size={24} />
+            <X className="h-6 w-6" />
           </button>
         </div>
-
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-600">{error}</p>
-          </div>
-        )}
-
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Full Name
-            </label>
-            <SupervisorAutocomplete
-              value={formData.fullName}
-              onChange={(name, email) => setFormData(prev => ({ ...prev, fullName: name, email }))}
-              disabled={status !== 'draft'}
-            />
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1">First Name</label>
+              <input
+                type="text"
+                value={formData.firstName}
+                onChange={e => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                placeholder="Enter validator's first name"
+                required
+                disabled={status !== 'draft'}
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Last Name</label>
+              <input
+                type="text"
+                value={formData.lastName}
+                onChange={e => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                placeholder="Enter validator's last name"
+                required
+                disabled={status !== 'draft'}
+              />
+            </div>
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Email
-            </label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
             <input
               type="email"
               value={formData.email}
@@ -235,11 +249,8 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
               disabled={status !== 'draft'}
             />
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Description
-            </label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
@@ -249,22 +260,22 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
               disabled={status !== 'draft'}
             />
           </div>
-
-          <div className="flex justify-end gap-2 mt-6">
+          {error && <div className="text-red-600 text-sm">{error}</div>}
+          <div className="flex justify-end gap-2 mt-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg"
+              className="btn btn-secondary"
               disabled={loading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg disabled:opacity-50"
+              className="btn btn-primary"
               disabled={loading}
             >
-              {loading ? 'Saving...' : existingValidator ? 'Update Validator' : 'Add Validator'}
+              {loading ? 'Saving...' : existingValidator ? 'Save Changes' : 'Add Validator'}
             </button>
           </div>
         </form>
@@ -1255,7 +1266,7 @@ const References: React.FC = () => {
                                     disabled={validator.status !== 'draft'}
                                   >
                                     <Edit2 size={14} />
-                                    {validator.full_name}
+                                    {validator.first_name} {validator.last_name}
                                   </button>
                                   {/* Status tag */}
                                   <span className={`ml-2 px-2 py-0.5 rounded text-xs font-semibold ${
@@ -1284,7 +1295,7 @@ const References: React.FC = () => {
                                           if (!user) return;
                                           const { data: eitProfile } = await supabase
                                             .from('eit_profiles')
-                                            .select('full_name')
+                                            .select('first_name, last_name, full_name')
                                             .eq('id', user.id)
                                             .single();
                                           // Get supervisor profile for notification
@@ -1296,7 +1307,9 @@ const References: React.FC = () => {
                                           // Send notification to supervisor
                                           await sendValidationRequestNotification(
                                             supervisorProfile?.id || validator.email, // fallback to email if id not found
-                                            eitProfile?.full_name || user.email,
+                                            (eitProfile?.first_name && eitProfile?.last_name)
+                                              ? `${eitProfile.first_name} ${eitProfile.last_name}`
+                                              : (eitProfile?.full_name || user.email),
                                             skill.name
                                           );
                                           // Set status back to pending in DB and clear score
@@ -1325,7 +1338,7 @@ const References: React.FC = () => {
                                           if (!user) return;
                                           const { data: eitProfile } = await supabase
                                             .from('eit_profiles')
-                                            .select('full_name')
+                                            .select('first_name, last_name, full_name')
                                             .eq('id', user.id)
                                             .single();
                                           // Get supervisor profile for notification
@@ -1337,7 +1350,9 @@ const References: React.FC = () => {
                                           // Send notification to supervisor
                                           await sendValidationRequestNotification(
                                             supervisorProfile?.id || validator.email, // fallback to email if id not found
-                                            eitProfile?.full_name || user.email,
+                                            (eitProfile?.first_name && eitProfile?.last_name)
+                                              ? `${eitProfile.first_name} ${eitProfile.last_name}`
+                                              : (eitProfile?.full_name || user.email),
                                             skill.name
                                           );
                                           // Set status back to pending in DB and clear score

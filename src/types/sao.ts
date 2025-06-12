@@ -21,6 +21,7 @@ export interface SAO {
   outcome: string;
   status: 'draft' | 'complete';
   eit_id: string;
+  employer: string;
   created_at: string;
   updated_at: string;
   feedback?: Array<{

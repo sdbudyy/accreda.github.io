@@ -54,7 +54,8 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
   const [situation, setSituation] = useState('');
   const [action, setAction] = useState('');
   const [outcome, setOutcome] = useState('');
-  const [selectedSkills, setSelectedSkills] = useState<Skill[]>([]);
+  const [employer, setEmployer] = useState('');
+  const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
   const [status, setStatus] = useState<'draft' | 'complete'>('draft');
   const [isSkillsModalOpen, setIsSkillsModalOpen] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
@@ -73,6 +74,8 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
   const [versions, setVersions] = useState<any[]>([]);
   const [loadingVersions, setLoadingVersions] = useState(false);
   const [versionError, setVersionError] = useState<string | null>(null);
+  const [selectedSkillStatus, setSelectedSkillStatus] = useState<string | null>(null);
+  const [selectedSkillInfo, setSelectedSkillInfo] = useState<{ status: string | null, rank: number | null } | null>(null);
 
   const mostRecentFeedback = editSAO && editSAO.feedback ? getMostRecentFeedback(editSAO.feedback) : null;
 
@@ -116,14 +119,16 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
       setSituation(editSAO.situation || '');
       setAction(editSAO.action || '');
       setOutcome(editSAO.outcome || '');
-      setSelectedSkills(editSAO.skills);
+      setEmployer(editSAO.employer || '');
+      setSelectedSkill(editSAO.skills[0] || null);
       setStatus(editSAO.status || 'draft');
     } else if (isOpen) {
       setTitle('');
       setSituation('');
       setAction('');
       setOutcome('');
-      setSelectedSkills([]);
+      setEmployer('');
+      setSelectedSkill(null);
       setStatus('draft');
     }
   }, [isOpen, editSAO]);
@@ -156,14 +161,42 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
     fetchCount();
   }, [isOpen]);
 
+  useEffect(() => {
+    const fetchSkillInfo = async () => {
+      if (!selectedSkill) {
+        setSelectedSkillInfo(null);
+        return;
+      }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data, error } = await supabase
+        .from('eit_skills')
+        .select('status, rank')
+        .eq('eit_id', user.id)
+        .eq('skill_id', selectedSkill.id)
+        .single();
+      if (error || !data) {
+        setSelectedSkillInfo(null);
+      } else {
+        setSelectedSkillInfo({ status: data.status, rank: data.rank });
+      }
+    };
+    fetchSkillInfo();
+  }, [selectedSkill]);
+
   const handleSendForValidation = async () => {
+    if (!selectedSkill) {
+      toast.error('Please select a skill');
+      return;
+    }
+
     try {
       if (editSAO) {
-        await updateSAO(editSAO.id, title, situation, action, outcome, selectedSkills, status);
+        await updateSAO(editSAO.id, title, situation, action, outcome, [selectedSkill], status, employer);
         await requestFeedback(editSAO.id, selectedSupervisor);
       } else {
         // If creating, first create the SAO, then send for validation
-        await createSAO(title, situation, action, outcome, selectedSkills, status);
+        await createSAO(title, situation, action, outcome, [selectedSkill], status, employer);
         // Optionally, you may want to reload SAOs and get the new ID, but for now just call requestFeedback with a placeholder or skip
       }
       toast.success('SAO sent to supervisor for validation!');
@@ -177,31 +210,41 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLimitError(null);
+    if (!selectedSkill) {
+      toast.error('Please select a skill');
+      return;
+    }
+
     try {
-      if (!editSAO && tier === 'free') {
-        const canCreate = await checkSaoLimit();
-        if (!canCreate) {
-          setLimitError('You have reached your SAO limit for the Free plan. Upgrade to add more.');
-          return;
-        }
-      }
       if (editSAO) {
-        await updateSAO(editSAO.id, title, situation, action, outcome, selectedSkills, status);
+        await updateSAO(
+          editSAO.id,
+          title,
+          situation,
+          action,
+          outcome,
+          [selectedSkill],
+          status,
+          employer
+        );
+        if (selectedSupervisor) {
+          await requestFeedback(editSAO.id, selectedSupervisor);
+        }
       } else {
-        await createSAO(title, situation, action, outcome, selectedSkills, status);
+        await createSAO(
+          title,
+          situation,
+          action,
+          outcome,
+          [selectedSkill],
+          status,
+          employer
+        );
       }
-      setTitle('');
-      setSituation('');
-      setAction('');
-      setOutcome('');
-      setSelectedSkills([]);
-      setSelectedSupervisor('');
       onClose();
-      loadUserSAOs();
-      onCreated && onCreated();
-    } catch (error) {
-      console.error('Error saving SAO:', error);
+      if (onCreated) onCreated();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to save SAO');
     }
   };
 
@@ -409,27 +452,57 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
               disabled={loading}
             />
           </div>
+          <div>
+            <label htmlFor="employer" className="block text-sm font-medium text-slate-700 mb-2">
+              Employer
+            </label>
+            <input
+              type="text"
+              id="employer"
+              value={employer}
+              onChange={(e) => setEmployer(e.target.value)}
+              className="w-full px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 text-lg"
+              placeholder="Enter employer name"
+              required
+              disabled={loading}
+            />
+          </div>
           <div className="space-y-6">
             <div className="bg-slate-100 border border-slate-200 rounded-lg p-4 mb-2">
               <div className="font-semibold mb-1 text-lg text-slate-800">Situation</div>
-              <RichTextEditor
-                content={situation}
-                onChange={val => setSituation(val)}
-              />
+              <div className="relative">
+                <RichTextEditor
+                  content={situation}
+                  onChange={val => setSituation(val)}
+                />
+                <div className="absolute bottom-2 right-2 text-xs text-slate-500">
+                  {situation.split(/\s+/).filter(Boolean).length} words
+                </div>
+              </div>
             </div>
             <div className="bg-slate-100 border border-slate-200 rounded-lg p-4 mb-2">
               <div className="font-semibold mb-1 text-lg text-slate-800">Action</div>
-              <RichTextEditor
-                content={action}
-                onChange={val => setAction(val)}
-              />
+              <div className="relative">
+                <RichTextEditor
+                  content={action}
+                  onChange={val => setAction(val)}
+                />
+                <div className="absolute bottom-2 right-2 text-xs text-slate-500">
+                  {action.split(/\s+/).filter(Boolean).length} words
+                </div>
+              </div>
             </div>
             <div className="bg-slate-100 border border-slate-200 rounded-lg p-4">
               <div className="font-semibold mb-1 text-lg text-slate-800">Outcome</div>
-              <RichTextEditor
-                content={outcome}
-                onChange={val => setOutcome(val)}
-              />
+              <div className="relative">
+                <RichTextEditor
+                  content={outcome}
+                  onChange={val => setOutcome(val)}
+                />
+                <div className="absolute bottom-2 right-2 text-xs text-slate-500">
+                  {outcome.split(/\s+/).filter(Boolean).length} words
+                </div>
+              </div>
             </div>
           </div>
 
@@ -457,25 +530,30 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
-              Relevant Skills
+              Relevant Skill
             </label>
             <div className="flex flex-wrap gap-2 mb-3">
-              {selectedSkills.map((skill) => (
+              {selectedSkill && (
                 <span
-                  key={skill.id}
+                  key={selectedSkill.id}
                   className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-teal-100 text-teal-800"
                 >
-                  {skill.name}
+                  {selectedSkill.name}
+                  {selectedSkillInfo && selectedSkillInfo.rank && (
+                    <span className="ml-2 text-xs text-blue-600 font-semibold">
+                      (Rank: {selectedSkillInfo.rank})
+                    </span>
+                  )}
                   <button
                     type="button"
-                    onClick={() => setSelectedSkills(prev => prev.filter(s => s.id !== skill.id))}
+                    onClick={() => setSelectedSkill(null)}
                     className="ml-2 text-teal-600 hover:text-teal-800"
                     disabled={loading}
                   >
                     <X size={16} />
                   </button>
                 </span>
-              ))}
+              )}
             </div>
             <button
               type="button"
@@ -484,7 +562,7 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
               disabled={loading}
             >
               <Plus size={20} />
-              Select Skills
+              Select Skill
             </button>
           </div>
 
@@ -547,7 +625,7 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
             <div className="bg-white rounded-lg p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-semibold">Select Skills</h3>
+                <h3 className="text-2xl font-semibold">Select Skill</h3>
                 <button
                   onClick={() => setIsSkillsModalOpen(false)}
                   className="text-slate-400 hover:text-slate-600"
@@ -567,16 +645,14 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
                           className="flex items-center space-x-3 p-3 hover:bg-slate-50 rounded cursor-pointer"
                         >
                           <input
-                            type="checkbox"
-                            checked={selectedSkills.some(s => s.id === skill.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedSkills(prev => [...prev, { ...skill, category_name: category.name }]);
-                              } else {
-                                setSelectedSkills(prev => prev.filter(s => s.id !== skill.id));
-                              }
+                            type="radio"
+                            name="skill-selection"
+                            checked={selectedSkill?.id === skill.id}
+                            onChange={() => {
+                              setSelectedSkill({ ...skill, category_name: category.name });
+                              setIsSkillsModalOpen(false);
                             }}
-                            className="rounded text-teal-600 focus:ring-teal-500 w-5 h-5"
+                            className="text-teal-600 focus:ring-teal-500 w-5 h-5"
                           />
                           <span className="text-base">{skill.name}</span>
                         </label>
@@ -720,6 +796,11 @@ const SAOCard: React.FC<{
             className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-teal-100 text-teal-800"
           >
             {skill.name}
+            {typeof skill.rank === 'number' && (
+              <span className="ml-2 text-xs text-blue-600 font-semibold">
+                (Rank: {skill.rank})
+              </span>
+            )}
           </span>
         ))}
       </div>
@@ -729,6 +810,36 @@ const SAOCard: React.FC<{
     </div>
   );
 };
+
+const SKILL_ORDER = [
+  '1.1 Regulations, Codes & Standards',
+  '1.2 Technical & Design Constraints',
+  '1.3 Risk Management for Technical Work',
+  '1.4 Application of Theory',
+  '1.5 Solution Techniques – Results Verification',
+  '1.6 Safety in Design & Technical Work',
+  '1.7 Systems & Their Components',
+  '1.8 Project or Asset Life-Cycle Awareness',
+  '1.9 Quality Assurance',
+  '1.10 Engineering Documentation',
+  '2.1 Oral Communication (English)',
+  '2.2 Written Communication (English)',
+  '2.3 Reading & Comprehension (English)',
+  '3.1 Project Management Principles',
+  '3.2 Finances & Budget',
+  '4.1 Promote Team Effectiveness & Resolve Conflict',
+  '5.1 Professional Accountability (Ethics, Liability, Limits)',
+  '6.1 Protection of the Public Interest',
+  '6.2 Benefits of Engineering to the Public',
+  '6.3 Role of Regulatory Bodies',
+  '6.4 Application of Sustainability Principles',
+  '6.5 Promotion of Sustainability',
+];
+
+function getSkillOrderIndex(skillName: string) {
+  const idx = SKILL_ORDER.indexOf(skillName);
+  return idx === -1 ? 999 : idx;
+}
 
 const SAOs: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -744,6 +855,7 @@ const SAOs: React.FC = () => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [uploadInputRef] = useState(() => React.createRef<HTMLInputElement>());
   const [pendingSAOContent, setPendingSAOContent] = useState<string | null>(null);
+  const [sortMode, setSortMode] = useState<'recent' | 'skill'>('recent');
 
   // --- GOOGLE DRIVE IMPORT SCAFFOLD ---
   // TODO: Replace with your credentials when you have a domain
@@ -947,6 +1059,19 @@ const SAOs: React.FC = () => {
     if (uploadInputRef.current) uploadInputRef.current.value = '';
   };
 
+  // Sorting logic
+  let sortedSAOs = [...saos];
+  if (sortMode === 'recent') {
+    sortedSAOs.sort((a, b) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime());
+  } else if (sortMode === 'skill') {
+    sortedSAOs.sort((a, b) => {
+      // Find the lowest skill order index for each SAO
+      const aIdx = Math.min(...a.skills.map(s => getSkillOrderIndex(s.name)));
+      const bIdx = Math.min(...b.skills.map(s => getSkillOrderIndex(s.name)));
+      return aIdx - bIdx;
+    });
+  }
+
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       {/* SAO Limit Banner */}
@@ -959,13 +1084,12 @@ const SAOs: React.FC = () => {
               : 'You have reached your SAO limit for the Free plan. Upgrade to add more.')}
         </div>
       )}
-      <div className="flex justify-between items-center mb-4">
-        <div>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 bg-slate-50 px-6 py-4 rounded-lg border border-slate-100">
+        <div className="mb-3 md:mb-0">
           <h1 className="text-2xl font-bold text-slate-800">Situation-Action-Outcome (SAO)</h1>
           <p className="text-slate-500 mt-1">Write and manage your SAO essays.</p>
         </div>
-        <div className="flex gap-2 items-center relative">
-          {/* Combined Import/Upload Button */}
+        <div className="flex flex-wrap gap-2 items-center justify-end">
           <button
             className="btn flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
             onClick={() => setImportMenuOpen((v) => !v)}
@@ -999,7 +1123,6 @@ const SAOs: React.FC = () => {
               </button>
             </div>
           )}
-          {/* Hidden file input for upload */}
           <input
             type="file"
             className="hidden"
@@ -1007,7 +1130,6 @@ const SAOs: React.FC = () => {
             onChange={handleUploadFile}
             accept=".txt,.docx,.pdf"
           />
-          {/* Existing buttons */}
           {userRole === 'eit' && (
             <button
               className={`btn btn-primary ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
@@ -1029,8 +1151,18 @@ const SAOs: React.FC = () => {
             <Plus size={18} />
             Start New SAO
           </button>
+          <select
+            className="border border-slate-300 rounded px-3 py-2 text-sm ml-2 min-w-[140px]"
+            value={sortMode}
+            onChange={e => setSortMode(e.target.value as 'recent' | 'skill')}
+            title="Sort SAOs"
+          >
+            <option value="recent">Recently Edited</option>
+            <option value="skill">Sort by Skill</option>
+          </select>
         </div>
       </div>
+      <hr className="mb-6 border-slate-200" />
 
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -1045,9 +1177,9 @@ const SAOs: React.FC = () => {
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
         </div>
-      ) : saos.length > 0 ? (
+      ) : sortedSAOs.length > 0 ? (
         <div className="space-y-4">
-          {saos.map((sao) => (
+          {sortedSAOs.map((sao) => (
             <SAOCard 
               key={sao.id} 
               sao={sao} 

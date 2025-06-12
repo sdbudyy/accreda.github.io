@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
-import { Check, Lock, Bell, Sun, Trash2, User as UserIcon, Mail, Calendar } from 'lucide-react';
+import { Check, Lock, Bell, Sun, Trash2, User as UserIcon, Mail, Calendar, FileText, X } from 'lucide-react';
 import FileUpload from '../components/FileUpload';
 import ConnectionStatus from '../components/common/ConnectionStatus';
 import { useNotificationPreferences } from '../store/notificationPreferences';
 import { Switch } from '@headlessui/react';
 import { useSubscriptionStore } from '../store/subscriptionStore';
 import { sendSupervisorRequestNotification } from '../utils/notifications';
+import { generateCSAWPDF, createPDFBlobUrl, CSAWData } from '../utils/pdfGenerator';
 
 const defaultAvatar =
   'https://ui-avatars.com/api/?name=User&background=E0F2FE&color=0891B2&size=128';
@@ -80,6 +81,10 @@ const Settings: React.FC = () => {
   const [start_date, setStartDate] = useState('');
   const [target_date, setTargetDate] = useState('');
   const [plan_interval, setPlanInterval] = useState('monthly');
+  const [exportLoading, setExportLoading] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [previewData, setPreviewData] = useState<any>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   const {
     supervisorReviews,
@@ -457,6 +462,65 @@ const Settings: React.FC = () => {
     return 'Free';
   };
 
+  const handleExportToCSAW = async () => {
+    if (!user) return;
+    setExportLoading(true);
+    try {
+      // Fetch all EIT data
+      const { data: eitData, error: eitError } = await supabase
+        .from('eit_profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      if (eitError) throw eitError;
+
+      // Fetch all skills
+      const { data: skills, error: skillsError } = await supabase
+        .from('eit_skills')
+        .select('*')
+        .eq('eit_id', user.id);
+
+      if (skillsError) throw skillsError;
+
+      // Fetch all experiences
+      const { data: experiences, error: expError } = await supabase
+        .from('experiences')
+        .select('*')
+        .eq('eit_id', user.id);
+
+      if (expError) throw expError;
+
+      // Create the export data
+      const exportData: CSAWData = {
+        profile: eitData,
+        skills: skills || [],
+        experiences: experiences || []
+      };
+
+      // Generate PDF
+      const pdfBytes = await generateCSAWPDF(exportData);
+      const url = createPDFBlobUrl(pdfBytes);
+      setPdfUrl(url);
+      setPreviewData(exportData);
+      setShowPreviewModal(true);
+      setMessage({ type: 'success', text: 'Preview generated successfully!' });
+    } catch (error) {
+      console.error('Export error:', error);
+      setMessage({ type: 'error', text: 'Failed to generate preview. Please try again.' });
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  // Clean up PDF URL when modal is closed
+  useEffect(() => {
+    if (!showPreviewModal && pdfUrl) {
+      URL.revokeObjectURL(pdfUrl);
+      setPdfUrl(null);
+    }
+  }, [showPreviewModal]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -674,6 +738,27 @@ const Settings: React.FC = () => {
                   )}
                 </div>
               </form>
+            </section>
+          )}
+
+          {/* CSAW Export Section */}
+          {userRole === 'eit' && (
+            <section className="card p-6">
+              <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
+                <FileText className="h-5 w-5" /> CSAW Application Preview
+              </h2>
+              <div className="space-y-4">
+                <p className="text-slate-600">
+                  Generate a PDF preview of your CSAW application. This can be used to review your application before submission, but does not submit the application to CSAW.
+                </p>
+                <button
+                  onClick={handleExportToCSAW}
+                  disabled={exportLoading}
+                  className="btn btn-secondary flex items-center gap-2"
+                >
+                  {exportLoading ? 'Generating Preview...' : 'Generate Preview'}
+                </button>
+              </div>
             </section>
           )}
 
@@ -1282,6 +1367,61 @@ const Settings: React.FC = () => {
                 </button>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Preview Modal */}
+      {showPreviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-4xl w-full h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-blue-800">CSAW Application Preview</h2>
+              <button
+                className="text-slate-400 hover:text-slate-600"
+                onClick={() => setShowPreviewModal(false)}
+                aria-label="Close"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto bg-white rounded-lg border border-slate-200">
+              {pdfUrl ? (
+                <iframe
+                  src={pdfUrl}
+                  className="w-full h-full"
+                  title="CSAW Application Preview"
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-slate-500">Loading preview...</p>
+                </div>
+              )}
+            </div>
+            <div className="mt-4 flex justify-end gap-3">
+              <button
+                onClick={() => setShowPreviewModal(false)}
+                className="btn btn-secondary"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  if (pdfUrl) {
+                    const a = document.createElement('a');
+                    a.href = pdfUrl;
+                    a.download = `csaw_application_${new Date().toISOString().split('T')[0]}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                  }
+                }}
+                className="btn btn-primary"
+                disabled={!pdfUrl}
+              >
+                Download PDF
+              </button>
+            </div>
           </div>
         </div>
       )}

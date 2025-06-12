@@ -55,32 +55,25 @@ const SAOCard: React.FC<SAOCardProps> = ({ sao, onEdit, onDelete }) => {
       ref={cardRef}
       className="card hover:shadow-md transition-shadow"
     >
-      <div className="flex justify-between items-center">
-        <h3 className="font-semibold text-lg text-slate-800">{sao.title}</h3>
-        <div className="flex items-center space-x-2">
-          {/* Status Tag */}
-          {sao.status === 'draft' && (
-            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-200 text-slate-700">Draft</span>
-          )}
-          {sao.status === 'complete' && (
-            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">Complete</span>
-          )}
-          {sao.feedback && sao.feedback.length > 0 && (
-            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-              {sao.feedback.some(f => f.status === 'pending') ? 'Feedback Pending' : 'Has Feedback'}
-            </span>
-          )}
-          <button 
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <h3 className="text-xl font-semibold text-slate-900">{sao.title}</h3>
+          <p className="text-sm text-slate-500 mt-1">Employer: {sao.employer}</p>
+        </div>
+        <div className="flex gap-2">
+          <button
             onClick={() => onEdit(sao)}
-            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            title="Edit SAO"
           >
-            <Edit3 size={16} />
+            <Edit3 size={18} />
           </button>
-          <button 
+          <button
             onClick={() => onDelete(sao.id)}
-            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-red-600"
+            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            title="Delete SAO"
           >
-            <Trash2 size={16} />
+            <Trash2 size={18} />
           </button>
         </div>
       </div>

@@ -25,6 +25,7 @@ export interface SAO {
   status: 'draft' | 'complete';
   skills: Skill[];
   feedback?: SAOFeedback[];
+  employer: string;
 }
 
 interface SAOsState {
@@ -32,8 +33,8 @@ interface SAOsState {
   loading: boolean;
   error: string | null;
   lastFetched: number | null;
-  createSAO: (title: string, situation: string, action: string, outcome: string, skills: Skill[], status: 'draft' | 'complete') => Promise<void>;
-  updateSAO: (id: string, title: string, situation: string, action: string, outcome: string, skills: Skill[], status: 'draft' | 'complete') => Promise<void>;
+  createSAO: (title: string, situation: string, action: string, outcome: string, skills: Skill[], status: 'draft' | 'complete', employer: string) => Promise<void>;
+  updateSAO: (id: string, title: string, situation: string, action: string, outcome: string, skills: Skill[], status: 'draft' | 'complete', employer: string) => Promise<void>;
   deleteSAO: (id: string) => Promise<void>;
   loadUserSAOs: (force?: boolean) => Promise<void>;
   clearState: () => void;
@@ -63,7 +64,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
     lastFetched: null
   }),
 
-  createSAO: async (title: string, situation: string, action: string, outcome: string, skills: Skill[], status: 'draft' | 'complete') => {
+  createSAO: async (title: string, situation: string, action: string, outcome: string, skills: Skill[], status: 'draft' | 'complete', employer: string) => {
     set({ loading: true, error: null });
     try {
       console.log('Creating new SAO...');
@@ -83,7 +84,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
           email: user.email || ''
         });
 
-      console.log('Creating SAO:', { title, situation, action, outcome, skills, eit_id: user.id });
+      console.log('Creating SAO:', { title, situation, action, outcome, skills, eit_id: user.id, employer });
 
       // First, create the SAO with draft status
       const { data: sao, error: saoError } = await supabase
@@ -95,7 +96,8 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
             situation,
             action,
             outcome,
-            status
+            status,
+            employer
           }
         ])
         .select()
@@ -163,10 +165,10 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
     }
   },
 
-  updateSAO: async (id: string, title: string, situation: string, action: string, outcome: string, skills: Skill[], status: 'draft' | 'complete') => {
+  updateSAO: async (id: string, title: string, situation: string, action: string, outcome: string, skills: Skill[], status: 'draft' | 'complete', employer: string) => {
     set({ loading: true, error: null });
     try {
-      console.log('Updating SAO:', { id, title, situation, action, outcome, skills });
+      console.log('Updating SAO:', { id, title, situation, action, outcome, skills, employer });
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError) {
         console.error('Auth error:', authError);
@@ -177,7 +179,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
       // Update the SAO
       const { error: saoError } = await supabase
         .from('saos')
-        .update({ title, situation, action, outcome, status })
+        .update({ title, situation, action, outcome, status, employer })
         .eq('id', id)
         .eq('eit_id', user.id);
 
@@ -417,7 +419,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
       }
       if (!user) throw new Error('No authenticated user found');
 
-      console.log('Fetching SAOs for user:', user.id);
+      // Fetch all SAOs and their skills (no join)
       const { data: saos, error: saosError } = await supabase
         .from('saos')
         .select(`
@@ -443,21 +445,48 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
         throw saosError;
       }
 
-      console.log('SAOs fetched:', saos?.length);
+      // Fetch all user skill ranks
+      const { data: userSkills, error: userSkillsError } = await supabase
+        .from('eit_skills')
+        .select('skill_id, rank')
+        .eq('eit_id', user.id);
 
-      // Transform the data to match our SAO interface
+      if (userSkillsError) {
+        console.error('Error fetching user skill ranks:', userSkillsError);
+        throw userSkillsError;
+      }
+      // Build a map for quick lookup
+      const skillRankMap = new Map<string, number | undefined>();
+      userSkills?.forEach((us: any) => {
+        skillRankMap.set(us.skill_id, us.rank);
+      });
+
+      // Fetch all skills for name lookup
+      const { data: allSkills, error: allSkillsError } = await supabase
+        .from('skills')
+        .select('id, name');
+      if (allSkillsError) {
+        console.error('Error fetching all skills:', allSkillsError);
+        throw allSkillsError;
+      }
+      const skillNameMap = new Map<string, string>();
+      allSkills?.forEach((s: any) => {
+        skillNameMap.set(s.id, s.name);
+      });
+
+      // Transform the data to match our SAO interface, merging in the rank and name
       const transformedSAOs = saos?.map(sao => ({
         ...sao,
         skills: sao.sao_skills.map((skill: any) => ({
           id: skill.skill_id,
-          name: '',
+          name: skillNameMap.get(skill.skill_id) || '',
           category_name: skill.category_name,
-          status: 'not-started'
+          status: 'not-started',
+          rank: skillRankMap.get(skill.skill_id)
         })),
         feedback: sao.sao_feedback || []
       })) || [];
 
-      console.log('Transformed SAOs:', transformedSAOs.length);
       set({ saos: transformedSAOs, lastFetched: now });
     } catch (error: any) {
       console.error('Error in loadUserSAOs:', {
