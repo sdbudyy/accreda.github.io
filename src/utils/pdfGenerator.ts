@@ -29,6 +29,7 @@ export interface CSAWData {
   profile: {
     full_name: string;
     email: string;
+    apega_id?: number;
     // Add other profile fields as needed
   };
   skills: Array<{
@@ -36,6 +37,11 @@ export interface CSAWData {
     name: string;
     status: string;
     description?: string;
+    validator?: {
+      first_name: string;
+      last_name: string;
+      position?: string;
+    };
     // Add other skill fields as needed
   }>;
   experiences: Array<{
@@ -120,10 +126,17 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     // Use form.getTextField('FieldName') to get the field, then .setText(value) to fill it.
     // Example: Fill the 'Name' field with the user's full name from Supabase
     try {
-      const nameField = form.getTextField('Name');
-      nameField.setText(data.profile.full_name || '');
+      const applicantNameField = form.getTextField('ApplicantName');
+      applicantNameField.setText(data.profile.full_name || '');
     } catch (e) {
-      console.warn('Could not find Name field:', e);
+      console.warn('Could not find ApplicantName field:', e);
+    }
+    // Fill the 'ApegaID' field with the user's APEGA ID
+    try {
+      const apegaIdField = form.getTextField('ApegaID');
+      apegaIdField.setText(data.profile.apega_id ? String(data.profile.apega_id) : '');
+    } catch (e) {
+      console.warn('Could not find ApegaID field:', e);
     }
     // To fill more fields, repeat the above pattern:
     // try {
@@ -138,38 +151,27 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     const sao11 = (data.experiences || []).find(
       (sao) => Array.isArray(sao.skills) && sao.skills.some(s => s.id === skill11.id)
     );
-
-    try {
-      const nameField = form.getTextField('ApplicantName');
-      nameField.setText(data.profile.full_name || '');
-    } catch (e) { console.warn('Could not find ApplicantName field:', e); }
-    try {
-      const employerField = form.getTextField('Employer1');
-      employerField.setText((sao11?.employer) || '');
-    } catch (e) { console.warn('Could not find Employer1 field:', e); }
-    // Only try to set validator fields if they exist
-    if (sao11 && Array.isArray((sao11 as any).validators) && (sao11 as any).validators.length > 0) {
+    console.log('Skill 1.1:', skill11);
+    console.log('SAO linked to skill 1.1:', sao11);
+    // Dynamically fill fields ending with 11 for situation, action, and outcome
+    const sao11Fields = [
+      { field: 'Employer11', value: sao11?.employer || '' },
+      { field: 'VFName11', value: skill11?.validator?.first_name || '' },
+      { field: 'VLName11', value: skill11?.validator?.last_name || '' },
+      { field: 'VPos11', value: skill11?.validator?.position || '' },
+      { field: 'Situation11', value: sao11?.situation || '' },
+      { field: 'Action11', value: sao11?.action || '' },
+      { field: 'Outcome11', value: sao11?.outcome || '' },
+    ];
+    sao11Fields.forEach(({ field, value }) => {
       try {
-        const vFNameField = form.getTextField('VFName1');
-        vFNameField.setText((sao11 as any).validators[0]?.first_name || '');
-      } catch (e) { console.warn('Could not find VFName1 field:', e); }
-      try {
-        const vLNameField = form.getTextField('VLName1');
-        vLNameField.setText((sao11 as any).validators[0]?.last_name || '');
-      } catch (e) { console.warn('Could not find VLName1 field:', e); }
-    }
-    try {
-      const situationField = form.getTextField('Situation1');
-      situationField.setText((sao11?.situation) || '');
-    } catch (e) { console.warn('Could not find Situation1 field:', e); }
-    try {
-      const actionField = form.getTextField('Action1');
-      actionField.setText((sao11?.action) || '');
-    } catch (e) { console.warn('Could not find Action1 field:', e); }
-    try {
-      const outcomeField = form.getTextField('Outcome 1');
-      outcomeField.setText((sao11?.outcome) || '');
-    } catch (e) { console.warn('Could not find Outcome 1 field:', e); }
+        const f = form.getTextField(field);
+        f.setText(value);
+        console.log(`Set ${field} to:`, value);
+      } catch (e) {
+        console.warn(`Could not find ${field} field:`, e);
+      }
+    });
     // --- END FILLING FORM FIELDS FOR SKILL 1.1 ---
 
     // --- FILLING SAO FIELDS ON SKILL PAGES (if you want to fill text, not form fields) ---

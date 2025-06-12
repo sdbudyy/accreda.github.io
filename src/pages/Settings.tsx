@@ -88,6 +88,8 @@ const Settings: React.FC = () => {
   const [apegaId, setApegaId] = useState('');
   const [showApegaWarning, setShowApegaWarning] = useState(false);
   const [allowAnyway, setAllowAnyway] = useState(false);
+  const [apegaIdSaving, setApegaIdSaving] = useState(false);
+  const [apegaIdSaved, setApegaIdSaved] = useState(false);
 
   const {
     supervisorReviews,
@@ -480,10 +482,15 @@ const Settings: React.FC = () => {
 
   const handleSaveApegaId = async () => {
     if (!user) return;
+    setApegaIdSaving(true);
+    setApegaIdSaved(false);
     await supabase
       .from('eit_profiles')
       .update({ apega_id: apegaId })
       .eq('id', user.id);
+    setApegaIdSaving(false);
+    setApegaIdSaved(true);
+    setTimeout(() => setApegaIdSaved(false), 2000);
   };
 
   const handleExportToCSAW = async () => {
@@ -796,14 +803,44 @@ const Settings: React.FC = () => {
           {userRole === 'eit' && (
             <section className="card p-6 mb-6">
               <h2 className="text-lg font-semibold mb-2">APEGA ID</h2>
-              <input
-                type="text"
-                className="input input-bordered w-full mb-2"
-                placeholder="Enter your APEGA ID"
-                value={apegaId}
-                onChange={e => setApegaId(e.target.value)}
-                onBlur={handleSaveApegaId}
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={7}
+                  minLength={5}
+                  className="input input-bordered w-full mb-2"
+                  placeholder="Enter your APEGA ID"
+                  value={apegaId}
+                  onChange={e => {
+                    // Only allow numbers
+                    const val = e.target.value.replace(/[^0-9]/g, '');
+                    setApegaId(val);
+                  }}
+                />
+                <button
+                  className={`btn btn-primary mb-2 flex items-center justify-center ${apegaIdSaving ? 'opacity-70 cursor-not-allowed' : ''}`}
+                  style={{ minWidth: 80 }}
+                  onClick={handleSaveApegaId}
+                  disabled={apegaId.length < 5 || apegaId.length > 7 || !/^[0-9]{5,7}$/.test(apegaId) || apegaIdSaving}
+                  type="button"
+                >
+                  {apegaIdSaving ? (
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                    </svg>
+                  ) : apegaIdSaved ? (
+                    <span className="text-green-500">Saved!</span>
+                  ) : (
+                    'Save'
+                  )}
+                </button>
+              </div>
+              {apegaId && (apegaId.length < 5 || apegaId.length > 7) && (
+                <p className="text-red-600 text-sm mt-1">APEGA ID must be 5 to 7 digits.</p>
+              )}
               <p className="text-slate-500 text-sm">Your APEGA ID is required for your CSAW application.</p>
             </section>
           )}

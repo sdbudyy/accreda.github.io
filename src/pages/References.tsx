@@ -128,7 +128,7 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
       // Get EIT profile for notification
       const { data: eitProfile, error: eitError } = await supabase
         .from('eit_profiles')
-        .select('first_name, last_name, full_name')
+        .select('full_name')
         .eq('id', user.id)
         .single();
 
@@ -174,10 +174,8 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
 
         // Send notification to supervisor
         await sendValidationRequestNotification(
-          supervisorProfile.id,
-          (eitProfile?.first_name && eitProfile?.last_name)
-            ? `${eitProfile.first_name} ${eitProfile.last_name}`
-            : (eitProfile?.full_name || user.email),
+          supervisorProfile?.id || formData.email, // fallback to email if id not found
+          eitProfile?.full_name ?? '',
           skillName
         );
       }
@@ -547,6 +545,8 @@ const References: React.FC = () => {
   const [isEditJobModalOpen, setIsEditJobModalOpen] = useState(false);
   const [editJob, setEditJob] = useState<Job | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [showDeleteValidatorConfirm, setShowDeleteValidatorConfirm] = useState(false);
+  const [validatorToDelete, setValidatorToDelete] = useState<Validator | null>(null);
 
   const selectedSkills = skillCategories
     .flatMap(cat => cat.skills)
@@ -863,6 +863,15 @@ const References: React.FC = () => {
       default:
         return <AlertCircle size={16} className="text-yellow-600" />;
     }
+  };
+
+  const handleDeleteValidator = async () => {
+    if (!validatorToDelete) return;
+    await supabase.from('validators').delete().eq('id', validatorToDelete.id);
+    setShowDeleteValidatorConfirm(false);
+    setValidatorToDelete(null);
+    setTimeout(() => loadValidators(), 300);
+    toast.success('Validator deleted');
   };
 
   return (
@@ -1295,7 +1304,7 @@ const References: React.FC = () => {
                                           if (!user) return;
                                           const { data: eitProfile } = await supabase
                                             .from('eit_profiles')
-                                            .select('first_name, last_name, full_name')
+                                            .select('full_name')
                                             .eq('id', user.id)
                                             .single();
                                           // Get supervisor profile for notification
@@ -1307,9 +1316,7 @@ const References: React.FC = () => {
                                           // Send notification to supervisor
                                           await sendValidationRequestNotification(
                                             supervisorProfile?.id || validator.email, // fallback to email if id not found
-                                            (eitProfile?.first_name && eitProfile?.last_name)
-                                              ? `${eitProfile.first_name} ${eitProfile.last_name}`
-                                              : (eitProfile?.full_name || user.email),
+                                            eitProfile?.full_name ?? '',
                                             skill.name
                                           );
                                           // Set status back to pending in DB and clear score
@@ -1327,47 +1334,17 @@ const References: React.FC = () => {
                                     </button>
                                   )}
                                   {validator.status === 'scored' && (
-                                    <button
-                                      className={`ml-2 px-2 py-0.5 text-xs font-medium bg-green-800 text-white rounded hover:bg-green-900 disabled:bg-green-300 disabled:cursor-not-allowed`}
-                                      disabled={!!(nudgeCooldowns[validator.id] && Date.now() - nudgeCooldowns[validator.id] < 5 * 60 * 1000)}
-                                      onClick={async () => {
-                                        setNudgeCooldowns((prev: any) => ({ ...prev, [validator.id]: Date.now() }));
-                                        try {
-                                          // Get EIT profile for notification
-                                          const { data: { user } } = await supabase.auth.getUser();
-                                          if (!user) return;
-                                          const { data: eitProfile } = await supabase
-                                            .from('eit_profiles')
-                                            .select('first_name, last_name, full_name')
-                                            .eq('id', user.id)
-                                            .single();
-                                          // Get supervisor profile for notification
-                                          const { data: supervisorProfile } = await supabase
-                                            .from('supervisor_profiles')
-                                            .select('id')
-                                            .eq('email', validator.email)
-                                            .single();
-                                          // Send notification to supervisor
-                                          await sendValidationRequestNotification(
-                                            supervisorProfile?.id || validator.email, // fallback to email if id not found
-                                            (eitProfile?.first_name && eitProfile?.last_name)
-                                              ? `${eitProfile.first_name} ${eitProfile.last_name}`
-                                              : (eitProfile?.full_name || user.email),
-                                            skill.name
-                                          );
-                                          // Set status back to pending in DB and clear score
-                                          await supabase.from('validators').update({ status: 'pending', score: null }).eq('id', validator.id);
-                                          await loadValidators();
-                                          toast.success('Rescore request sent!');
-                                        } catch (err) {
-                                          toast.error('Failed to request rescore.');
-                                        }
-                                      }}
-                                    >
-                                      {nudgeCooldowns[validator.id] && Date.now() - nudgeCooldowns[validator.id] < 5 * 60 * 1000
-                                        ? `Requested (wait ${Math.ceil((5 * 60 * 1000 - (Date.now() - nudgeCooldowns[validator.id])) / 60000)} min)`
-                                        : 'Ask for Rescore'}
-                                    </button>
+                                    <>
+                                      <button
+                                        className="ml-2 px-2 py-0.5 text-xs font-medium bg-red-700 text-white rounded hover:bg-red-800 disabled:bg-red-300 disabled:cursor-not-allowed"
+                                        onClick={() => {
+                                          setValidatorToDelete(validator);
+                                          setShowDeleteValidatorConfirm(true);
+                                        }}
+                                      >
+                                        Delete
+                                      </button>
+                                    </>
                                   )}
                                   {/* Add Cancel button for draft or pending status */}
                                   {(validator.status === 'draft' || validator.status === 'pending') && (
@@ -1719,6 +1696,30 @@ const References: React.FC = () => {
                     toast.error(err.message || 'Failed to delete experience');
                   }
                 }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Validator Confirmation Modal */}
+      {showDeleteValidatorConfirm && validatorToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-red-700 mb-4">Delete Validator</h3>
+            <p className="mb-4">Are you sure you want to delete the validator <b>{validatorToDelete.first_name} {validatorToDelete.last_name}</b>? This action cannot be undone.</p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => { setShowDeleteValidatorConfirm(false); setValidatorToDelete(null); }}
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteValidator}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-700 hover:bg-red-800 rounded-lg transition-colors"
               >
                 Delete
               </button>
