@@ -76,6 +76,16 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
   const [versionError, setVersionError] = useState<string | null>(null);
   const [selectedSkillStatus, setSelectedSkillStatus] = useState<string | null>(null);
   const [selectedSkillInfo, setSelectedSkillInfo] = useState<{ status: string | null, rank: number | null } | null>(null);
+  const lastSavedValues = useRef({
+    title: '',
+    situation: '',
+    action: '',
+    outcome: '',
+    employer: '',
+    status: 'draft',
+    selectedSkillId: ''
+  });
+  const autoSaveTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const mostRecentFeedback = editSAO && editSAO.feedback ? getMostRecentFeedback(editSAO.feedback) : null;
 
@@ -183,6 +193,52 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
     };
     fetchSkillInfo();
   }, [selectedSkill]);
+
+  useEffect(() => {
+    if (!editSAO) return;
+    const current = {
+      title,
+      situation,
+      action,
+      outcome,
+      employer,
+      status,
+      selectedSkillId: selectedSkill?.id || editSAO.skills[0]?.id || ''
+    };
+    const last = lastSavedValues.current;
+    // Only auto-save if any field has changed
+    const changed =
+      current.title !== (last.title || editSAO.title) ||
+      current.situation !== (last.situation || editSAO.situation) ||
+      current.action !== (last.action || editSAO.action) ||
+      current.outcome !== (last.outcome || editSAO.outcome) ||
+      current.employer !== (last.employer || editSAO.employer) ||
+      current.status !== (last.status || editSAO.status) ||
+      current.selectedSkillId !== (last.selectedSkillId || editSAO.skills[0]?.id || '');
+    if (!changed) return;
+    if (autoSaveTimeout.current) clearTimeout(autoSaveTimeout.current);
+    autoSaveTimeout.current = setTimeout(async () => {
+      try {
+        await updateSAO(
+          editSAO.id,
+          title,
+          situation,
+          action,
+          outcome,
+          [selectedSkill || editSAO.skills[0]],
+          status,
+          employer
+        );
+        lastSavedValues.current = { ...current };
+        toast.success('Auto-saved');
+      } catch (err: any) {
+        toast.error(err.message || 'Failed to auto-save');
+      }
+    }, 1000);
+    return () => {
+      if (autoSaveTimeout.current) clearTimeout(autoSaveTimeout.current);
+    };
+  }, [title, situation, action, outcome, employer, status, selectedSkill, editSAO]);
 
   const handleSendForValidation = async () => {
     if (!selectedSkill) {

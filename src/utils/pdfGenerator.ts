@@ -106,8 +106,10 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
   try {
     // Load the template PDF
     const templateBytes = await fetch(templatePDF).then(res => res.arrayBuffer());
+    console.log('Template bytes:', templateBytes);
     const pdfDoc = await PDFDocument.load(templateBytes);
     const form = pdfDoc.getForm();
+    console.log('Form fields:', form.getFields().map(f => f.getName()));
     const pages = pdfDoc.getPages();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontSize = 12;
@@ -145,20 +147,21 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       const employerField = form.getTextField('Employer1');
       employerField.setText((sao11?.employer) || '');
     } catch (e) { console.warn('Could not find Employer1 field:', e); }
+    // Only try to set validator fields if they exist
+    if (sao11 && Array.isArray((sao11 as any).validators) && (sao11 as any).validators.length > 0) {
+      try {
+        const vFNameField = form.getTextField('VFName1');
+        vFNameField.setText((sao11 as any).validators[0]?.first_name || '');
+      } catch (e) { console.warn('Could not find VFName1 field:', e); }
+      try {
+        const vLNameField = form.getTextField('VLName1');
+        vLNameField.setText((sao11 as any).validators[0]?.last_name || '');
+      } catch (e) { console.warn('Could not find VLName1 field:', e); }
+    }
     try {
-      const vFNameField = form.getTextField('VFName1');
-      const validator = sao11?.validators?.[0];
-      vFNameField.setText(validator?.first_name || '');
-    } catch (e) { console.warn('Could not find VFName1 field:', e); }
-    try {
-      const vLNameField = form.getTextField('VLName1');
-      const validator = sao11?.validators?.[0];
-      vLNameField.setText(validator?.last_name || '');
-    } catch (e) { console.warn('Could not find VLName1 field:', e); }
-    try {
-      const situationField = form.getTextField('Siutation1');
+      const situationField = form.getTextField('Situation1');
       situationField.setText((sao11?.situation) || '');
-    } catch (e) { console.warn('Could not find Siutation1 field:', e); }
+    } catch (e) { console.warn('Could not find Situation1 field:', e); }
     try {
       const actionField = form.getTextField('Action1');
       actionField.setText((sao11?.action) || '');

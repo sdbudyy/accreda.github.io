@@ -503,6 +503,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
   },
 
   fetchAnnotations: async (saoId: string, section?: string) => {
+    if (!saoId) return [];
     set({ loading: true, error: null });
     try {
       let query = supabase
@@ -525,6 +526,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
   },
 
   addAnnotation: async (saoId: string, location: any, annotation: string, section?: string) => {
+    if (!saoId) return;
     set({ loading: true, error: null });
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -574,6 +576,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
   },
 
   fetchReplies: async (annotationId: string) => {
+    if (!annotationId) return [];
     set({ loading: true, error: null });
     try {
       const { data, error } = await supabase
@@ -592,6 +595,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
   },
 
   addReply: async (annotationId: string, content: string) => {
+    if (!annotationId) return;
     set({ loading: true, error: null });
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -616,6 +620,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
   },
 
   resolveAnnotation: async (annotationId: string) => {
+    if (!annotationId) return;
     set({ loading: true, error: null });
     try {
       const { error } = await supabase
@@ -632,6 +637,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
   },
 
   deleteAnnotation: async (annotationId: string) => {
+    if (!annotationId) return;
     set({ loading: true, error: null });
     try {
       const { error } = await supabase
@@ -648,6 +654,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
   },
 
   updateAnnotationStatus: async (annotationId: string, status: string) => {
+    if (!annotationId) return;
     set({ loading: true, error: null });
     try {
       const { error } = await supabase
@@ -664,6 +671,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
   },
 
   fetchSAOVersions: async (saoId: string) => {
+    if (!saoId) return [];
     set({ loading: true, error: null });
     try {
       const { data, error } = await supabase

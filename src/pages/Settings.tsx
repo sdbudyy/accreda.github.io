@@ -85,6 +85,9 @@ const Settings: React.FC = () => {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [apegaId, setApegaId] = useState('');
+  const [showApegaWarning, setShowApegaWarning] = useState(false);
+  const [allowAnyway, setAllowAnyway] = useState(false);
 
   const {
     supervisorReviews,
@@ -158,6 +161,19 @@ const Settings: React.FC = () => {
   useEffect(() => {
     fetchSubscription();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      supabase
+        .from('eit_profiles')
+        .select('apega_id')
+        .eq('id', user.id)
+        .single()
+        .then(({ data }) => {
+          if (data?.apega_id) setApegaId(data.apega_id);
+        });
+    }
+  }, [user]);
 
   const handleAvatarSelect = (files: File[]) => {
     if (files.length > 0) {
@@ -462,9 +478,23 @@ const Settings: React.FC = () => {
     return 'Free';
   };
 
+  const handleSaveApegaId = async () => {
+    if (!user) return;
+    await supabase
+      .from('eit_profiles')
+      .update({ apega_id: apegaId })
+      .eq('id', user.id);
+  };
+
   const handleExportToCSAW = async () => {
     if (!user) return;
+    if (!apegaId && !allowAnyway) {
+      setShowApegaWarning(true);
+      return;
+    }
     setExportLoading(true);
+    setShowApegaWarning(false);
+    setAllowAnyway(false);
     try {
       // Fetch all EIT data
       const { data: eitData, error: eitError } = await supabase
@@ -759,6 +789,22 @@ const Settings: React.FC = () => {
                   {exportLoading ? 'Generating Preview...' : 'Generate Preview'}
                 </button>
               </div>
+            </section>
+          )}
+
+          {/* APEGA ID Section */}
+          {userRole === 'eit' && (
+            <section className="card p-6 mb-6">
+              <h2 className="text-lg font-semibold mb-2">APEGA ID</h2>
+              <input
+                type="text"
+                className="input input-bordered w-full mb-2"
+                placeholder="Enter your APEGA ID"
+                value={apegaId}
+                onChange={e => setApegaId(e.target.value)}
+                onBlur={handleSaveApegaId}
+              />
+              <p className="text-slate-500 text-sm">Your APEGA ID is required for your CSAW application.</p>
             </section>
           )}
 
@@ -1421,6 +1467,20 @@ const Settings: React.FC = () => {
               >
                 Download PDF
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* APEGA ID Warning Modal */}
+      {showApegaWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full">
+            <h2 className="text-xl font-bold mb-4 text-red-600">APEGA ID Required</h2>
+            <p className="mb-4">You have not entered your APEGA ID. Are you sure you want to generate the PDF without it?</p>
+            <div className="flex justify-end gap-3">
+              <button className="btn btn-secondary" onClick={() => setShowApegaWarning(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={() => { setAllowAnyway(true); setShowApegaWarning(false); handleExportToCSAW(); }}>Allow Anyway</button>
             </div>
           </div>
         </div>
