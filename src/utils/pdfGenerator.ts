@@ -146,10 +146,12 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     // --- END FILLING FORM FIELDS ---
 
     // --- FILLING FORM FIELDS FOR SKILL 1.1 (TESTING) ---
-    // Find the SAO linked to skill 1.1 (first skill in the array)
-    const skill11 = data.skills[0];
+    // Find the skill object for 1.1 by name (or use the correct skill ID if preferred)
+    const skill11 = data.skills.find(s => s.name.includes('1.1 Regulations, Codes & Standards'));
+    // If not found by name, fallback to first skill
+    // const skill11 = data.skills[0];
     const sao11 = (data.experiences || []).find(
-      (sao) => Array.isArray(sao.skills) && sao.skills.some(s => s.id === skill11.id)
+      (sao) => Array.isArray(sao.skills) && sao.skills.some(s => s.id === skill11?.id)
     );
     console.log('Skill 1.1:', skill11);
     console.log('SAO linked to skill 1.1:', sao11);

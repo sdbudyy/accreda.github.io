@@ -528,11 +528,39 @@ const Settings: React.FC = () => {
 
       if (expError) throw expError;
 
+      // Build a map of skill_id -> { id, name }
+      const skillMap: Record<string, { id: string; name: string }> = {};
+      (skills || []).forEach((skill: any) => {
+        skillMap[skill.skill_id] = {
+          id: skill.skill_id,
+          name: skill.skill_name
+        };
+      });
+
+      // Map experiences to include a skills array
+      const mappedExperiences = (experiences || []).map((exp: any) => {
+        let skillIds: string[] = [];
+        if (Array.isArray(exp.skill_ids)) {
+          skillIds = exp.skill_ids;
+        } else if (exp.skill_id) {
+          skillIds = [exp.skill_id];
+        }
+        // Build the skills array for this experience
+        const expSkills = skillIds.map((id: string) => skillMap[id]).filter(Boolean);
+        return {
+          ...exp,
+          skills: expSkills
+        };
+      });
+
+      console.log("Mapped Experiences for PDF:", mappedExperiences);
+      console.log("Skill 1.1 ID:", skills[0]?.skill_id, "Name:", skills[0]?.skill_name);
+
       // Create the export data
       const exportData: CSAWData = {
         profile: eitData,
         skills: skills || [],
-        experiences: experiences || []
+        experiences: mappedExperiences
       };
 
       // Generate PDF

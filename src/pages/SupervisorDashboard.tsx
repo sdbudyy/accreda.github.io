@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import SupervisorProgressCard from '../components/supervisor/SupervisorProgressCard';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useNavigate } from 'react-router-dom';
 import { Clock } from 'lucide-react';
 import { supervisorService, SupervisorCategoryAverage } from '../services/supervisorService';
 import SupervisorRecentActivities from '../components/supervisor/SupervisorRecentActivities';
@@ -34,6 +34,34 @@ const SupervisorDashboard: React.FC = () => {
   const [pendingSAOFeedbackRequests, setPendingSAOFeedbackRequests] = useState(0);
   const [progressMap, setProgressMap] = useState<Record<string, number>>({});
   const [categoryAverages, setCategoryAverages] = useState<SupervisorCategoryAverage[]>([]);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  // Fetch user role on mount
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return setUserRole(null);
+      // Check supervisor_profiles table
+      const { data: supervisorProfile } = await supabase
+        .from('supervisor_profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+      if (supervisorProfile && supervisorProfile.id) {
+        setUserRole('supervisor');
+      } else {
+        setUserRole('eit');
+      }
+    };
+    fetchUserRole();
+  }, []);
+
+  useEffect(() => {
+    if (userRole && userRole !== 'supervisor') {
+      navigate('/dashboard'); // or show a 403 page
+    }
+  }, [userRole, navigate]);
 
   const fetchDashboardData = async () => {
     try {
