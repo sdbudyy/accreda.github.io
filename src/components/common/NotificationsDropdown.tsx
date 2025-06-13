@@ -3,10 +3,13 @@ import { Bell, Check, X, Clock } from 'lucide-react';
 import { useNotificationsStore, Notification } from '../../store/notifications';
 import { formatDistanceToNow, subWeeks } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import ReactDOM from 'react-dom';
 
 const NotificationsDropdown: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [showFullHistory, setShowFullHistory] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
+  const bellButtonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotificationsStore();
   const navigate = useNavigate();
@@ -15,7 +18,9 @@ const NotificationsDropdown: React.FC = () => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
+        !dropdownRef.current.contains(event.target as Node) &&
+        bellButtonRef.current &&
+        !bellButtonRef.current.contains(event.target as Node)
       ) {
         setIsOpen(false);
         setShowFullHistory(false);
@@ -25,6 +30,16 @@ const NotificationsDropdown: React.FC = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (isOpen && bellButtonRef.current) {
+      const rect = bellButtonRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + 8, // 8px margin below the button
+        left: rect.right - 320, // dropdown width is 320px (w-80)
+      });
+    }
+  }, [isOpen]);
 
   const handleNotificationClick = async (notification: Notification) => {
     if (!notification.read) {
@@ -105,6 +120,7 @@ const NotificationsDropdown: React.FC = () => {
   return (
     <div className="relative inline-block">
       <button
+        ref={bellButtonRef}
         className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 relative"
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Notifications"
@@ -115,8 +131,13 @@ const NotificationsDropdown: React.FC = () => {
         )}
       </button>
 
-      {isOpen && !showFullHistory && (
-        <div ref={dropdownRef} className="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
+      {/* Dropdown menu (portalized, fixed, positioned below bell) */}
+      {isOpen && !showFullHistory && dropdownPos && ReactDOM.createPortal(
+        <div
+          ref={dropdownRef}
+          className="fixed w-80 bg-white rounded-lg shadow-lg border border-slate-200 z-[9999]"
+          style={{ top: dropdownPos.top, left: dropdownPos.left }}
+        >
           <div className="p-3 border-b border-slate-200 flex justify-between items-center">
             <h3 className="font-semibold text-slate-800">Notifications</h3>
             <div className="flex items-center gap-2">
@@ -147,11 +168,13 @@ const NotificationsDropdown: React.FC = () => {
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {showFullHistory && (
-        <div className="fixed inset-0 min-h-screen bg-black bg-opacity-50 z-50 flex items-center justify-center">
+      {/* Portal for full history overlay */}
+      {showFullHistory && typeof window !== 'undefined' && ReactDOM.createPortal(
+        <div className="fixed inset-0 min-h-screen bg-black bg-opacity-50 z-[9999] flex items-center justify-center">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-lg mx-4 max-h-[80vh] flex flex-col">
             <div className="p-4 border-b border-slate-200 flex justify-between items-center">
               <h3 className="font-semibold text-slate-800">Notification History</h3>
@@ -182,7 +205,8 @@ const NotificationsDropdown: React.FC = () => {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

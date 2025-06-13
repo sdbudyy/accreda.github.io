@@ -513,7 +513,7 @@ const Settings: React.FC = () => {
       if (eitError) throw eitError;
 
       // Fetch all skills
-      const { data: skills, error: skillsError } = await supabase
+      const { data: userSkills, error: skillsError } = await supabase
         .from('eit_skills')
         .select('*')
         .eq('eit_id', user.id);
@@ -528,14 +528,72 @@ const Settings: React.FC = () => {
 
       if (expError) throw expError;
 
-      // Build a map of skill_id -> { id, name }
-      const skillMap: Record<string, { id: string; name: string }> = {};
-      (skills || []).forEach((skill: any) => {
-        skillMap[skill.skill_id] = {
-          id: skill.skill_id,
-          name: skill.skill_name
-        };
+      // Fetch all canonical skills for name lookup
+      const { data: allSkills, error: allSkillsError } = await supabase
+        .from('skills')
+        .select('id, name');
+
+      if (allSkillsError) throw allSkillsError;
+
+      // Build a map of skill_id -> name
+      const skillNameMap: Record<string, string> = {};
+      (allSkills || []).forEach(skill => {
+        skillNameMap[skill.id] = skill.name;
       });
+
+      // Fetch validator for skill 1.1
+      const SKILL_1_1_ID = 'b5fb4469-5f9a-47da-86c6-9f17864b8070';
+      const { data: allValidators, error: allValidatorsError } = await supabase
+        .from('validators')
+        .select('first_name, last_name, skill_id, updated_at, eit_id');
+
+      console.log('All validatorRows for skill 1.1 and user:', allValidators);
+
+      const validatorRows = (allValidators || []).filter(
+        v => String(v.skill_id).trim().toLowerCase() === String(SKILL_1_1_ID).trim().toLowerCase() &&
+             String(v.eit_id).trim().toLowerCase() === String(user.id).trim().toLowerCase()
+      );
+      console.log('Filtered validatorRows:', validatorRows);
+
+      let validator1_1 = validatorRows.length > 0
+        ? validatorRows.slice().sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0]
+        : null;
+
+      console.log('Selected validator1_1 for skill 1.1:', validator1_1, 'user.id:', user.id, 'SKILL_1_1_ID:', SKILL_1_1_ID);
+
+      // Map user skills to include canonical name and validator for 1.1
+      let skills = (userSkills || [])
+        .map(skill => {
+          const isSkill11 = skill.skill_id === SKILL_1_1_ID;
+          return {
+            ...skill,
+            id: skill.skill_id,
+            name: skillNameMap[skill.skill_id] || skill.skill_name || '',
+            validator: isSkill11 && validator1_1
+              ? { first_name: validator1_1.first_name, last_name: validator1_1.last_name }
+              : skill.validator
+          };
+        });
+
+      // Ensure skill 1.1 is present in the skills array
+      if (!skills.some(s => s.id === SKILL_1_1_ID)) {
+        // Find canonical name for skill 1.1
+        const canonicalName = skillNameMap[SKILL_1_1_ID] || 'Technical Competence 1.1';
+        skills = [
+          ...skills,
+          {
+            id: SKILL_1_1_ID,
+            name: canonicalName,
+            status: '',
+            validator: validator1_1 ? {
+              first_name: validator1_1.first_name,
+              last_name: validator1_1.last_name
+            } : undefined
+          }
+        ];
+      }
+
+      skills = skills.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
 
       // Map experiences to include a skills array
       const mappedExperiences = (experiences || []).map((exp: any) => {
@@ -546,20 +604,19 @@ const Settings: React.FC = () => {
           skillIds = [exp.skill_id];
         }
         // Build the skills array for this experience
-        const expSkills = skillIds.map((id: string) => skillMap[id]).filter(Boolean);
+        const expSkills = skillIds
+          .map((id: string) => skills.find(s => s.id === id || s.skill_id === id))
+          .filter(Boolean);
         return {
           ...exp,
           skills: expSkills
         };
       });
 
-      console.log("Mapped Experiences for PDF:", mappedExperiences);
-      console.log("Skill 1.1 ID:", skills[0]?.skill_id, "Name:", skills[0]?.skill_name);
-
       // Create the export data
       const exportData: CSAWData = {
         profile: eitData,
-        skills: skills || [],
+        skills: skills,
         experiences: mappedExperiences
       };
 
@@ -570,6 +627,19 @@ const Settings: React.FC = () => {
       setPreviewData(exportData);
       setShowPreviewModal(true);
       setMessage({ type: 'success', text: 'Preview generated successfully!' });
+
+      (allValidators || []).forEach(v => {
+        console.log('Validator row:', {
+          skill_id: v.skill_id,
+          skill_id_str: String(v.skill_id).trim().toLowerCase(),
+          SKILL_1_1_ID: String(SKILL_1_1_ID).trim().toLowerCase(),
+          match: String(v.skill_id).trim().toLowerCase() === String(SKILL_1_1_ID).trim().toLowerCase(),
+          eit_id: v.eit_id,
+          eit_id_str: String(v.eit_id).trim().toLowerCase(),
+          user_id: String(user.id).trim().toLowerCase(),
+          match_eit: String(v.eit_id).trim().toLowerCase() === String(user.id).trim().toLowerCase()
+        });
+      });
     } catch (error) {
       console.error('Export error:', error);
       setMessage({ type: 'error', text: 'Failed to generate preview. Please try again.' });

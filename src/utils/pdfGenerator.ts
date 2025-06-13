@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb, PDFPage } from 'pdf-lib';
 import templatePDF from '../assets/templates/csaw/CSAW-PDF-Version.pdf';
+import { supabase } from '../lib/supabase';
 
 // Define the coordinates for each section in the PDF
 const PDF_COORDINATES = {
@@ -55,6 +56,11 @@ export interface CSAWData {
     created_at: string;
     updated_at: string;
     skills: Array<{ id: string; name: string }>;
+    validator?: {
+      first_name: string;
+      last_name: string;
+      position?: string;
+    };
     // Add other experience fields as needed
   }>;
 }
@@ -110,6 +116,11 @@ function drawWrappedText(
 
 export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
   try {
+    // Debug: Log all experiences at the start
+    console.log('All experiences:', data.experiences);
+    data.experiences.forEach(exp => {
+      console.log('Experience:', exp.id, 'skills:', exp.skills);
+    });
     // Load the template PDF
     const templateBytes = await fetch(templatePDF).then(res => res.arrayBuffer());
     console.log('Template bytes:', templateBytes);
@@ -146,20 +157,38 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     // --- END FILLING FORM FIELDS ---
 
     // --- FILLING FORM FIELDS FOR SKILL 1.1 (TESTING) ---
-    // Find the skill object for 1.1 by name (or use the correct skill ID if preferred)
-    const skill11 = data.skills.find(s => s.name.includes('1.1 Regulations, Codes & Standards'));
-    // If not found by name, fallback to first skill
-    // const skill11 = data.skills[0];
+    // Find the skill object for 1.1 by its unique skill ID from the database
+    const SKILL_1_1_ID = 'b5fb4469-5f9a-47da-86c6-9f17864b8070';
+    console.log('Looking for SKILL_1_1_ID:', SKILL_1_1_ID);
+    data.skills.forEach(s => {
+      console.log('Skill:', { id: s.id, skill_id: (s as any).skill_id });
+    });
+    const skill11 = data.skills.find(s => s.id === SKILL_1_1_ID);
+    if (!skill11) {
+      console.warn('Skill 1.1 not found in skills array by ID.');
+    }
     const sao11 = (data.experiences || []).find(
-      (sao) => Array.isArray(sao.skills) && sao.skills.some(s => s.id === skill11?.id)
+      (sao) => Array.isArray(sao.skills) && sao.skills.some(s => s.id === SKILL_1_1_ID)
     );
     console.log('Skill 1.1:', skill11);
     console.log('SAO linked to skill 1.1:', sao11);
+
+    // Extract validator names from the experience
+    let validatorFirstName = '';
+    let validatorLastName = '';
+    if (sao11 && sao11.validator) {
+      validatorFirstName = sao11.validator.first_name || '';
+      validatorLastName = sao11.validator.last_name || '';
+    } else if (skill11 && skill11.validator) {
+      validatorFirstName = skill11.validator.first_name || '';
+      validatorLastName = skill11.validator.last_name || '';
+    }
+
     // Dynamically fill fields ending with 11 for situation, action, and outcome
     const sao11Fields = [
       { field: 'Employer11', value: sao11?.employer || '' },
-      { field: 'VFName11', value: skill11?.validator?.first_name || '' },
-      { field: 'VLName11', value: skill11?.validator?.last_name || '' },
+      { field: 'VFName11', value: validatorFirstName },
+      { field: 'VLName11', value: validatorLastName },
       { field: 'VPos11', value: skill11?.validator?.position || '' },
       { field: 'Situation11', value: sao11?.situation || '' },
       { field: 'Action11', value: sao11?.action || '' },
@@ -222,4 +251,4 @@ EXPLANATION FOR CUSTOMIZATION
 export function createPDFBlobUrl(pdfBytes: Uint8Array): string {
   const blob = new Blob([pdfBytes], { type: 'application/pdf' });
   return URL.createObjectURL(blob);
-} 
+}
