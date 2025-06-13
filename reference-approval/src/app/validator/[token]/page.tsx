@@ -16,8 +16,7 @@ export default function ValidatorApprovalPage() {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
-    position: "",
-    relation: "",
+    description: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -38,6 +37,11 @@ export default function ValidatorApprovalPage() {
           ...tokenData.validators,
           validatorId: tokenData.validators.id,
           description: tokenData.validators.description,
+        });
+        setFormData({
+          fullName: tokenData.validators.full_name || "",
+          email: tokenData.validators.email || "",
+          description: tokenData.validators.description || "",
         });
       } catch (err: any) {
         setError(err.message || "An error occurred");
@@ -62,9 +66,7 @@ export default function ValidatorApprovalPage() {
         .update({
           full_name: formData.fullName,
           email: formData.email,
-          position: formData.position,
-          relation: formData.relation,
-          status: "validated",
+          description: formData.description,
           updated_at: new Date().toISOString(),
         })
         .eq("id", validatorData.validatorId);
@@ -160,28 +162,16 @@ export default function ValidatorApprovalPage() {
                       placeholder="Enter your email"
                     />
                   </div>
-                  <div>
-                    <label htmlFor="position" className="block text-sm font-medium text-[#1a365d] mb-1">Your Position</label>
-                    <input
-                      type="text"
-                      id="position"
+                  <div className="md:col-span-2">
+                    <label htmlFor="description" className="block text-sm font-medium text-[#1a365d] mb-1">Validation Description / Feedback</label>
+                    <textarea
+                      id="description"
                       required
-                      value={formData.position}
-                      onChange={e => setFormData(prev => ({ ...prev, position: e.target.value }))}
+                      value={formData.description}
+                      onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
                       className="mt-1 block w-full border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#1cc8ae] focus:border-[#1cc8ae] transition bg-[#f8fafc] text-slate-900 placeholder:text-slate-400"
-                      placeholder="Enter your position"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="relation" className="block text-sm font-medium text-[#1a365d] mb-1">Your Relation to the EIT</label>
-                    <input
-                      type="text"
-                      id="relation"
-                      required
-                      value={formData.relation}
-                      onChange={e => setFormData(prev => ({ ...prev, relation: e.target.value }))}
-                      className="mt-1 block w-full border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#1cc8ae] focus:border-[#1cc8ae] transition bg-[#f8fafc] text-slate-900 placeholder:text-slate-400"
-                      placeholder="e.g. Supervisor, Manager, Colleague"
+                      placeholder="Describe your validation or feedback"
+                      rows={4}
                     />
                   </div>
                 </div>
