@@ -613,11 +613,18 @@ const Settings: React.FC = () => {
         };
       });
 
+      // Ensure allValidators includes eit_id for each validator
+      const allValidatorsWithEitId = (allValidators || []).map(v => ({
+        ...v,
+        eit_id: v.eit_id || user.id // fallback to user.id if missing
+      }));
+
       // Create the export data
       const exportData: CSAWData = {
-        profile: eitData,
+        profile: { ...eitData, eit_id: user.id }, // ensure eit_id is present
         skills: skills,
-        experiences: mappedExperiences
+        experiences: mappedExperiences,
+        allValidators: allValidatorsWithEitId // pass allValidators with eit_id
       };
 
       // Generate PDF

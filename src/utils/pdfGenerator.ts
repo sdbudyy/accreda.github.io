@@ -31,6 +31,7 @@ export interface CSAWData {
     full_name: string;
     email: string;
     apega_id?: number;
+    eit_id?: string;
     // Add other profile fields as needed
   };
   skills: Array<{
@@ -62,6 +63,25 @@ export interface CSAWData {
       position?: string;
     };
     // Add other experience fields as needed
+  }>;
+  saos?: Array<{
+    id: string;
+    eit_id: string;
+    employer?: string;
+    // Add other SAO fields as needed
+  }>;
+  sao_skills?: Array<{
+    id: string;
+    sao_id: string;
+    skill_id: string;
+    // Add other sao_skill fields as needed
+  }>;
+  allValidators?: Array<{
+    first_name: string;
+    last_name: string;
+    skill_id: string;
+    updated_at: string;
+    eit_id: string;
   }>;
 }
 
@@ -116,118 +136,93 @@ function drawWrappedText(
 
 export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
   try {
-    // Debug: Log all experiences at the start
-    console.log('All experiences:', data.experiences);
-    data.experiences.forEach(exp => {
-      console.log('Experience:', exp.id, 'skills:', exp.skills);
-    });
     // Load the template PDF
     const templateBytes = await fetch(templatePDF).then(res => res.arrayBuffer());
-    console.log('Template bytes:', templateBytes);
     const pdfDoc = await PDFDocument.load(templateBytes);
     const form = pdfDoc.getForm();
-    console.log('Form fields:', form.getFields().map(f => f.getName()));
-    const pages = pdfDoc.getPages();
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const fontSize = 12;
-    const textColor = rgb(0, 0, 0);
 
     // --- FILLING FORM FIELDS (AcroForm) ---
-    // To fill a form field, you need to know its exact name in the PDF template.
-    // Use form.getTextField('FieldName') to get the field, then .setText(value) to fill it.
-    // Example: Fill the 'Name' field with the user's full name from Supabase
+    // Log all PDF field names for debugging
+    try {
+      console.log('PDF fields:', form.getFields().map(f => f.getName()));
+    } catch (e) {
+      console.log('Could not log PDF fields:', e);
+    }
+
+    // Fill the 'Name' field with the user's full name from Supabase
     try {
       const applicantNameField = form.getTextField('ApplicantName');
       applicantNameField.setText(data.profile.full_name || '');
     } catch (e) {
-      console.warn('Could not find ApplicantName field:', e);
+      // Silently handle missing field
     }
+
     // Fill the 'ApegaID' field with the user's APEGA ID
     try {
       const apegaIdField = form.getTextField('ApegaID');
       apegaIdField.setText(data.profile.apega_id ? String(data.profile.apega_id) : '');
     } catch (e) {
-      console.warn('Could not find ApegaID field:', e);
+      // Silently handle missing field
     }
-    // To fill more fields, repeat the above pattern:
-    // try {
-    //   const emailField = form.getTextField('Email');
-    //   emailField.setText(data.profile.email || '');
-    // } catch (e) { /* ... */ }
-    // --- END FILLING FORM FIELDS ---
 
-    // --- FILLING FORM FIELDS FOR SKILL 1.1 (TESTING) ---
-    // Find the skill object for 1.1 by its unique skill ID from the database
-    const SKILL_1_1_ID = 'b5fb4469-5f9a-47da-86c6-9f17864b8070';
-    console.log('Looking for SKILL_1_1_ID:', SKILL_1_1_ID);
-    data.skills.forEach(s => {
-      console.log('Skill:', { id: s.id, skill_id: (s as any).skill_id });
-    });
-    const skill11 = data.skills.find(s => s.id === SKILL_1_1_ID);
-    if (!skill11) {
-      console.warn('Skill 1.1 not found in skills array by ID.');
-    }
-    const sao11 = (data.experiences || []).find(
-      (sao) => Array.isArray(sao.skills) && sao.skills.some(s => s.id === SKILL_1_1_ID)
+    // Find the first SAO for this EIT that is linked to skill 1.1
+    const skill1_1_sao = (data.saos || []).find(sao =>
+      String(sao.eit_id).trim().toLowerCase() === String(data.profile.eit_id).trim().toLowerCase() &&
+      (data.sao_skills || []).some(ss =>
+        ss.sao_id === sao.id &&
+        String(ss.skill_id).trim().toLowerCase() === 'b5fb4469-5f9a-47da-86c6-9f17864b8070'
+      )
     );
-    console.log('Skill 1.1:', skill11);
-    console.log('SAO linked to skill 1.1:', sao11);
 
-    // Extract validator names from the experience
-    let validatorFirstName = '';
-    let validatorLastName = '';
-    if (sao11 && sao11.validator) {
-      validatorFirstName = sao11.validator.first_name || '';
-      validatorLastName = sao11.validator.last_name || '';
-    } else if (skill11 && skill11.validator) {
-      validatorFirstName = skill11.validator.first_name || '';
-      validatorLastName = skill11.validator.last_name || '';
-    }
-
-    // Dynamically fill fields ending with 11 for situation, action, and outcome
-    const sao11Fields = [
-      { field: 'Employer11', value: sao11?.employer || '' },
-      { field: 'VFName11', value: validatorFirstName },
-      { field: 'VLName11', value: validatorLastName },
-      { field: 'VPos11', value: skill11?.validator?.position || '' },
-      { field: 'Situation11', value: sao11?.situation || '' },
-      { field: 'Action11', value: sao11?.action || '' },
-      { field: 'Outcome11', value: sao11?.outcome || '' },
-    ];
-    sao11Fields.forEach(({ field, value }) => {
+    if (skill1_1_sao) {
       try {
-        const f = form.getTextField(field);
-        f.setText(value);
-        console.log(`Set ${field} to:`, value);
+        const employerField = form.getTextField('Employer11');
+        employerField.setText(skill1_1_sao.employer || '');
       } catch (e) {
-        console.warn(`Could not find ${field} field:`, e);
-      }
-    });
-    // --- END FILLING FORM FIELDS FOR SKILL 1.1 ---
-
-    // --- FILLING SAO FIELDS ON SKILL PAGES (if you want to fill text, not form fields) ---
-    // The following code assumes the order of skills matches the order of pages (after intro)
-    for (let i = 1; i < pages.length; i++) {
-      const page = pages[i];
-      const skill = data.skills[i - 1];
-      if (!skill) continue;
-      const saosForSkill = (data.experiences || []).filter(
-        (sao) => Array.isArray(sao.skills) && sao.skills.some(s => s.id === skill.id)
-      );
-      const sao = saosForSkill[0];
-      if (sao) {
-        drawWrappedText(page, sao.situation || '', 50, 600, 500, fontSize, font, textColor);
-        drawWrappedText(page, sao.action || '', 50, 500, 500, fontSize, font, textColor);
-        drawWrappedText(page, sao.outcome || '', 50, 400, 500, fontSize, font, textColor);
+        console.log('Error filling Employer11 field:', e);
       }
     }
-    // --- END FILLING SAO FIELDS ---
+
+    // --- VALIDATOR FILL LOGIC (NO DEBUG LOGS) ---
+    const skill1_1_validators = (data.allValidators || []).filter(
+      v =>
+        String(v.skill_id).trim().toLowerCase().includes('b5fb4469-5f9a-47da-86c6-9f17864b8070') &&
+        String(v.eit_id).trim().toLowerCase().includes(String(data.profile.eit_id).trim().toLowerCase())
+    );
+    if (skill1_1_validators.length > 0) {
+      // Sort by updated_at descending
+      skill1_1_validators.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+      const mostRecentValidator = skill1_1_validators[0];
+      try {
+        const vfNameField = form.getTextField('firstname1');
+        const vlNameField = form.getTextField('lastname1');
+        vfNameField.setText(mostRecentValidator.first_name || '');
+        vlNameField.setText(mostRecentValidator.last_name || '');
+      } catch (e) {
+        console.log('Error filling validator fields for skill 1.1:', e);
+      }
+    } else {
+      // Try fallback: match only on skill_id
+      const skill1_1_candidates = (data.allValidators || []).filter(
+        v => String(v.skill_id).trim().toLowerCase() === 'b5fb4469-5f9a-47da-86c6-9f17864b8070'
+      );
+      if (skill1_1_candidates.length > 0) {
+        const fallbackValidator = skill1_1_candidates[0];
+        try {
+          const vfNameField = form.getTextField('firstname1');
+          const vlNameField = form.getTextField('lastname1');
+          vfNameField.setText(fallbackValidator.first_name || '');
+          vlNameField.setText(fallbackValidator.last_name || '');
+        } catch (e) {
+          console.log('Error filling validator fields for skill 1.1 (fallback):', e);
+        }
+      }
+    }
 
     // Save the modified PDF
     const pdfBytes = await pdfDoc.save();
     return pdfBytes;
   } catch (error) {
-    console.error('Error generating PDF:', error);
     throw error;
   }
 }
