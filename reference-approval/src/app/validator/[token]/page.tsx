@@ -14,7 +14,8 @@ export default function ValidatorApprovalPage() {
   const [error, setError] = useState<string | null>(null);
   const [validatorData, setValidatorData] = useState<any>(null);
   const [formData, setFormData] = useState({
-    fullName: "",
+    firstName: "",
+    lastName: "",
     email: "",
     position: "",
     relation: "",
@@ -91,7 +92,8 @@ export default function ValidatorApprovalPage() {
       const { error: updateError } = await supabase
         .from("validators")
         .update({
-          full_name: formData.fullName,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
           email: formData.email,
           position: formData.position,
           relation: formData.relation,
@@ -171,15 +173,27 @@ export default function ValidatorApprovalPage() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label htmlFor="fullName" className="block text-sm font-medium text-[#1a365d] mb-1">Your Full Name</label>
+                    <label htmlFor="firstName" className="block text-sm font-medium text-[#1a365d] mb-1">Your First Name</label>
                     <input
                       type="text"
-                      id="fullName"
+                      id="firstName"
                       required
-                      value={formData.fullName}
-                      onChange={e => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
+                      value={formData.firstName}
+                      onChange={e => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
                       className="mt-1 block w-full border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#1cc8ae] focus:border-[#1cc8ae] transition bg-[#f8fafc] text-slate-900 placeholder:text-slate-400"
-                      placeholder="Enter your full name"
+                      placeholder="Enter your first name"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="lastName" className="block text-sm font-medium text-[#1a365d] mb-1">Your Last Name</label>
+                    <input
+                      type="text"
+                      id="lastName"
+                      required
+                      value={formData.lastName}
+                      onChange={e => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                      className="mt-1 block w-full border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#1cc8ae] focus:border-[#1cc8ae] transition bg-[#f8fafc] text-slate-900 placeholder:text-slate-400"
+                      placeholder="Enter your last name"
                     />
                   </div>
                   <div>
