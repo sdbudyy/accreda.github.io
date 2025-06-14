@@ -95,6 +95,7 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -192,6 +193,58 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
     }
   };
 
+  const handleSendViaEmail = async () => {
+    setSending(true);
+    setError(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+      let validatorId = existingValidator?.id;
+      // Save validator if not already saved
+      if (!validatorId) {
+        const { data: insertData, error: insertError } = await supabase
+          .from('validators')
+          .insert([{
+            eit_id: user.id,
+            skill_id: skillId,
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            email: formData.email,
+            description: formData.description,
+            status: 'pending'
+          }])
+          .select();
+        if (insertError) throw insertError;
+        validatorId = insertData && insertData[0]?.id;
+      }
+      // Call the Edge Function to send the magic link
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-validator`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({
+          validator_id: validatorId,
+          email: formData.email
+        })
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to send validation request');
+      }
+      toast.success('Validation request sent successfully');
+      onSave();
+      onClose();
+      setTimeout(() => loadValidators(), 300);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred while sending the validation request');
+      toast.error(err instanceof Error ? err.message : 'Error sending validation request');
+    } finally {
+      setSending(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -267,6 +320,14 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
               disabled={loading}
             >
               Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline-primary"
+              onClick={handleSendViaEmail}
+              disabled={loading || sending || status !== 'draft'}
+            >
+              {sending ? 'Sending...' : 'Send via Email instead'}
             </button>
             <button
               type="submit"
