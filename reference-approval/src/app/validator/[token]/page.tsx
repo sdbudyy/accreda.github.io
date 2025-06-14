@@ -17,8 +17,6 @@ export default function ValidatorApprovalPage() {
     firstName: "",
     lastName: "",
     email: "",
-    position: "",
-    relation: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -95,8 +93,6 @@ export default function ValidatorApprovalPage() {
           first_name: formData.firstName,
           last_name: formData.lastName,
           email: formData.email,
-          position: formData.position,
-          relation: formData.relation,
           status: "validated",
           score: score,
           updated_at: new Date().toISOString(),
@@ -206,30 +202,6 @@ export default function ValidatorApprovalPage() {
                       onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
                       className="mt-1 block w-full border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#1cc8ae] focus:border-[#1cc8ae] transition bg-[#f8fafc] text-slate-900 placeholder:text-slate-400"
                       placeholder="Enter your email"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="position" className="block text-sm font-medium text-[#1a365d] mb-1">Your Position</label>
-                    <input
-                      type="text"
-                      id="position"
-                      required
-                      value={formData.position}
-                      onChange={e => setFormData(prev => ({ ...prev, position: e.target.value }))}
-                      className="mt-1 block w-full border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#1cc8ae] focus:border-[#1cc8ae] transition bg-[#f8fafc] text-slate-900 placeholder:text-slate-400"
-                      placeholder="Enter your position"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="relation" className="block text-sm font-medium text-[#1a365d] mb-1">Your Relation to the EIT</label>
-                    <input
-                      type="text"
-                      id="relation"
-                      required
-                      value={formData.relation}
-                      onChange={e => setFormData(prev => ({ ...prev, relation: e.target.value }))}
-                      className="mt-1 block w-full border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#1cc8ae] focus:border-[#1cc8ae] transition bg-[#f8fafc] text-slate-900 placeholder:text-slate-400"
-                      placeholder="e.g. Supervisor, Manager, Colleague"
                     />
                   </div>
                 </div>
