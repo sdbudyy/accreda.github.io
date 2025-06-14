@@ -93,7 +93,7 @@ export default function ValidatorApprovalPage() {
           first_name: formData.firstName,
           last_name: formData.lastName,
           email: formData.email,
-          status: "validated",
+          status: "scored",
           score: score,
           updated_at: new Date().toISOString(),
         })
