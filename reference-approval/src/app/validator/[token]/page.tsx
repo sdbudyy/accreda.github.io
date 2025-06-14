@@ -33,7 +33,18 @@ export default function ValidatorApprovalPage() {
         console.log("DEBUG TOKEN QUERY", { debugResult, token });
         const { data: tokenData, error: tokenError } = await supabase
           .from("validators_token")
-          .select(`*, validators:validator_id ( id, full_name, email, description, created_at, updated_at )`)
+          .select(`
+            *,
+            validator:validator_id (
+              id,
+              first_name,
+              last_name,
+              email,
+              description,
+              created_at,
+              updated_at
+            )
+          `)
           .eq("token", token)
           .single();
         if (tokenError || !tokenData) throw new Error("This validation link has expired or has already been completed.");
@@ -41,9 +52,9 @@ export default function ValidatorApprovalPage() {
           throw new Error("This validation link has expired. Please request a new one if needed.");
         }
         setValidatorData({
-          ...tokenData.validators,
-          validatorId: tokenData.validators.id,
-          description: tokenData.validators.description,
+          ...tokenData.validator,
+          validatorId: tokenData.validator.id,
+          description: tokenData.validator.description,
         });
       } catch (err: any) {
         setError(err.message || "An error occurred");
@@ -122,7 +133,7 @@ export default function ValidatorApprovalPage() {
               </div>
             ) : (
               <div className="text-slate-700 text-base grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
-                <div><span className="font-medium">Validator Name:</span> {validatorData?.full_name}</div>
+                <div><span className="font-medium">Validator Name:</span> {validatorData?.first_name} {validatorData?.last_name}</div>
                 <div><span className="font-medium">Validator Email:</span> {validatorData?.email}</div>
                 {validatorData?.description && (
                   <div className="col-span-2 mt-4 p-4 bg-[#f0f6ff] border border-blue-100 rounded-xl">
