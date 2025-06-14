@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bookmark, Users, CheckCircle2, Award, X, Edit2, Briefcase, Calendar, MapPin, Plus, ChevronDown, ChevronUp, Search, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { Bookmark, Users, CheckCircle2, Award, X, Edit2, Briefcase, Calendar, MapPin, Plus, ChevronDown, ChevronUp, Search, AlertCircle, CheckCircle, XCircle, Info } from 'lucide-react';
 import Timeline from '../components/references/Timeline';
 import { useSkillsStore } from '../store/skills';
 import { supabase } from '../lib/supabase';
@@ -36,7 +36,8 @@ interface Job {
 interface Reference {
   id: string;
   job_id: string;
-  full_name: string;
+  first_name: string;
+  last_name: string;
   email: string;
   description: string;
   reference_number: number;
@@ -75,6 +76,14 @@ interface ReferencePopupProps {
   referenceNumber: number;
   existingReference?: Reference;
   onSave: (newReferenceId?: string) => void;
+}
+
+interface Skill {
+  id: string;
+  name: string;
+  category: string;
+  status?: string;
+  description?: string;
 }
 
 const ValidatorPopup: React.FC<ValidatorPopupProps> = ({ 
@@ -352,7 +361,8 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
   onSave
 }) => {
   const [formData, setFormData] = useState({
-    fullName: '',
+    firstName: '',
+    lastName: '',
     email: '',
     referenceText: ''
   });
@@ -365,13 +375,15 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
     if (isOpen) {
       if (existingReference) {
         setFormData({
-          fullName: existingReference.full_name,
+          firstName: existingReference.first_name || '',
+          lastName: existingReference.last_name || '',
           email: existingReference.email,
           referenceText: existingReference.description
         });
       } else {
         setFormData({
-          fullName: '',
+          firstName: '',
+          lastName: '',
           email: '',
           referenceText: ''
         });
@@ -388,7 +400,8 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
       if (!user) throw new Error('No authenticated user');
       const referenceData = {
         job_id: job.id,
-        full_name: formData.fullName,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
         email: formData.email,
         description: formData.referenceText,
         reference_number: referenceNumber,
@@ -494,15 +507,31 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
         )}
 
         <form onSubmit={handleSave} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Full Name
-            </label>
-            <ReferenceAutocomplete
-              value={formData.fullName}
-              onChange={(name, email) => setFormData(prev => ({ ...prev, fullName: name, email }))}
-              disabled={existingReference?.validation_status === 'validated'}
-            />
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1">First Name</label>
+              <input
+                type="text"
+                value={formData.firstName}
+                onChange={e => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                placeholder="Enter reference's first name"
+                required
+                disabled={existingReference?.validation_status === 'validated'}
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Last Name</label>
+              <input
+                type="text"
+                value={formData.lastName}
+                onChange={e => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                placeholder="Enter reference's last name"
+                required
+                disabled={existingReference?.validation_status === 'validated'}
+              />
+            </div>
           </div>
 
           <div>
@@ -559,7 +588,7 @@ const ReferencePopup: React.FC<ReferencePopupProps> = ({
                   className="px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg disabled:opacity-50"
                   disabled={loading || sending}
                 >
-                  {sending ? 'Sending...' : 'Send'}
+                  {sending ? 'Sending...' : 'Send via Email'}
                 </button>
               </>
             )}
@@ -1066,7 +1095,7 @@ const References: React.FC = () => {
                                   data-reference-id={reference.id}
                                 >
                                   <Edit2 size={14} />
-                                  Reference {refNum}: {reference.full_name}
+                                  Reference {refNum}: {reference.first_name} {reference.last_name}
                                 </button>
                               ) : (
                                 <button
@@ -1165,7 +1194,7 @@ const References: React.FC = () => {
                               data-reference-id={reference.id}
                             >
                               <Edit2 size={14} />
-                              Reference {refNum}: {reference.full_name}
+                              Reference {refNum}: {reference.first_name} {reference.last_name}
                             </button>
                           ) : (
                             <button
@@ -1232,7 +1261,7 @@ const References: React.FC = () => {
                               {reference ? (
                                 <div>
                                   <div className="flex items-center justify-between mb-2">
-                                    <h5 className="font-medium text-slate-900">{reference.full_name}</h5>
+                                    <h5 className="font-medium text-slate-900">{reference.first_name} {reference.last_name}</h5>
                                   </div>
                                   <p className="text-sm text-slate-600 mb-2">{reference.email}</p>
                                   {reference.description && (
@@ -1315,12 +1344,23 @@ const References: React.FC = () => {
                     <h3 className="font-semibold text-slate-900 mb-4">{category.name}</h3>
                     <div className="space-y-4">
                       {category.skills.map((skill) => (
-                        <div key={skill.id} className="flex items-center justify-between" data-skill-id={skill.id}>
+                        <div key={skill.id} className="flex items-center justify-between group relative transition-shadow hover:shadow-lg focus-within:shadow-lg rounded-lg p-2" data-skill-id={skill.id}>
                           <div className="flex-1">
-                            <h4 className="font-medium text-slate-800">{skill.name}</h4>
-                            <div className="flex items-center gap-2">
+                            <h4 className="font-medium text-slate-800 flex items-center gap-2">
+                              {skill.name}
+                              {/* Info icon for rubric/description */}
+                              {(skill as Skill).description && (
+                                <span className="relative group/info">
+                                  <Info size={16} className="text-blue-500 cursor-pointer" />
+                                  <span className="absolute left-6 top-0 z-10 w-64 p-2 bg-white border border-slate-200 rounded shadow text-xs text-slate-700 opacity-0 group-hover/info:opacity-100 transition-opacity pointer-events-none">
+                                    {(skill as Skill).description}
+                                  </span>
+                                </span>
+                              )}
+                            </h4>
+                            <div className="flex items-center gap-2 mt-1">
                               {validators[skill.id]?.map((validator) => (
-                                <div key={validator.id} className="flex items-center gap-2">
+                                <div key={validator.id} className="flex items-center gap-2 bg-slate-50 rounded-lg px-2 py-1 group/validator relative transition-all hover:bg-slate-100 focus-within:bg-slate-100">
                                   <button
                                     onClick={() => {
                                       if (validator.status === 'draft') {
@@ -1338,18 +1378,32 @@ const References: React.FC = () => {
                                     <Edit2 size={14} />
                                     {validator.first_name} {validator.last_name}
                                   </button>
-                                  {/* Status tag */}
-                                  <span className={`ml-2 px-2 py-0.5 rounded text-xs font-semibold ${
+                                  {/* Status tag with tooltip */}
+                                  <span className={`ml-2 px-2 py-0.5 rounded text-xs font-semibold relative group/status ${
                                     validator.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
                                     validator.status === 'pending' ? 'bg-blue-100 text-blue-800' :
                                     validator.status === 'scored' ? 'bg-green-100 text-green-800' :
                                     'bg-slate-100 text-slate-500'
                                   }`}>
                                     {validator.status.charAt(0).toUpperCase() + validator.status.slice(1)}
+                                    <span className="absolute left-1/2 -translate-x-1/2 top-7 z-10 w-40 p-2 bg-white border border-slate-200 rounded shadow text-xs text-slate-700 opacity-0 group-hover/status:opacity-100 transition-opacity pointer-events-none">
+                                      {validator.status === 'draft' && 'Draft: Not yet sent to supervisor.'}
+                                      {validator.status === 'pending' && 'Pending: Awaiting supervisor action.'}
+                                      {validator.status === 'scored' && 'Scored: Supervisor has submitted a score.'}
+                                      {validator.status !== 'draft' && validator.status !== 'pending' && validator.status !== 'scored' && 'Unknown status.'}
+                                    </span>
                                   </span>
-                                  {/* Show score if scored */}
+                                  {/* Supervisor Score UI */}
                                   {validator.status === 'scored' && (
-                                    <span className="ml-2 text-green-700 font-bold">Supervisor Score: {validator.score}</span>
+                                    <span className="ml-2 flex flex-col items-center">
+                                      <span className="inline-block px-3 py-1 rounded-full text-base font-bold bg-green-100 text-green-800 border border-green-300 shadow-sm relative group/score" title="Supervisor's score for this skill">
+                                        Supervisor Score: {validator.score}
+                                        <span className="absolute left-1/2 -translate-x-1/2 top-8 z-10 w-40 p-2 bg-white border border-slate-200 rounded shadow text-xs text-slate-700 opacity-0 group-hover/score:opacity-100 transition-opacity pointer-events-none">
+                                          This is the score (1-5) given by your supervisor for this skill.
+                                        </span>
+                                      </span>
+                                      {/* Progress bar removed as requested */}
+                                    </span>
                                   )}
                                   {/* Nudge Supervisor button for pending or scored status */}
                                   {(validator.status === 'pending') && (
@@ -1357,10 +1411,8 @@ const References: React.FC = () => {
                                       className={`ml-2 px-2 py-0.5 text-xs font-medium bg-orange-500 text-white rounded hover:bg-orange-600 disabled:bg-orange-200 disabled:cursor-not-allowed`}
                                       disabled={!!(nudgeCooldowns[validator.id] && Date.now() - nudgeCooldowns[validator.id] < 5 * 60 * 1000)}
                                       onClick={async () => {
-                                        // Set cooldown
                                         setNudgeCooldowns((prev: any) => ({ ...prev, [validator.id]: Date.now() }));
                                         try {
-                                          // Get EIT profile for notification
                                           const { data: { user } } = await supabase.auth.getUser();
                                           if (!user) return;
                                           const { data: eitProfile } = await supabase
@@ -1368,19 +1420,16 @@ const References: React.FC = () => {
                                             .select('full_name')
                                             .eq('id', user.id)
                                             .single();
-                                          // Get supervisor profile for notification
                                           const { data: supervisorProfile } = await supabase
                                             .from('supervisor_profiles')
                                             .select('id')
                                             .eq('email', validator.email)
                                             .single();
-                                          // Send notification to supervisor
                                           await sendValidationRequestNotification(
-                                            supervisorProfile?.id || validator.email, // fallback to email if id not found
+                                            supervisorProfile?.id || validator.email,
                                             eitProfile?.full_name ?? '',
                                             skill.name
                                           );
-                                          // Set status back to pending in DB and clear score
                                           await supabase.from('validators').update({ status: 'pending', score: null }).eq('id', validator.id);
                                           await loadValidators();
                                           toast.success('Nudge sent!');
@@ -1395,19 +1444,16 @@ const References: React.FC = () => {
                                     </button>
                                   )}
                                   {validator.status === 'scored' && (
-                                    <>
-                                      <button
-                                        className="ml-2 px-2 py-0.5 text-xs font-medium bg-red-700 text-white rounded hover:bg-red-800 disabled:bg-red-300 disabled:cursor-not-allowed"
-                                        onClick={() => {
-                                          setValidatorToDelete(validator);
-                                          setShowDeleteValidatorConfirm(true);
-                                        }}
-                                      >
-                                        Delete
-                                      </button>
-                                    </>
+                                    <button
+                                      className="ml-2 px-2 py-0.5 text-xs font-medium bg-red-700 text-white rounded hover:bg-red-800 disabled:bg-red-300 disabled:cursor-not-allowed"
+                                      onClick={() => {
+                                        setValidatorToDelete(validator);
+                                        setShowDeleteValidatorConfirm(true);
+                                      }}
+                                    >
+                                      Delete
+                                    </button>
                                   )}
-                                  {/* Add Cancel button for draft or pending status */}
                                   {(validator.status === 'draft' || validator.status === 'pending') && (
                                     <button
                                       className="btn btn-danger btn-xs"

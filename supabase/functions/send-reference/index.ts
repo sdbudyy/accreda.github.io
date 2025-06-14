@@ -82,7 +82,7 @@ serve(async (req) => {
       subject: `Reference Request: ${reference.jobs.title} at ${reference.jobs.company}`,
       html: `
         <h2>Reference Request</h2>
-        <p>Hello ${reference.full_name},</p>
+        <p>Hello ${reference.first_name || ''} ${reference.last_name || ''},</p>
         <p>${reference.jobs.eit_profiles.full_name} has requested a reference for their work at ${reference.jobs.company} as ${reference.jobs.title}.</p>
         <p>Please click the button below to provide your reference:</p>
         <a href="${referenceFormUrl}" style="display: inline-block; padding: 12px 24px; background-color: #1a365d; color: white; text-decoration: none; border-radius: 6px; margin: 16px 0;">Provide Reference</a>

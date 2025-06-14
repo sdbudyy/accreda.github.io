@@ -22,6 +22,7 @@ export default function ReferenceApprovalPage() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [tokenEmail, setTokenEmail] = useState<string>("");
 
   useEffect(() => {
     const fetchReferenceData = async () => {
@@ -40,6 +41,7 @@ export default function ReferenceApprovalPage() {
           description: tokenData.job_references.description,
           referenceId: tokenData.job_references.id,
         });
+        setTokenEmail(tokenData.email || "");
       } catch (err: any) {
         setError(err.message || "An error occurred");
       } finally {
@@ -58,6 +60,11 @@ export default function ReferenceApprovalPage() {
     setSubmitting(true);
     setError(null);
     try {
+      if (formData.email.trim().toLowerCase() !== tokenEmail.trim().toLowerCase()) {
+        setError("The email you entered does not match the email this reference was sent to. Please use the correct email.");
+        setSubmitting(false);
+        return;
+      }
       const { error: updateError } = await supabase
         .from("job_references")
         .update({
