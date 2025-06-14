@@ -21,6 +21,8 @@ export default function ValidatorApprovalPage() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [skillName, setSkillName] = useState<string>("");
+  const [score, setScore] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchValidatorData = async () => {
@@ -42,7 +44,8 @@ export default function ValidatorApprovalPage() {
               email,
               description,
               created_at,
-              updated_at
+              updated_at,
+              skill_id
             )
           `)
           .eq("token", token)
@@ -55,7 +58,17 @@ export default function ValidatorApprovalPage() {
           ...tokenData.validator,
           validatorId: tokenData.validator.id,
           description: tokenData.validator.description,
+          skill_id: tokenData.validator.skill_id,
         });
+        // Fetch skill name
+        if (tokenData.validator.skill_id) {
+          const { data: skillData } = await supabase
+            .from("skills")
+            .select("name")
+            .eq("id", tokenData.validator.skill_id)
+            .single();
+          setSkillName(skillData?.name || "");
+        }
       } catch (err: any) {
         setError(err.message || "An error occurred");
       } finally {
@@ -74,6 +87,7 @@ export default function ValidatorApprovalPage() {
     setSubmitting(true);
     setError(null);
     try {
+      if (!score) throw new Error("Please select a score before submitting.");
       const { error: updateError } = await supabase
         .from("validators")
         .update({
@@ -82,6 +96,7 @@ export default function ValidatorApprovalPage() {
           position: formData.position,
           relation: formData.relation,
           status: "validated",
+          score: score,
           updated_at: new Date().toISOString(),
         })
         .eq("id", validatorData.validatorId);
@@ -135,6 +150,9 @@ export default function ValidatorApprovalPage() {
               <div className="text-slate-700 text-base grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
                 <div><span className="font-medium">Validator Name:</span> {validatorData?.first_name} {validatorData?.last_name}</div>
                 <div><span className="font-medium">Validator Email:</span> {validatorData?.email}</div>
+                {skillName && (
+                  <div className="col-span-2"><span className="font-medium">Skill:</span> {skillName}</div>
+                )}
                 {validatorData?.description && (
                   <div className="col-span-2 mt-4 p-4 bg-[#f0f6ff] border border-blue-100 rounded-xl">
                     <div className="font-medium text-[#2563eb] mb-1">Validation Description:</div>
@@ -202,9 +220,30 @@ export default function ValidatorApprovalPage() {
                   </div>
                 </div>
                 <div className="pt-4">
+                  <label htmlFor="score" className="block text-sm font-medium text-[#1a365d] mb-2">Score the EIT (1-5):</label>
+                  <div className="flex flex-col items-center gap-2 mb-4">
+                    <span className="text-lg font-semibold text-teal-700">{score ?? "Select a score"}</span>
+                    <input
+                      type="range"
+                      id="score"
+                      min={1}
+                      max={5}
+                      step={1}
+                      value={score ?? 1}
+                      onChange={e => setScore(Number(e.target.value))}
+                      className="w-full max-w-xs accent-teal-600"
+                    />
+                    <div className="flex justify-between w-full max-w-xs text-xs text-slate-500">
+                      <span>1</span>
+                      <span>2</span>
+                      <span>3</span>
+                      <span>4</span>
+                      <span>5</span>
+                    </div>
+                  </div>
                   <button
                     type="submit"
-                    disabled={submitting}
+                    disabled={submitting || !score}
                     className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-md text-lg font-semibold text-white bg-[#1cc8ae] hover:bg-[#179e8c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1cc8ae] disabled:opacity-50 transition-all duration-200"
                   >
                     {submitting ? (
