@@ -25,6 +25,12 @@ export default function ValidatorApprovalPage() {
   useEffect(() => {
     const fetchValidatorData = async () => {
       try {
+        // DEBUG: Log the token query result
+        const debugResult = await supabase
+          .from("validators_token")
+          .select("*")
+          .eq("token", token);
+        console.log("DEBUG TOKEN QUERY", { debugResult, token });
         const { data: tokenData, error: tokenError } = await supabase
           .from("validators_token")
           .select(`*, validators:validator_id ( id, full_name, email, description, created_at, updated_at )`)

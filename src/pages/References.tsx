@@ -323,7 +323,7 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
             </button>
             <button
               type="button"
-              className="btn btn-outline-primary"
+              className="btn btn-outline-primary px-4 py-2 rounded-md border border-teal-600 text-teal-700 font-semibold hover:bg-teal-50 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
               onClick={handleSendViaEmail}
               disabled={loading || sending || status !== 'draft'}
             >

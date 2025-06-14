@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { serve } from "std/http/server.ts";
+import { serve } from "https://deno.land/std@0.203.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 
@@ -29,7 +29,7 @@ serve(async (req) => {
     // Get validator data
     const { data: validator, error: validatorError } = await supabaseClient
       .from('validators')
-      .select(`*, skill_id, full_name, email, description, created_at, updated_at`)
+      .select(`*, skill_id, first_name, last_name, email, description, created_at, updated_at`)
       .eq('id', validator_id)
       .single()
 
@@ -68,7 +68,7 @@ serve(async (req) => {
       subject: `Validation Request: Please validate for Accreda`,
       html: `
         <h2>Validation Request</h2>
-        <p>Hello ${validator.full_name},</p>
+        <p>Hello ${validator.first_name} ${validator.last_name},</p>
         <p>You have been requested to validate an EIT's experience for Accreda.</p>
         <p>Please click the button below to provide your validation:</p>
         <a href="${validationFormUrl}" style="display: inline-block; padding: 12px 24px; background-color: #1a365d; color: white; text-decoration: none; border-radius: 6px; margin: 16px 0;">Provide Validation</a>
