@@ -22,6 +22,7 @@ export default function ValidatorApprovalPage() {
   const [submitted, setSubmitted] = useState(false);
   const [skillName, setSkillName] = useState<string>("");
   const [score, setScore] = useState<number | null>(null);
+  const [tokenEmail, setTokenEmail] = useState<string>("");
 
   useEffect(() => {
     const fetchValidatorData = async () => {
@@ -59,6 +60,7 @@ export default function ValidatorApprovalPage() {
           description: tokenData.validator.description,
           skill_id: tokenData.validator.skill_id,
         });
+        setTokenEmail(tokenData.email || "");
         // Fetch skill name
         if (tokenData.validator.skill_id) {
           const { data: skillData } = await supabase
@@ -87,6 +89,11 @@ export default function ValidatorApprovalPage() {
     setError(null);
     try {
       if (!score) throw new Error("Please select a score before submitting.");
+      if (formData.email.trim().toLowerCase() !== tokenEmail.trim().toLowerCase()) {
+        setError("The email you entered does not match the original supervisor email for this validation request.");
+        setSubmitting(false);
+        return;
+      }
       const { error: updateError } = await supabase
         .from("validators")
         .update({
@@ -99,7 +106,10 @@ export default function ValidatorApprovalPage() {
         })
         .eq("id", validatorData.validatorId);
       if (updateError) throw updateError;
-      await supabase.from("validators_token").delete().eq("token", token);
+      await supabase
+        .from("validators_token")
+        .update({ used_at: new Date().toISOString() })
+        .eq("token", token);
       setSubmitted(true);
     } catch (err: any) {
       setError(err.message || "An error occurred");
