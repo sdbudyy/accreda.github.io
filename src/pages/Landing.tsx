@@ -865,9 +865,9 @@ const Landing: React.FC = () => {
               {
                 title: "Pro",
                 subtitle: "For fast-growing engineers",
-                price: "$19.99",
+                price: "$9.99",
                 period: "per month",
-                subtext: "or $17.49/month billed yearly",
+                subtext: "or $104.99/year",
                 features: [
                   "Unlimited documents",
                   "Unlimited SAOs",

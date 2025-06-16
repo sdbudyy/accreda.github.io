@@ -1005,9 +1005,9 @@ const Settings: React.FC = () => {
                 </div>
                 <h3 className="text-2xl font-bold text-teal-900 mb-2">Pro</h3>
                 <div className="text-center mb-4">
-                  <p className="text-5xl font-extrabold text-teal-800">$19.99</p>
+                  <p className="text-5xl font-extrabold text-teal-800">$9.99</p>
                   <p className="text-sm text-gray-600">per month</p>
-                  <p className="text-sm text-teal-600 font-medium mt-1">or $17.49/month billed yearly</p>
+                  <p className="text-sm text-teal-600 font-medium mt-1">or $104.99/year</p>
                 </div>
                 <ul className="mb-6 w-full space-y-3">
                   <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Unlimited documents</li>
