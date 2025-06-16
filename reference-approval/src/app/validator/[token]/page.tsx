@@ -17,6 +17,7 @@ export default function ValidatorApprovalPage() {
     firstName: "",
     lastName: "",
     email: "",
+    position: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -100,6 +101,7 @@ export default function ValidatorApprovalPage() {
           first_name: formData.firstName,
           last_name: formData.lastName,
           email: formData.email,
+          position: formData.position,
           status: "scored",
           score: score,
           updated_at: new Date().toISOString(),
@@ -213,6 +215,24 @@ export default function ValidatorApprovalPage() {
                       className="mt-1 block w-full border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#1cc8ae] focus:border-[#1cc8ae] transition bg-[#f8fafc] text-slate-900 placeholder:text-slate-400"
                       placeholder="Enter your email"
                     />
+                  </div>
+                  <div>
+                    <label htmlFor="position" className="block text-sm font-medium text-[#1a365d] mb-1">Your Position</label>
+                    <select
+                      id="position"
+                      required
+                      value={formData.position}
+                      onChange={e => setFormData(prev => ({ ...prev, position: e.target.value }))}
+                      className="mt-1 block w-full border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#1cc8ae] focus:border-[#1cc8ae] transition bg-[#f8fafc] text-slate-900"
+                    >
+                      <option value="">Select your position</option>
+                      <option value="Direct Supervisor">Direct Supervisor (preferred)</option>
+                      <option value="Project Manager">Project Manager</option>
+                      <option value="Senior Engineer">Senior Engineer</option>
+                      <option value="Team Lead">Team Lead</option>
+                      <option value="Peer Collaborator">Peer Collaborator</option>
+                      <option value="Client">Client</option>
+                    </select>
                   </div>
                 </div>
                 <div className="pt-4">

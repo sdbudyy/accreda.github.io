@@ -68,6 +68,11 @@ export interface CSAWData {
     id: string;
     eit_id: string;
     employer?: string;
+    situation?: string;
+    action?: string;
+    outcome?: string;
+    created_at?: string;
+    updated_at?: string;
     // Add other SAO fields as needed
   }>;
   sao_skills?: Array<{
@@ -82,6 +87,7 @@ export interface CSAWData {
     skill_id: string;
     updated_at: string;
     eit_id: string;
+    position?: string;
   }>;
 }
 
@@ -165,54 +171,103 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       // Silently handle missing field
     }
 
-    // Find the first SAO for this EIT that is linked to skill 1.1
-    const skill1_1_sao = (data.saos || []).find(sao =>
-      String(sao.eit_id).trim().toLowerCase() === String(data.profile.eit_id).trim().toLowerCase() &&
-      (data.sao_skills || []).some(ss =>
-        ss.sao_id === sao.id &&
-        String(ss.skill_id).trim().toLowerCase() === 'b5fb4469-5f9a-47da-86c6-9f17864b8070'
-      )
+    // --- EMPLOYER FILL LOGIC FOR SKILL 1.1 SAO (now using saos.skill_id directly) ---
+    const SKILL_1_1_ID = 'bf5b4469-51e9-47da-86e6-9f71864b4870'; // Skill 1.1 ID from your skills table
+    const EIT_ID = data.profile.eit_id ? String(data.profile.eit_id).trim().toLowerCase() : '';
+
+    // Safe fallback for undefined array
+    const saos = data.saos || [];
+
+    // Debug logs for troubleshooting
+    console.log('PDFGEN: EIT_ID for matching:', EIT_ID);
+    console.log('PDFGEN: SKILL_1_1_ID for matching:', SKILL_1_1_ID);
+    console.log('PDFGEN: All SAOs:', saos);
+
+    // Find all SAOs for this EIT and skill 1.1
+    let skill1_1_saos = saos.filter(sao =>
+      String(sao.eit_id).trim().toLowerCase() === EIT_ID &&
+      String((sao as any).skill_id).trim().toLowerCase() === SKILL_1_1_ID
     );
 
-    if (skill1_1_sao) {
+    console.log('PDFGEN: Filtered SAOs for EIT and Skill 1.1:', skill1_1_saos);
+
+    // Sort by updated_at descending if available
+    if (skill1_1_saos.length > 0 && (skill1_1_saos[0] as any).updated_at) {
+      skill1_1_saos.sort((a, b) =>
+        new Date(((b as any).updated_at || 0) as string).getTime() -
+        new Date(((a as any).updated_at || 0) as string).getTime()
+      );
+    }
+
+    // Use the employer from the most recent matching SAO
+    if (skill1_1_saos.length > 0) {
       try {
         const employerField = form.getTextField('Employer11');
-        employerField.setText(skill1_1_sao.employer || '');
+        employerField.setText(skill1_1_saos[0].employer || '');
+
+        // Fill in Situation, Action, and Outcome fields
+        const situationField = form.getTextField('Situation11');
+        const actionField = form.getTextField('Action11');
+        const outcomeField = form.getTextField('Outcome11');
+
+        situationField.setText(stripHtml(skill1_1_saos[0].situation) || '');
+        actionField.setText(stripHtml(skill1_1_saos[0].action) || '');
+        outcomeField.setText(stripHtml(skill1_1_saos[0].outcome) || '');
       } catch (e) {
-        console.log('Error filling Employer11 field:', e);
+        console.log('Error filling SAO fields:', e);
       }
     }
 
-    // --- VALIDATOR FILL LOGIC (NO DEBUG LOGS) ---
-    const skill1_1_validators = (data.allValidators || []).filter(
-      v =>
-        String(v.skill_id).trim().toLowerCase().includes('b5fb4469-5f9a-47da-86c6-9f17864b8070') &&
-        String(v.eit_id).trim().toLowerCase().includes(String(data.profile.eit_id).trim().toLowerCase())
+    // --- DETAILED LOGGING AND ROBUST MATCHING FOR VALIDATOR FIELDS ---
+    const FORCE_OVERRIDE = false; // Set to true to always use the first validator for testing
+
+    let skill1_1_validators = (data.allValidators || []).filter(
+      v => {
+        const skillIdStr = v.skill_id ? String(v.skill_id).trim().toLowerCase() : '';
+        const eitIdStr = v.eit_id ? String(v.eit_id).trim().toLowerCase() : '';
+        return skillIdStr === SKILL_1_1_ID && eitIdStr === EIT_ID;
+      }
     );
+
+    // Sort by updated_at descending to get the most recent validator
+    skill1_1_validators.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+
+    // --- FORCE OVERRIDE: Use first validator if no match and override is enabled ---
+    if (FORCE_OVERRIDE && (!skill1_1_validators || skill1_1_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
+      console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match.');
+      skill1_1_validators = [data.allValidators![0]];
+    }
+
     if (skill1_1_validators.length > 0) {
-      // Sort by updated_at descending
-      skill1_1_validators.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
       const mostRecentValidator = skill1_1_validators[0];
+      console.log('PDFGEN: Most recent validator for skill 1.1:', mostRecentValidator);
       try {
         const vfNameField = form.getTextField('firstname1');
         const vlNameField = form.getTextField('lastname1');
+        const vPosField = form.getTextField('VPos11');
         vfNameField.setText(mostRecentValidator.first_name || '');
         vlNameField.setText(mostRecentValidator.last_name || '');
+        vPosField.setText(mostRecentValidator.position || '');
       } catch (e) {
         console.log('Error filling validator fields for skill 1.1:', e);
       }
     } else {
       // Try fallback: match only on skill_id
-      const skill1_1_candidates = (data.allValidators || []).filter(
-        v => String(v.skill_id).trim().toLowerCase() === 'b5fb4469-5f9a-47da-86c6-9f17864b8070'
+      let skill1_1_candidates = (data.allValidators || []).filter(
+        v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_1_1_ID
       );
+      // Sort fallback candidates by updated_at descending as well
+      skill1_1_candidates.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
       if (skill1_1_candidates.length > 0) {
         const fallbackValidator = skill1_1_candidates[0];
+        console.log('PDFGEN: Fallback validator for skill 1.1:', fallbackValidator);
         try {
           const vfNameField = form.getTextField('firstname1');
           const vlNameField = form.getTextField('lastname1');
+          const vPosField = form.getTextField('VPos11');
           vfNameField.setText(fallbackValidator.first_name || '');
           vlNameField.setText(fallbackValidator.last_name || '');
+          vPosField.setText(fallbackValidator.position || '');
         } catch (e) {
           console.log('Error filling validator fields for skill 1.1 (fallback):', e);
         }
@@ -246,4 +301,11 @@ EXPLANATION FOR CUSTOMIZATION
 export function createPDFBlobUrl(pdfBytes: Uint8Array): string {
   const blob = new Blob([pdfBytes], { type: 'application/pdf' });
   return URL.createObjectURL(blob);
+}
+
+function stripHtml(html: string = ''): string {
+  // Remove all HTML tags and decode HTML entities
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
 }

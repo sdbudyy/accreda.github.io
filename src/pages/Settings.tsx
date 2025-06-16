@@ -9,6 +9,7 @@ import { Switch } from '@headlessui/react';
 import { useSubscriptionStore } from '../store/subscriptionStore';
 import { sendSupervisorRequestNotification } from '../utils/notifications';
 import { generateCSAWPDF, createPDFBlobUrl, CSAWData } from '../utils/pdfGenerator';
+import { useSAOsStore } from '../store/saos';
 
 const defaultAvatar =
   'https://ui-avatars.com/api/?name=User&background=E0F2FE&color=0891B2&size=128';
@@ -113,6 +114,8 @@ const Settings: React.FC = () => {
     checkSaoLimit,
     checkSupervisorLimit
   } = useSubscriptionStore();
+
+  const { saos } = useSAOsStore();
 
   useEffect(() => {
     const getUserProfile = async () => {
@@ -545,7 +548,7 @@ const Settings: React.FC = () => {
       const SKILL_1_1_ID = 'b5fb4469-5f9a-47da-86c6-9f17864b8070';
       const { data: allValidators, error: allValidatorsError } = await supabase
         .from('validators')
-        .select('first_name, last_name, skill_id, updated_at, eit_id');
+        .select('first_name, last_name, skill_id, updated_at, eit_id, position');
 
       console.log('All validatorRows for skill 1.1 and user:', allValidators);
 
@@ -570,7 +573,7 @@ const Settings: React.FC = () => {
             id: skill.skill_id,
             name: skillNameMap[skill.skill_id] || skill.skill_name || '',
             validator: isSkill11 && validator1_1
-              ? { first_name: validator1_1.first_name, last_name: validator1_1.last_name }
+              ? { first_name: validator1_1.first_name, last_name: validator1_1.last_name, position: validator1_1.position }
               : skill.validator
           };
         });
@@ -587,7 +590,8 @@ const Settings: React.FC = () => {
             status: '',
             validator: validator1_1 ? {
               first_name: validator1_1.first_name,
-              last_name: validator1_1.last_name
+              last_name: validator1_1.last_name,
+              position: validator1_1.position
             } : undefined
           }
         ];
@@ -621,10 +625,11 @@ const Settings: React.FC = () => {
 
       // Create the export data
       const exportData: CSAWData = {
-        profile: { ...eitData, eit_id: user.id }, // ensure eit_id is present
+        profile: { ...eitData, eit_id: user.id },
         skills: skills,
         experiences: mappedExperiences,
-        allValidators: allValidatorsWithEitId // pass allValidators with eit_id
+        allValidators: allValidatorsWithEitId,
+        saos: saos.map(sao => ({ ...sao, eit_id: user.id }))
       };
 
       // Generate PDF

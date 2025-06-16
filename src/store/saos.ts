@@ -97,7 +97,8 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
             action,
             outcome,
             status,
-            employer
+            employer,
+            skill_id: skills[0]?.id || null
           }
         ])
         .select()
@@ -179,7 +180,7 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
       // Update the SAO
       const { error: saoError } = await supabase
         .from('saos')
-        .update({ title, situation, action, outcome, status, employer })
+        .update({ title, situation, action, outcome, status, employer, skill_id: skills[0]?.id || null })
         .eq('id', id)
         .eq('eit_id', user.id);
 

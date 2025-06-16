@@ -177,6 +177,7 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
             last_name: formData.lastName,
             email: formData.email,
             description: formData.description,
+            position: 'supervisor',
             status: 'pending'
           }]);
 
@@ -220,6 +221,7 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
             last_name: formData.lastName,
             email: formData.email,
             description: formData.description,
+            position: 'supervisor',
             status: 'pending'
           }])
           .select();
