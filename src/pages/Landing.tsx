@@ -860,9 +860,9 @@ const Landing: React.FC = () => {
             {[
               {
                 title: "Start",
-                subtitle: "Try Accreda Pro free for 30 days",
+                subtitle: "Try with limited access now",
                 price: "Free",
-                period: "for 30 days",
+                period: "forever",
                 features: [
                   "Up to 5 documents",
                   "Up to 5 SAOs",

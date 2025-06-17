@@ -523,52 +523,92 @@ const Settings: React.FC = () => {
     setShowApegaWarning(false);
     setAllowAnyway(false);
     try {
+      console.log('Starting CSAW export process...');
+      
       // Load data using hooks
+      console.log('Loading user skills and SAOs...');
       await Promise.all([
         loadUserSkills(true),
         loadUserSAOs(true)
       ]);
+      console.log('User skills and SAOs loaded successfully');
+
       // --- Fetch all SAOs and sao_skills directly from Supabase ---
+      console.log('Fetching fresh SAOs and SAO skills...');
       const { data: freshSAOs, error: saosError } = await supabase
         .from('saos')
         .select('*')
         .eq('eit_id', user.id);
+      
+      if (saosError) {
+        console.error('Error fetching SAOs:', saosError);
+        throw saosError;
+      }
+      console.log(`Fetched ${freshSAOs?.length || 0} SAOs`);
+
       const { data: freshSaoSkills, error: saoSkillsError } = await supabase
         .from('sao_skills')
         .select('*')
         .in('sao_id', (freshSAOs || []).map(s => s.id));
+      
+      if (saoSkillsError) {
+        console.error('Error fetching SAO skills:', saoSkillsError);
+        throw saoSkillsError;
+      }
+      console.log(`Fetched ${freshSaoSkills?.length || 0} SAO skills`);
+
       // --- End fresh fetch ---
       // Fetch all EIT data
+      console.log('Fetching EIT profile data...');
       const { data: eitData, error: eitError } = await supabase
         .from('eit_profiles')
         .select('*')
         .eq('id', user.id)
         .single();
       
-      if (eitError) throw eitError;
+      if (eitError) {
+        console.error('Error fetching EIT profile:', eitError);
+        throw eitError;
+      }
+      console.log('EIT profile data fetched successfully');
 
       // Fetch all skills
+      console.log('Fetching user skills...');
       const { data: userSkills, error: skillsError } = await supabase
         .from('eit_skills')
         .select('*')
         .eq('eit_id', user.id);
 
-      if (skillsError) throw skillsError;
+      if (skillsError) {
+        console.error('Error fetching user skills:', skillsError);
+        throw skillsError;
+      }
+      console.log(`Fetched ${userSkills?.length || 0} user skills`);
 
       // Fetch all experiences
+      console.log('Fetching experiences...');
       const { data: experiences, error: expError } = await supabase
         .from('experiences')
         .select('*')
         .eq('eit_id', user.id);
 
-      if (expError) throw expError;
+      if (expError) {
+        console.error('Error fetching experiences:', expError);
+        throw expError;
+      }
+      console.log(`Fetched ${experiences?.length || 0} experiences`);
 
       // Fetch all canonical skills for name lookup
+      console.log('Fetching canonical skills...');
       const { data: allSkills, error: allSkillsError } = await supabase
         .from('skills')
         .select('id, name');
 
-      if (allSkillsError) throw allSkillsError;
+      if (allSkillsError) {
+        console.error('Error fetching canonical skills:', allSkillsError);
+        throw allSkillsError;
+      }
+      console.log(`Fetched ${allSkills?.length || 0} canonical skills`);
 
       // Build a map of skill_id -> name
       const skillNameMap: Record<string, string> = {};
@@ -578,25 +618,32 @@ const Settings: React.FC = () => {
 
       // Fetch validator for skill 1.1
       const SKILL_1_1_ID = 'b5fb4469-5f9a-47da-86c6-9f17864b8070';
+      console.log('Fetching validators...');
       const { data: allValidators, error: allValidatorsError } = await supabase
         .from('validators')
         .select('first_name, last_name, skill_id, updated_at, eit_id, position');
 
-      console.log('All validatorRows for skill 1.1 and user:', allValidators);
+      if (allValidatorsError) {
+        console.error('Error fetching validators:', allValidatorsError);
+        throw allValidatorsError;
+      }
+      console.log(`Fetched ${allValidators?.length || 0} validators`);
 
+      console.log('Filtering validators for skill 1.1...');
       const validatorRows = (allValidators || []).filter(
         v => String(v.skill_id).trim().toLowerCase() === String(SKILL_1_1_ID).trim().toLowerCase() &&
              String(v.eit_id).trim().toLowerCase() === String(user.id).trim().toLowerCase()
       );
-      console.log('Filtered validatorRows:', validatorRows);
+      console.log(`Found ${validatorRows.length} validators for skill 1.1`);
 
       let validator1_1 = validatorRows.length > 0
         ? validatorRows.slice().sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0]
         : null;
 
-      console.log('Selected validator1_1 for skill 1.1:', validator1_1, 'user.id:', user.id, 'SKILL_1_1_ID:', SKILL_1_1_ID);
+      console.log('Selected validator for skill 1.1:', validator1_1);
 
       // Map user skills to include canonical name and validator for 1.1
+      console.log('Mapping user skills...');
       let skills = (userSkills || [])
         .map(skill => {
           const isSkill11 = skill.skill_id === SKILL_1_1_ID;
@@ -612,7 +659,7 @@ const Settings: React.FC = () => {
 
       // Ensure skill 1.1 is present in the skills array
       if (!skills.some(s => s.id === SKILL_1_1_ID)) {
-        // Find canonical name for skill 1.1
+        console.log('Adding missing skill 1.1 to skills array');
         const canonicalName = skillNameMap[SKILL_1_1_ID] || 'Technical Competence 1.1';
         skills = [
           ...skills,
@@ -630,8 +677,10 @@ const Settings: React.FC = () => {
       }
 
       skills = skills.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+      console.log(`Final skills array contains ${skills.length} skills`);
 
       // Map experiences to include a skills array
+      console.log('Mapping experiences with skills...');
       const mappedExperiences = (experiences || []).map((exp: any) => {
         let skillIds: string[] = [];
         if (Array.isArray(exp.skill_ids)) {
@@ -648,14 +697,17 @@ const Settings: React.FC = () => {
           skills: expSkills
         };
       });
+      console.log(`Mapped ${mappedExperiences.length} experiences with skills`);
 
       // Ensure allValidators includes eit_id for each validator
+      console.log('Preparing validators data...');
       const allValidatorsWithEitId = (allValidators || []).map(v => ({
         ...v,
         eit_id: v.eit_id || user.id // fallback to user.id if missing
       }));
 
       // Create the export data
+      console.log('Creating final export data...');
       const exportData: CSAWData = {
         profile: { ...eitData, eit_id: user.id },
         skills: skills,
@@ -666,23 +718,15 @@ const Settings: React.FC = () => {
       };
 
       // Generate PDF
+      console.log('Generating PDF...');
       const pdfBytes = await generateCSAWPDF(exportData);
       const url = createPDFBlobUrl(pdfBytes);
       setPdfUrl(url);
       setPreviewData(exportData);
       setShowPreviewModal(true);
       setMessage({ type: 'success', text: 'Preview generated successfully!' });
+      console.log('PDF generation completed successfully');
 
-      // console.log('Validator row:', {
-      //   skill_id: v.skill_id,
-      //   skill_id_str: String(v.skill_id).trim().toLowerCase(),
-      //   SKILL_1_1_ID: String(SKILL_1_1_ID).trim().toLowerCase(),
-      //   match: String(v.skill_id).trim().toLowerCase() === String(SKILL_1_1_ID).trim().toLowerCase(),
-      //   eit_id: v.eit_id,
-      //   eit_id_str: String(v.eit_id).trim().toLowerCase(),
-      //   user_id: String(user.id).trim().toLowerCase(),
-      //   match_eit: String(v.eit_id).trim().toLowerCase() === String(user.id).trim().toLowerCase()
-      // });
     } catch (error) {
       console.error('Export error:', error);
       setMessage({ type: 'error', text: 'Failed to generate preview. Please try again.' });
