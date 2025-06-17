@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense, lazy } from 'react'
 import { supabase } from './lib/supabase'
 import { Session } from '@supabase/supabase-js'
 import Login from './components/auth/Login'
@@ -7,39 +7,40 @@ import SignUp from './components/auth/SignUp'
 import ForgotPassword from './components/auth/ForgotPassword'
 import ResetPassword from './components/auth/ResetPassword'
 import Layout from './components/Layout'
-import Dashboard from './pages/Dashboard'
-import Skills from './pages/Skills'
-import Documents from './pages/Documents'
-import Essays from './pages/Essays'
-import TextInput from './pages/TextInput'
-import NotFound from './pages/NotFound'
-import EditDocument from './pages/EditDocument'
-import Settings from './pages/Settings'
-import SAOs from './pages/SAOs'
-import Support from './pages/Support'
-import Landing from './pages/Landing'
-import References from './pages/References'
 import { useProgressStore } from './store/progress'
 import { useSkillsStore } from './store/skills'
 import { useEssayStore } from './store/essays'
 import SupervisorLayout from './components/supervisor/SupervisorLayout'
-import SupervisorTeam from './pages/SupervisorTeam'
-import SupervisorReviews from './pages/SupervisorReviews'
-import SupervisorDocuments from './pages/SupervisorDocuments'
-import SupervisorSettings from './pages/SupervisorSettings'
-import SupervisorSupport from './pages/SupervisorSupport'
-import SupervisorDashboardContent from './pages/SupervisorDashboard'
-import RoleBasedDashboard from './components/dashboard/RoleBasedDashboard'
-import EitDashboardGate from './components/dashboard/EitDashboardGate'
-import SupervisorSkills from './pages/SupervisorSkills'
 import { useNotificationsStore } from './store/notifications'
 import RealtimeNotifications from './components/common/RealtimeNotifications'
 import { Toaster } from 'react-hot-toast'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
 import ProtectedRoute from './components/auth/ProtectedRoute'
-import ThankYou from './pages/ThankYou'
-import Enterprise from './pages/Enterprise'
+import RoleBasedDashboard from './components/dashboard/RoleBasedDashboard'
+import EitDashboardGate from './components/dashboard/EitDashboardGate'
+import NotFound from './pages/NotFound'
+
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Skills = lazy(() => import('./pages/Skills'))
+const Documents = lazy(() => import('./pages/Documents'))
+const Essays = lazy(() => import('./pages/Essays'))
+const TextInput = lazy(() => import('./pages/TextInput'))
+const EditDocument = lazy(() => import('./pages/EditDocument'))
+const Settings = lazy(() => import('./pages/Settings'))
+const SAOs = lazy(() => import('./pages/SAOs'))
+const Support = lazy(() => import('./pages/Support'))
+const Landing = lazy(() => import('./pages/Landing'))
+const References = lazy(() => import('./pages/References'))
+const SupervisorTeam = lazy(() => import('./pages/SupervisorTeam'))
+const SupervisorReviews = lazy(() => import('./pages/SupervisorReviews'))
+const SupervisorDocuments = lazy(() => import('./pages/SupervisorDocuments'))
+const SupervisorSettings = lazy(() => import('./pages/SupervisorSettings'))
+const SupervisorSupport = lazy(() => import('./pages/SupervisorSupport'))
+const SupervisorDashboardContent = lazy(() => import('./pages/SupervisorDashboard'))
+const SupervisorSkills = lazy(() => import('./pages/SupervisorSkills'))
+const ThankYou = lazy(() => import('./pages/ThankYou'))
+const Enterprise = lazy(() => import('./pages/Enterprise'))
 
 function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -83,75 +84,77 @@ function App() {
     <>
       {session && <RealtimeNotifications userId={session.user.id} />}
       <Toaster position="top-right" />
-      <Routes>
-        {/* Public routes */}
-        <Route path="/" element={!session ? <Landing /> : <RoleBasedDashboard />} />
-        <Route path="/pricing" element={<Navigate to="/?scroll=pricing" replace />} />
-        <Route path="/#pricing" element={<Navigate to="/?scroll=pricing" replace />} />
-        <Route
-          path="/login"
-          element={!session ? <Login /> : <Navigate to="/dashboard" />}
-        />
-        <Route
-          path="/signup"
-          element={!session ? <SignUp /> : <Navigate to="/dashboard" />}
-        />
-        <Route
-          path="/enterprise"
-          element={<Enterprise />}
-        />
-        <Route
-          path="/forgot-password"
-          element={!session ? <ForgotPassword /> : <Navigate to="/dashboard" />}
-        />
-        <Route
-          path="/reset-password"
-          element={!session ? <ResetPassword /> : <Navigate to="/dashboard" />}
-        />
-        <Route path="/thank-you" element={<ThankYou />} />
+      <Suspense fallback={<div>Loading...</div>}>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/" element={!session ? <Landing /> : <RoleBasedDashboard />} />
+          <Route path="/pricing" element={<Navigate to="/?scroll=pricing" replace />} />
+          <Route path="/#pricing" element={<Navigate to="/?scroll=pricing" replace />} />
+          <Route
+            path="/login"
+            element={!session ? <Login /> : <Navigate to="/dashboard" />}
+          />
+          <Route
+            path="/signup"
+            element={!session ? <SignUp /> : <Navigate to="/dashboard" />}
+          />
+          <Route
+            path="/enterprise"
+            element={<Enterprise />}
+          />
+          <Route
+            path="/forgot-password"
+            element={!session ? <ForgotPassword /> : <Navigate to="/dashboard" />}
+          />
+          <Route
+            path="/reset-password"
+            element={!session ? <ResetPassword /> : <Navigate to="/dashboard" />}
+          />
+          <Route path="/thank-you" element={<ThankYou />} />
 
-        {/* Protected EIT routes */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute requiredRole="eit">
-              <Layout appLoaded={!loading} />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<EitDashboardGate />} />
-          <Route path="skills" element={<Skills />} />
-          <Route path="saos" element={<SAOs />} />
-          <Route path="documents" element={<Documents />} />
-          <Route path="essays" element={<Essays />} />
-          <Route path="text-input" element={<TextInput />} />
-          <Route path="edit-document/:id" element={<EditDocument />} />
-          <Route path="settings" element={<Settings />} />
-          <Route path="help" element={<Support />} />
-          <Route path="references" element={<References />} />
-        </Route>
+          {/* Protected EIT routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute requiredRole="eit">
+                <Layout appLoaded={!loading} />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<EitDashboardGate />} />
+            <Route path="skills" element={<Skills />} />
+            <Route path="saos" element={<SAOs />} />
+            <Route path="documents" element={<Documents />} />
+            <Route path="essays" element={<Essays />} />
+            <Route path="text-input" element={<TextInput />} />
+            <Route path="edit-document/:id" element={<EditDocument />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="help" element={<Support />} />
+            <Route path="references" element={<References />} />
+          </Route>
 
-        {/* Protected Supervisor routes */}
-        <Route
-          path="/dashboard/supervisor"
-          element={
-            <ProtectedRoute requiredRole="supervisor">
-              <SupervisorLayout appLoaded={!loading} />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<SupervisorDashboardContent />} />
-          <Route path="team" element={<SupervisorTeam />} />
-          <Route path="reviews" element={<SupervisorReviews />} />
-          <Route path="documents" element={<SupervisorDocuments />} />
-          <Route path="settings" element={<SupervisorSettings />} />
-          <Route path="support" element={<SupervisorSupport />} />
-          <Route path="skills" element={<SupervisorSkills />} />
-        </Route>
+          {/* Protected Supervisor routes */}
+          <Route
+            path="/dashboard/supervisor"
+            element={
+              <ProtectedRoute requiredRole="supervisor">
+                <SupervisorLayout appLoaded={!loading} />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<SupervisorDashboardContent />} />
+            <Route path="team" element={<SupervisorTeam />} />
+            <Route path="reviews" element={<SupervisorReviews />} />
+            <Route path="documents" element={<SupervisorDocuments />} />
+            <Route path="settings" element={<SupervisorSettings />} />
+            <Route path="support" element={<SupervisorSupport />} />
+            <Route path="skills" element={<SupervisorSkills />} />
+          </Route>
 
-        {/* Catch all route */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+          {/* Catch all route */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
       <Analytics />
       <SpeedInsights />
     </>
