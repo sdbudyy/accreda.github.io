@@ -171,9 +171,176 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       // Silently handle missing field
     }
 
+    // Set default value for all radio buttons to 'yes'
+    // e11-e110 radio buttons
+    try {
+      const e11Radio = form.getRadioGroup('e11');
+      e11Radio.select('yes');
+    } catch (e) {
+      console.log('Failed to set e11 radio button:', e);
+    }
+    try {
+      const e12Radio = form.getRadioGroup('e12');
+      e12Radio.select('yes');
+    } catch (e) {
+      console.log('Failed to set e12 radio button:', e);
+    }
+    try {
+      const e13Radio = form.getRadioGroup('e13');
+      e13Radio.select('yes');
+    } catch (e) {
+      console.log('Failed to set e13 radio button:', e);
+    }
+    try {
+      const e14Radio = form.getRadioGroup('e14');
+      e14Radio.select('yes');
+    } catch (e) {
+      console.log('Failed to set e14 radio button:', e);
+    }
+    try {
+      const e15Radio = form.getRadioGroup('e15');
+      e15Radio.select('yes');
+    } catch (e) {
+      console.log('Failed to set e15 radio button:', e);
+    }
+    try {
+      const e16Radio = form.getRadioGroup('e16');
+      e16Radio.select('yes');
+    } catch (e) {
+      console.log('Failed to set e16 radio button:', e);
+    }
+    try {
+      const e17Radio = form.getRadioGroup('e17');
+      e17Radio.select('yes');
+    } catch (e) {
+      console.log('Failed to set e17 radio button:', e);
+    }
+    try {
+      const e18Radio = form.getRadioGroup('e18');
+      e18Radio.select('yes');
+    } catch (e) {
+      console.log('Failed to set e18 radio button:', e);
+    }
+    try {
+      const e19Radio = form.getRadioGroup('e19');
+      e19Radio.select('yes');
+    } catch (e) {
+      console.log('Failed to set e19 radio button:', e);
+    }
+    try {
+      const e110Radio = form.getRadioGroup('e110');
+      e110Radio.select('yes');
+    } catch (e) {
+      console.log('Failed to set e110 radio button:', e);
+    }
+
+    // e21-e23 radio buttons
+    try {
+      const e21Radio = form.getRadioGroup('e21');
+      e21Radio.select('yes');
+    } catch (e) {
+      console.log('Failed to set e21 radio button:', e);
+    }
+    try {
+      const e22Radio = form.getRadioGroup('e22');
+      e22Radio.select('yes');
+    } catch (e) {
+      console.log('Failed to set e22 radio button:', e);
+    }
+    try {
+      const e23Radio = form.getRadioGroup('e23');
+      e23Radio.select('yes');
+    } catch (e) {
+      console.log('Failed to set e23 radio button:', e);
+    }
+
+    // e31-e32 radio buttons
+    try {
+      const e31Radio = form.getRadioGroup('e31');
+      e31Radio.select('yes');
+    } catch (e) {
+      console.log('Failed to set e31 radio button:', e);
+    }
+    try {
+      const e32Radio = form.getRadioGroup('e32');
+      e32Radio.select('yes');
+    } catch (e) {
+      console.log('Failed to set e32 radio button:', e);
+    }
+
+    // e41 radio button
+    try {
+      const e41Radio = form.getRadioGroup('e41');
+      e41Radio.select('yes');
+    } catch (e) {
+      console.log('Failed to set e41 radio button:', e);
+    }
+
+    // e51 radio button
+    try {
+      const e51Radio = form.getRadioGroup('e51');
+      e51Radio.select('yes');
+    } catch (e) {
+      console.log('Failed to set e51 radio button:', e);
+    }
+
+    // e61-e65 radio buttons
+    try {
+      const e61Radio = form.getRadioGroup('e61');
+      e61Radio.select('yes');
+    } catch (e) {
+      console.log('Failed to set e61 radio button:', e);
+    }
+    try {
+      const e62Radio = form.getRadioGroup('e62');
+      e62Radio.select('yes');
+    } catch (e) {
+      console.log('Failed to set e62 radio button:', e);
+    }
+    try {
+      const e63Radio = form.getRadioGroup('e63');
+      e63Radio.select('yes');
+    } catch (e) {
+      console.log('Failed to set e63 radio button:', e);
+    }
+    try {
+      const e64Radio = form.getRadioGroup('e64');
+      e64Radio.select('yes');
+    } catch (e) {
+      console.log('Failed to set e64 radio button:', e);
+    }
+    try {
+      const e65Radio = form.getRadioGroup('e65');
+      e65Radio.select('yes');
+    } catch (e) {
+      console.log('Failed to set e65 radio button:', e);
+    }
+
     // --- EMPLOYER FILL LOGIC FOR SKILL 1.1 SAO (now using saos.skill_id directly) ---
     const SKILL_1_1_ID = 'bf5b4469-51e9-47da-86e6-9f71864b4870'; // Skill 1.1 ID from your skills table
     const EIT_ID = data.profile.eit_id ? String(data.profile.eit_id).trim().toLowerCase() : '';
+
+    // Query the eit_skills table for the most recent rank value for skill 1.1
+    const { data: skill1_1_data, error: skill1_1_error } = await supabase
+      .from('eit_skills')
+      .select('rank')
+      .eq('eit_id', EIT_ID)
+      .eq('skill_id', SKILL_1_1_ID)
+      .order('updated_at', { ascending: false })
+      .limit(1);
+
+    try {
+      const radioField = form.getRadioGroup('skill11');
+      if (!skill1_1_error && skill1_1_data && skill1_1_data.length > 0 && skill1_1_data[0].rank !== null && skill1_1_data[0].rank !== undefined) {
+        // Set the corresponding radio button based on the rank value (0-5)
+        radioField.select(String(skill1_1_data[0].rank));
+      } else {
+        // Default to '0' if no rank value is found
+        radioField.select('0');
+      }
+    } catch (e) {
+      console.log('Error setting skill11 radio button:', e);
+    }
 
     // Safe fallback for undefined array
     const saos = data.saos || [];
@@ -202,13 +369,13 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     // Use the employer from the most recent matching SAO
     if (skill1_1_saos.length > 0) {
       try {
-        const employerField = form.getTextField('Employer11');
+        const employerField = form.getTextField('employer11');
         employerField.setText(skill1_1_saos[0].employer || '');
 
         // Fill in Situation, Action, and Outcome fields
-        const situationField = form.getTextField('Situation11');
-        const actionField = form.getTextField('Action11');
-        const outcomeField = form.getTextField('Outcome11');
+        const situationField = form.getTextField('situation11');
+        const actionField = form.getTextField('action11');
+        const outcomeField = form.getTextField('outcome11');
 
         situationField.setText(stripHtml(skill1_1_saos[0].situation) || '');
         actionField.setText(stripHtml(skill1_1_saos[0].action) || '');
@@ -242,9 +409,9 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       const mostRecentValidator = skill1_1_validators[0];
       console.log('PDFGEN: Most recent validator for skill 1.1:', mostRecentValidator);
       try {
-        const vfNameField = form.getTextField('firstname1');
-        const vlNameField = form.getTextField('lastname1');
-        const vPosField = form.getTextField('VPos11');
+        const vfNameField = form.getTextField('fn11');
+        const vlNameField = form.getTextField('ln11');
+        const vPosField = form.getTextField('vpos11');
         vfNameField.setText(mostRecentValidator.first_name || '');
         vlNameField.setText(mostRecentValidator.last_name || '');
         vPosField.setText(mostRecentValidator.position || '');
@@ -262,9 +429,9 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
         const fallbackValidator = skill1_1_candidates[0];
         console.log('PDFGEN: Fallback validator for skill 1.1:', fallbackValidator);
         try {
-          const vfNameField = form.getTextField('firstname1');
-          const vlNameField = form.getTextField('lastname1');
-          const vPosField = form.getTextField('VPos11');
+          const vfNameField = form.getTextField('fn11');
+          const vlNameField = form.getTextField('ln11');
+          const vPosField = form.getTextField('vpos11');
           vfNameField.setText(fallbackValidator.first_name || '');
           vlNameField.setText(fallbackValidator.last_name || '');
           vPosField.setText(fallbackValidator.position || '');

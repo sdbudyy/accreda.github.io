@@ -10,6 +10,7 @@ import { useSubscriptionStore } from '../store/subscriptionStore';
 import { sendSupervisorRequestNotification } from '../utils/notifications';
 import { generateCSAWPDF, createPDFBlobUrl, CSAWData } from '../utils/pdfGenerator';
 import { useSAOsStore } from '../store/saos';
+import { useSkillsStore } from '../store/skills';
 
 const defaultAvatar =
   'https://ui-avatars.com/api/?name=User&background=E0F2FE&color=0891B2&size=128';
@@ -506,6 +507,21 @@ const Settings: React.FC = () => {
     setShowApegaWarning(false);
     setAllowAnyway(false);
     try {
+      // --- Force-load all relevant data from stores ---
+      await Promise.all([
+        useSkillsStore.getState().loadUserSkills(true),
+        useSAOsStore.getState().loadUserSAOs(true)
+      ]);
+      // --- Fetch all SAOs and sao_skills directly from Supabase ---
+      const { data: freshSAOs, error: saosError } = await supabase
+        .from('saos')
+        .select('*')
+        .eq('eit_id', user.id);
+      const { data: freshSaoSkills, error: saoSkillsError } = await supabase
+        .from('sao_skills')
+        .select('*')
+        .in('sao_id', (freshSAOs || []).map(s => s.id));
+      // --- End fresh fetch ---
       // Fetch all EIT data
       const { data: eitData, error: eitError } = await supabase
         .from('eit_profiles')
@@ -629,7 +645,8 @@ const Settings: React.FC = () => {
         skills: skills,
         experiences: mappedExperiences,
         allValidators: allValidatorsWithEitId,
-        saos: saos.map(sao => ({ ...sao, eit_id: user.id }))
+        saos: (freshSAOs || []).map(sao => ({ ...sao, eit_id: user.id })),
+        sao_skills: freshSaoSkills || []
       };
 
       // Generate PDF
@@ -640,18 +657,16 @@ const Settings: React.FC = () => {
       setShowPreviewModal(true);
       setMessage({ type: 'success', text: 'Preview generated successfully!' });
 
-      (allValidators || []).forEach(v => {
-        console.log('Validator row:', {
-          skill_id: v.skill_id,
-          skill_id_str: String(v.skill_id).trim().toLowerCase(),
-          SKILL_1_1_ID: String(SKILL_1_1_ID).trim().toLowerCase(),
-          match: String(v.skill_id).trim().toLowerCase() === String(SKILL_1_1_ID).trim().toLowerCase(),
-          eit_id: v.eit_id,
-          eit_id_str: String(v.eit_id).trim().toLowerCase(),
-          user_id: String(user.id).trim().toLowerCase(),
-          match_eit: String(v.eit_id).trim().toLowerCase() === String(user.id).trim().toLowerCase()
-        });
-      });
+      // console.log('Validator row:', {
+      //   skill_id: v.skill_id,
+      //   skill_id_str: String(v.skill_id).trim().toLowerCase(),
+      //   SKILL_1_1_ID: String(SKILL_1_1_ID).trim().toLowerCase(),
+      //   match: String(v.skill_id).trim().toLowerCase() === String(SKILL_1_1_ID).trim().toLowerCase(),
+      //   eit_id: v.eit_id,
+      //   eit_id_str: String(v.eit_id).trim().toLowerCase(),
+      //   user_id: String(user.id).trim().toLowerCase(),
+      //   match_eit: String(v.eit_id).trim().toLowerCase() === String(user.id).trim().toLowerCase()
+      // });
     } catch (error) {
       console.error('Export error:', error);
       setMessage({ type: 'error', text: 'Failed to generate preview. Please try again.' });
@@ -1056,6 +1071,25 @@ const Settings: React.FC = () => {
                   </button>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* Billing Portal Section */}
+          <div className="max-w-2xl mx-auto mt-10">
+            <div className="rounded-2xl shadow bg-gradient-to-br from-slate-50 to-white p-8 flex flex-col items-center border border-slate-200">
+              <h3 className="text-xl font-bold text-teal-800 mb-2 flex items-center gap-2">
+                <svg className="w-6 h-6 text-teal-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 1.343-3 3s1.343 3 3 3 3-1.343 3-3-1.343-3-3-3zm0 10c-4.418 0-8-1.79-8-4V6c0-2.21 3.582-4 8-4s8 1.79 8 4v8c0 2.21-3.582 4-8 4z" /></svg>
+                Manage Your Billing
+              </h3>
+              <p className="text-gray-600 text-center mb-4 max-w-md">Update your payment method or view your invoices securely through our billing portal. <span className="font-semibold text-teal-700">Plan changes and cancellations require contacting support.</span></p>
+              <a
+                href="https://billing.stripe.com/p/login/test_bJebJ12tadR8e1d3pQ7ss00"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full font-semibold text-md shadow transition-colors mb-2 mt-2"
+              >
+                Go to Billing Portal
+              </a>
             </div>
           </div>
 
