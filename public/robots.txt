@@ -2,4 +2,12 @@ User-agent: *
 Allow: /
 
 # Sitemap location
-Sitemap: https://accreda.ca/sitemap.xml 
+Sitemap: https://accreda.com/sitemap.xml
+
+# Disallow admin and private routes
+Disallow: /admin/
+Disallow: /private/
+Disallow: /api/
+
+# Crawl-delay
+Crawl-delay: 10 

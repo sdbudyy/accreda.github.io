@@ -5,13 +5,13 @@ import accredaLogo from '../assets/accreda-logo.png';
 import accredaSmall from '../assets/accreda-small.webp';
 import smallSkill from '../assets/small-skill.png';
 import eitSkills from '../assets/eit-skills.png';
-import { Users, BarChart3, FileText, CheckCircle2, Clock, Menu, Award, Bell, MessageSquare, TrendingUp, Shield, Lock, Database } from 'lucide-react';
+import { Users, BarChart3, FileText, CheckCircle2, Clock, Menu, Award, Bell, MessageSquare, TrendingUp } from 'lucide-react';
 
 const features = [
   {
     icon: 'Users',
     title: 'Team Overview Dashboard',
-    description: 'Get a bird\'s eye view of your entire team\'s progress. Monitor completion rates, skill assessments, and documentation status at a glance.',
+    description: 'Get a comprehensive view of your entire team\'s progress. Monitor completion rates, skill assessments, and documentation status at a glance.',
     image: smallSkill,
     imageAlt: 'Team progress overview showing skill comparisons'
   },
@@ -24,24 +24,17 @@ const features = [
   },
   {
     icon: 'FileText',
-    title: 'Streamlined Documentation Review',
-    description: 'Review and approve EIT documentation efficiently. Our structured templates ensure consistency and compliance with regulatory requirements.',
+    title: 'Documentation Review System',
+    description: 'Streamline the review and approval process for EIT documentation. Our structured templates ensure consistency and compliance with regulatory requirements.',
     image: smallSkill,
     imageAlt: 'Documentation review interface'
   },
   {
     icon: 'CheckCircle2',
-    title: 'Automated Progress Tracking',
+    title: 'Progress Tracking',
     description: 'Track progress across 22 required skills and competencies. Get automated alerts for pending reviews and approvals.',
     image: smallSkill,
     imageAlt: 'Progress tracking dashboard'
-  },
-  {
-    icon: 'Clock',
-    title: 'Time-Saving Workflows',
-    description: 'Reduce administrative overhead with automated reminders, bulk actions, and streamlined approval processes.',
-    image: smallSkill,
-    imageAlt: 'Time-saving workflow interface'
   },
   {
     icon: 'Bell',
@@ -49,24 +42,13 @@ const features = [
     description: 'Stay informed with intelligent notifications for pending reviews, approvals, and important milestones.',
     image: smallSkill,
     imageAlt: 'Notification system interface'
-  }
-];
-
-const securityFeatures = [
-  {
-    icon: 'Shield',
-    title: 'SOC 2 Certified',
-    description: 'We are committed to the highest standard of security and are SOC 2 Type 2 certified.'
   },
   {
-    icon: 'Lock',
-    title: 'Data Encryption',
-    description: 'Industry-standard encryption at rest (AES-256) and in transit (TLS).'
-  },
-  {
-    icon: 'Database',
-    title: 'Automated Backups',
-    description: 'Daily backups with one week retention period for all your data.'
+    icon: 'Award',
+    title: 'Compliance Management',
+    description: 'Ensure your team meets all regulatory requirements with our comprehensive compliance tracking system.',
+    image: smallSkill,
+    imageAlt: 'Compliance management interface'
   }
 ];
 
@@ -77,9 +59,7 @@ const iconMap: Record<string, React.ReactNode> = {
   CheckCircle2: <CheckCircle2 className="w-8 h-8 text-teal-600" />,
   Clock: <Clock className="w-8 h-8 text-teal-600" />,
   Bell: <Bell className="w-8 h-8 text-teal-600" />,
-  Shield: <Shield className="w-8 h-8 text-teal-600" />,
-  Lock: <Lock className="w-8 h-8 text-teal-600" />,
-  Database: <Database className="w-8 h-8 text-teal-600" />
+  Award: <Award className="w-8 h-8 text-teal-600" />
 };
 
 const Enterprise: React.FC = () => {
@@ -113,22 +93,9 @@ const Enterprise: React.FC = () => {
             </div>
             <div className="hidden md:flex items-center space-x-8">
               <Link to="/login" className="text-slate-600 hover:text-slate-900 transition-colors">Sign In</Link>
-              <a 
-                href="/#pricing"
-                className="text-slate-600 hover:text-slate-900 transition-colors"
-              >
-                Pricing
-              </a>
-              {window.location.pathname === '/enterprise' ? (
-                <button
-                  className="text-slate-600 hover:text-slate-900 transition-colors"
-                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                >
-                  Enterprise
-                </button>
-              ) : (
-                <Link to="/enterprise" className="text-slate-600 hover:text-slate-900 transition-colors">Enterprise</Link>
-              )}
+              <Link to="/" className="text-slate-600 hover:text-slate-900 transition-colors">Features</Link>
+              <Link to="/?scroll=pricing" className="text-slate-600 hover:text-slate-900 transition-colors">Pricing</Link>
+              <Link to="/enterprise" className="text-slate-600 hover:text-slate-900 transition-colors">Enterprise</Link>
               <a 
                 href="https://cal.com/accreda" 
                 target="_blank" 
@@ -153,7 +120,7 @@ const Enterprise: React.FC = () => {
             transition={{ duration: 0.8 }}
           >
             <h1 className="text-6xl md:text-7xl font-bold text-slate-900 leading-tight mb-6">
-              Built for Engineering Teams
+              Supervise Your Engineering Team
             </h1>
             <p className="text-2xl text-slate-600 mb-8 max-w-2xl mx-auto">
               Streamline EIT development, ensure compliance, and drive team success with our comprehensive supervisor platform.
@@ -167,28 +134,6 @@ const Enterprise: React.FC = () => {
               Book a Demo
             </a>
           </motion.div>
-        </div>
-      </div>
-      <div className="py-20 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {securityFeatures.map((feature, idx) => (
-              <motion.div
-                key={feature.title}
-                className="bg-white rounded-2xl p-8 shadow-sm hover:shadow-md transition-shadow"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: idx * 0.1 }}
-              >
-                <div className="w-16 h-16 bg-slate-50 rounded-xl flex items-center justify-center mb-6">
-                  {iconMap[feature.icon]}
-                </div>
-                <h3 className="text-2xl font-bold text-slate-900 mb-4">{feature.title}</h3>
-                <p className="text-lg text-slate-600">{feature.description}</p>
-              </motion.div>
-            ))}
-          </div>
         </div>
       </div>
       <div className="py-20 bg-white">
@@ -285,6 +230,46 @@ const Enterprise: React.FC = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="bg-slate-900 text-white py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="col-span-2">
+              <img src={accredaLogo} alt="Accreda" className="h-12 w-auto mb-4" />
+              <p className="text-slate-400 max-w-md">
+                Helping engineers achieve their professional goals through structured development and documentation.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-4 text-white">Product</h3>
+              <ul className="space-y-2">
+                <li><Link to="/" className="text-slate-400 hover:text-white transition-colors">Features</Link></li>
+                <li><Link to="/?scroll=pricing" className="text-slate-400 hover:text-white transition-colors">Pricing</Link></li>
+                <li><button
+                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                  className="text-slate-400 hover:text-white transition-colors"
+                >
+                  Enterprise
+                </button></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-4 text-white">Company</h3>
+              <ul className="space-y-2">
+                <li><a href="mailto:accreda.info@gmail.com" className="text-slate-400 hover:text-white transition-colors">accreda.info@gmail.com</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-slate-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
+            <p className="text-slate-400">&copy; {new Date().getFullYear()} Accreda. All rights reserved.</p>
+            <div className="flex space-x-6 mt-4 md:mt-0">
+              <Link to="/privacy" className="text-slate-400 hover:text-white transition-colors">Privacy Policy</Link>
+              <Link to="/terms" className="text-slate-400 hover:text-white transition-colors">Terms of Service</Link>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

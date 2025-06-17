@@ -1039,13 +1039,20 @@ const Settings: React.FC = () => {
                     <span className="text-green-500 mr-2">✓</span>
                     Connect with 1 supervisor
                   </li>
-                  <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Standard support</li>
+                  <li className="flex items-center text-gray-700">
+                    <span className="text-green-500 mr-2">✓</span>
+                    Standard support
+                  </li>
+                  <li className="flex items-center text-gray-700">
+                    <span className="text-green-500 mr-2">✓</span>
+                    One-click CSAW generation
+                  </li>
                 </ul>
                 {tier === 'free' ? (
                   <span className="inline-block bg-blue-100 text-blue-800 px-4 py-2 rounded-full font-semibold text-sm shadow">Current Plan</span>
                 ) : (
                   <button 
-                    onClick={() => setShowContactModal(true)}
+                    onClick={() => window.location.href = 'mailto:contact@accreda.com?subject=Downgrade to Free Plan'}
                     className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-semibold text-sm shadow transition-colors"
                   >
                     Contact to Downgrade
@@ -1054,39 +1061,41 @@ const Settings: React.FC = () => {
               </div>
 
               {/* Pro Plan */}
-              <div className={`border ${tier === 'pro' ? 'border-teal-500' : 'border-gray-200'} rounded-2xl p-8 bg-gradient-to-br from-teal-50 to-white flex flex-col items-center shadow-sm relative`}>
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <span className="bg-teal-500 text-white px-4 py-1 rounded-full text-sm font-semibold">Most Popular</span>
-                </div>
+              <div className={`border ${tier === 'pro' ? 'border-teal-500' : 'border-gray-200'} rounded-2xl p-8 bg-gradient-to-br from-teal-50 to-white flex flex-col items-center shadow-sm`}>
                 <h3 className="text-2xl font-bold text-teal-900 mb-2">Pro</h3>
-                <div className="text-center mb-4">
-                  <p className="text-5xl font-extrabold text-teal-800">$9.99</p>
-                  <p className="text-sm text-gray-600">per month</p>
-                  <p className="text-sm text-teal-600 font-medium mt-1">or $104.99/year</p>
-                </div>
+                <p className="text-5xl font-extrabold text-teal-800 mb-4">$9.99</p>
+                <p className="text-base font-semibold text-teal-700 mb-4">per month</p>
                 <ul className="mb-6 w-full space-y-3">
-                  <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Unlimited documents</li>
-                  <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Unlimited SAOs</li>
-                  <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Unlimited supervisors</li>
-                  <li className="flex items-center text-gray-700"><span className="text-green-500 mr-2">✓</span> Priority support</li>
+                  <li className="flex items-center text-gray-700">
+                    <span className="text-green-500 mr-2">✓</span>
+                    Unlimited documents
+                  </li>
+                  <li className="flex items-center text-gray-700">
+                    <span className="text-green-500 mr-2">✓</span>
+                    Unlimited SAOs
+                  </li>
+                  <li className="flex items-center text-gray-700">
+                    <span className="text-green-500 mr-2">✓</span>
+                    Unlimited supervisors
+                  </li>
+                  <li className="flex items-center text-gray-700">
+                    <span className="text-green-500 mr-2">✓</span>
+                    Priority support
+                  </li>
+                  <li className="flex items-center text-gray-700">
+                    <span className="text-green-500 mr-2">✓</span>
+                    One-click CSAW generation
+                  </li>
                 </ul>
                 {tier === 'pro' ? (
                   <span className="inline-block bg-teal-100 text-teal-800 px-4 py-2 rounded-full font-semibold text-sm shadow">Current Plan</span>
                 ) : (
-                  <>
-                    <button
-                      onClick={() => user && handleStripeCheckout('pro_monthly', user.id || '', user.email || '')}
-                      className="inline-block bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full font-semibold text-sm shadow transition-colors mb-2"
-                    >
-                      Upgrade to Pro Monthly
-                    </button>
-                    <button
-                      onClick={() => user && handleStripeCheckout('pro_yearly', user.id || '', user.email || '')}
-                      className="inline-block bg-teal-500 hover:bg-teal-600 text-white px-6 py-2 rounded-full font-semibold text-sm shadow transition-colors"
-                    >
-                      Upgrade to Pro Yearly
-                    </button>
-                  </>
+                  <button 
+                    onClick={() => window.location.href = 'mailto:contact@accreda.com?subject=Upgrade to Pro Plan'}
+                    className="inline-block bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full font-semibold text-sm shadow transition-colors"
+                  >
+                    Upgrade to Pro
+                  </button>
                 )}
               </div>
 
@@ -1307,79 +1316,6 @@ const Settings: React.FC = () => {
               </div>
             </div>
           </section>
-
-          {userRole === 'eit' && (
-            <section className="card p-6">
-              <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
-                <Mail /> Supervisor Connections
-              </h2>
-              
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-sm font-medium text-slate-700 mb-3">Current Connections</h3>
-                  {supervisors.length === 0 ? (
-                    <div className="text-slate-400">No active supervisor connections.</div>
-                  ) : (
-                    <ul className="divide-y divide-slate-200">
-                      {supervisors.map((sup) => (
-                        <li key={sup.id} className="py-2 flex flex-col md:flex-row md:items-center md:justify-between">
-                          <span className="font-medium text-slate-800">{sup.full_name}</span>
-                          <span className="text-slate-500 text-sm">{sup.email}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-
-                <div className="border-t border-slate-200 my-4"></div>
-
-                <div>
-                  <h3 className="text-sm font-medium text-slate-700 mb-3">Connect with a New Supervisor</h3>
-                  {tier === 'free' && supervisors.length >= supervisorLimit && supervisorLimit !== -1 && supervisorLimit !== 2147483647 && (
-                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-yellow-900 font-semibold text-center">
-                      You have reached your supervisor connection limit for the Free plan. Upgrade to add more.
-                    </div>
-                  )}
-                  <form
-                    className="flex flex-col md:flex-row gap-4 items-start md:items-end"
-                    onSubmit={handleSupervisorRequest}
-                  >
-                    <div className="flex-1 w-full">
-                      <label htmlFor="supervisorEmail" className="label">Supervisor Email</label>
-                      <input
-                        type="email"
-                        id="supervisorEmail"
-                        value={supervisorEmail}
-                        onChange={e => setSupervisorEmail(e.target.value)}
-                        className="input w-full"
-                        placeholder="Enter supervisor's email"
-                        required
-                        disabled={tier === 'free' && supervisors.length >= supervisorLimit && supervisorLimit !== -1 && supervisorLimit !== 2147483647}
-                      />
-                    </div>
-                    <button 
-                      type="submit" 
-                      className="btn btn-primary whitespace-nowrap" 
-                      disabled={loading || (tier === 'free' && supervisors.length >= supervisorLimit && supervisorLimit !== -1 && supervisorLimit !== 2147483647)}
-                    >
-                      {loading ? 'Sending...' : 'Send Request'}
-                    </button>
-                  </form>
-                  {supervisorRequestMessage && (
-                    <div 
-                      className={`mt-3 text-sm p-2 rounded-md ${
-                        supervisorRequestStatus === 'success' 
-                          ? 'bg-green-50 text-green-700 border border-green-200' 
-                          : 'bg-red-50 text-red-700 border border-red-200'
-                      }`}
-                    >
-                      {supervisorRequestMessage}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </section>
-          )}
 
           {/* Notification Preferences */}
           <div className="bg-white shadow rounded-lg p-6">

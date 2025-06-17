@@ -593,6 +593,17 @@ const Landing: React.FC = () => {
     );
   }
 
+  // Add state for contact modal
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactCorporation, setContactCorporation] = useState('');
+  const [contactMessage, setContactMessage] = useState('');
+  const [contactEitCount, setContactEitCount] = useState('');
+  const [contactLoading, setContactLoading] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
+  const [contactSuccess, setContactSuccess] = useState(false);
+
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}
@@ -849,14 +860,15 @@ const Landing: React.FC = () => {
             {[
               {
                 title: "Start",
-                subtitle: "For developers and early-stage engineers",
+                subtitle: "Try Accreda Pro free for 30 days",
                 price: "Free",
-                period: "forever",
+                period: "for 30 days",
                 features: [
                   "Up to 5 documents",
                   "Up to 5 SAOs",
                   "Connect with 1 supervisor",
-                  "Standard support"
+                  "Standard support",
+                  "One-click CSAW generation"
                 ],
                 buttonText: "Join Today",
                 buttonLink: "/signup",
@@ -864,7 +876,7 @@ const Landing: React.FC = () => {
               },
               {
                 title: "Pro",
-                subtitle: "For fast-growing engineers",
+                subtitle: "Complete P.Eng platform",
                 price: "$9.99",
                 period: "per month",
                 subtext: "or $104.99/year",
@@ -872,7 +884,8 @@ const Landing: React.FC = () => {
                   "Unlimited documents",
                   "Unlimited SAOs",
                   "Unlimited supervisors",
-                  "Priority support"
+                  "Priority support",
+                  "One-click CSAW generation"
                 ],
                 buttonText: "Join Today",
                 buttonLink: "/signup",
@@ -890,8 +903,10 @@ const Landing: React.FC = () => {
                   "Access to Supervisor Dashboard"
                 ],
                 buttonText: "Contact Sales",
-                buttonLink: "/support",
-                highlighted: false
+                buttonLink: "#",
+                highlighted: false,
+                demoButton: true,
+                onContactClick: () => setShowContactModal(true)
               }
             ].map((plan, index) => (
               <motion.div
@@ -932,16 +947,41 @@ const Landing: React.FC = () => {
                     </li>
                   ))}
                 </ul>
-                <Link 
-                  to={plan.buttonLink}
-                  className={`mt-auto text-center text-lg px-8 py-4 rounded-lg transition-colors ${
-                    plan.highlighted
-                      ? 'bg-black text-white hover:bg-slate-800'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  {plan.buttonText}
-                </Link>
+                <div className="flex flex-col gap-4">
+                  {plan.demoButton && (
+                    <a 
+                      href="https://cal.com/accreda"
+                      target="_blank"
+                      rel="noopener"
+                      className="text-center text-lg px-8 py-4 rounded-lg bg-black text-white hover:bg-slate-800 transition-colors"
+                    >
+                      Book a Demo
+                    </a>
+                  )}
+                  {plan.buttonLink && !plan.onContactClick ? (
+                    <Link
+                      to={plan.buttonLink}
+                      className={`mt-auto text-center text-lg px-8 py-4 rounded-lg transition-colors ${
+                        plan.highlighted
+                          ? 'bg-black text-white hover:bg-slate-800'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      {plan.buttonText}
+                    </Link>
+                  ) : (
+                    <button 
+                      onClick={plan.onContactClick}
+                      className={`mt-auto text-center text-lg px-8 py-4 rounded-lg transition-colors ${
+                        plan.highlighted
+                          ? 'bg-black text-white hover:bg-slate-800'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      {plan.buttonText}
+                    </button>
+                  )}
+                </div>
               </motion.div>
             ))}
           </div>
@@ -1012,7 +1052,6 @@ const Landing: React.FC = () => {
             <div>
               <h3 className="text-lg font-semibold mb-4 text-white">Company</h3>
               <ul className="space-y-2">
-                <li><Link to="/about" className="text-slate-400 hover:text-white transition-colors">About</Link></li>
                 <li><a href="mailto:accreda.info@gmail.com" className="text-slate-400 hover:text-white transition-colors">accreda.info@gmail.com</a></li>
               </ul>
             </div>
@@ -1026,6 +1065,155 @@ const Landing: React.FC = () => {
           </div>
         </div>
       </footer>
+
+      {/* Contact Modal */}
+      {showContactModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full relative">
+            <button
+              className="absolute top-2 right-2 text-slate-400 hover:text-slate-600"
+              onClick={() => {
+                setShowContactModal(false);
+                setContactSuccess(false);
+                setContactError(null);
+              }}
+              aria-label="Close"
+            >
+              ×
+            </button>
+            <h2 className="text-xl font-bold mb-4 text-purple-800">Enterprise Plan Inquiry</h2>
+            {contactSuccess ? (
+              <div className="p-3 bg-green-50 text-green-700 rounded-md text-sm mb-4">
+                Your inquiry has been sent successfully. We'll get back to you soon!
+              </div>
+            ) : (
+              <form
+                onSubmit={async e => {
+                  e.preventDefault();
+                  setContactLoading(true);
+                  setContactError(null);
+                  setContactSuccess(false);
+                  try {
+                    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-support-email`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                      },
+                      body: JSON.stringify({
+                        email: contactEmail,
+                        subject: 'Enterprise Plan Inquiry',
+                        message: `Name: ${contactName}\nCorporation: ${contactCorporation}\nCurrent EIT Count: ${contactEitCount}\n\n${contactMessage}`,
+                        issueType: 'enterprise',
+                        mode: 'help',
+                      }),
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                      throw new Error(data.error || 'Failed to send message');
+                    }
+                    setContactSuccess(true);
+                    setContactName('');
+                    setContactEmail('');
+                    setContactCorporation('');
+                    setContactMessage('');
+                    setContactEitCount('');
+                  } catch (err) {
+                    setContactError(err instanceof Error ? err.message : 'Failed to send message. Please try again later.');
+                  } finally {
+                    setContactLoading(false);
+                  }
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <label htmlFor="contactName" className="label">Full Name</label>
+                  <input
+                    type="text"
+                    id="contactName"
+                    value={contactName}
+                    onChange={e => setContactName(e.target.value)}
+                    className="input"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="contactEmail" className="label">Email Address</label>
+                  <input
+                    type="email"
+                    id="contactEmail"
+                    value={contactEmail}
+                    onChange={e => setContactEmail(e.target.value)}
+                    className="input"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="contactCorporation" className="label">Organization</label>
+                  <input
+                    type="text"
+                    id="contactCorporation"
+                    value={contactCorporation}
+                    onChange={e => setContactCorporation(e.target.value)}
+                    className="input"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="contactEitCount" className="label">Current EIT Count</label>
+                  <input
+                    type="number"
+                    id="contactEitCount"
+                    value={contactEitCount}
+                    onChange={e => setContactEitCount(e.target.value)}
+                    className="input"
+                    min="0"
+                    placeholder="Enter number of EITs"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="contactMessage" className="label">Message</label>
+                  <textarea
+                    id="contactMessage"
+                    value={contactMessage}
+                    onChange={e => setContactMessage(e.target.value)}
+                    className="input h-32"
+                    required
+                    placeholder="Tell us about your needs and how we can help..."
+                  />
+                </div>
+                {contactError && (
+                  <div className="p-3 bg-red-50 text-red-700 rounded-md text-sm">
+                    {contactError}
+                  </div>
+                )}
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setShowContactModal(false);
+                      setContactSuccess(false);
+                      setContactError(null);
+                    }}
+                    disabled={contactLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={contactLoading}
+                  >
+                    {contactLoading ? 'Sending...' : 'Send Message'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
