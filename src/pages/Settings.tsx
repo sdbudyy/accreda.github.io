@@ -117,36 +117,45 @@ const Settings: React.FC = () => {
   } = useSubscriptionStore();
 
   const { saos } = useSAOsStore();
+  const { loadUserSkills } = useSkillsStore();
+  const { loadUserSAOs } = useSAOsStore();
 
+  // Fetch the user on mount
   useEffect(() => {
-    const getUserProfile = async () => {
+    const fetchUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUser(user);
-        setEmail(user.email || '');
-        setNewEmail(user.email || '');
-        setAvatarUrl(user.user_metadata?.avatar_url || '');
-        // Fetch name from profile table
-        let profileName = '';
-        const [eitProfile, supervisorProfile] = await Promise.all([
-          supabase.from('eit_profiles').select('full_name, start_date, target_date').eq('id', user.id).single(),
-          supabase.from('supervisor_profiles').select('full_name').eq('id', user.id).single()
-        ]);
-        if (supervisorProfile.data && supervisorProfile.data.full_name) {
-          setUserRole('supervisor');
-          profileName = supervisorProfile.data.full_name;
-        } else if (eitProfile.data && eitProfile.data.full_name) {
-          setUserRole('eit');
-          profileName = eitProfile.data.full_name;
-          setStartDate(eitProfile.data.start_date || '');
-          setTargetDate(eitProfile.data.target_date || '');
-        }
-        setFullName(profileName || user.email?.split('@')[0] || '');
+      setUser(user);
+    };
+    fetchUser();
+  }, []);
+
+  // Fetch the profile and set userRole when user changes
+  useEffect(() => {
+    if (!user) return;
+    const getUserProfile = async () => {
+      // Fetch name from profile table
+      let profileName = '';
+      const [eitProfile, supervisorProfile] = await Promise.all([
+        supabase.from('eit_profiles').select('full_name, start_date, target_date').eq('id', user.id).single(),
+        supabase.from('supervisor_profiles').select('full_name').eq('id', user.id).single()
+      ]);
+      if (supervisorProfile.data && supervisorProfile.data.full_name) {
+        setUserRole('supervisor');
+        profileName = supervisorProfile.data.full_name;
+      } else if (eitProfile.data && eitProfile.data.full_name) {
+        setUserRole('eit');
+        profileName = eitProfile.data.full_name;
+        setStartDate(eitProfile.data.start_date || '');
+        setTargetDate(eitProfile.data.target_date || '');
       }
+      setFullName(profileName || user.email?.split('@')[0] || '');
+      console.log('user.id:', user.id);
+      console.log('eitProfile:', eitProfile);
+      console.log('supervisorProfile:', supervisorProfile);
     };
     getUserProfile();
     fetchSubscription();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (userRole === 'eit' && user) {
@@ -507,10 +516,10 @@ const Settings: React.FC = () => {
     setShowApegaWarning(false);
     setAllowAnyway(false);
     try {
-      // --- Force-load all relevant data from stores ---
+      // Load data using hooks
       await Promise.all([
-        useSkillsStore.getState().loadUserSkills(true),
-        useSAOsStore.getState().loadUserSAOs(true)
+        loadUserSkills(true),
+        loadUserSAOs(true)
       ]);
       // --- Fetch all SAOs and sao_skills directly from Supabase ---
       const { data: freshSAOs, error: saosError } = await supabase
@@ -682,6 +691,17 @@ const Settings: React.FC = () => {
       setPdfUrl(null);
     }
   }, [showPreviewModal]);
+
+  console.log('user:', user);
+  console.log('userRole:', userRole);
+
+  if (!user || !userRole) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div>Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

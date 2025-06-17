@@ -218,11 +218,19 @@ const CategorySection = memo(({
 });
 
 const Skills: React.FC = () => {
-  const { skillCategories, updateSkillRank, loadUserSkills, loading, error } = useSkillsStore();
+  const { 
+    skillCategories, 
+    updateSkillRank, 
+    loadUserSkills, 
+    loading, 
+    error 
+  } = useSkillsStore();
+  
   const skillRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [linkedSkillIds, setLinkedSkillIds] = useState<Set<string>>(new Set());
   const linkedItemsCache = useRef<Record<string, { saos: any[]; jobs: any[] }>>({});
 
+  // Load skills on component mount
   useEffect(() => {
     loadUserSkills();
   }, [loadUserSkills]);
