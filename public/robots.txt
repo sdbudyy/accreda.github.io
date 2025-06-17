@@ -2,7 +2,7 @@ User-agent: *
 Allow: /
 
 # Sitemap location
-Sitemap: https://accreda.com/sitemap.xml
+Sitemap: https://accreda.ca/sitemap.xml
 
 # Disallow admin and private routes
 Disallow: /admin/
