@@ -28,6 +28,7 @@ const Dashboard: React.FC = () => {
   const { appLoaded } = useOutletContext<{ appLoaded: boolean }>();
   const [userName, setUserName] = useState<string>('');
   const [userRole, setUserRole] = useState<'eit' | 'supervisor' | null>(null);
+  const [localLoading, setLocalLoading] = useState(true);
   const {
     overallProgress,
     completedSkills,
@@ -56,6 +57,7 @@ const Dashboard: React.FC = () => {
     const initializeData = async () => {
       try {
         setRoleLoading(true);
+        setLocalLoading(true);
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
@@ -94,6 +96,7 @@ const Dashboard: React.FC = () => {
         console.error('Error initializing dashboard data:', error);
       } finally {
         setRoleLoading(false);
+        setLocalLoading(false);
       }
     };
 
@@ -158,8 +161,8 @@ const Dashboard: React.FC = () => {
     return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  // Show loading state if either role is loading or progress is not initialized
-  if ((roleLoading || !initialized || progressLoading) && appLoaded) {
+  // Show loading state if any loading is true
+  if (localLoading || roleLoading || !initialized || progressLoading || !appLoaded) {
     return <LoadingSpinner />;
   }
 

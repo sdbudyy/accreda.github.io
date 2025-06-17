@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Search, FileText, FileEdit, BookOpen, Loader2, Briefcase, Users, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSearchStore } from '../store/search';
@@ -60,7 +60,7 @@ const SearchBar: React.FC = () => {
     }
   };
 
-  const handleSelect = (result: typeof results[0]) => {
+  const handleSelect = useCallback((result: typeof results[0]) => {
     setIsOpen(false);
     setQuery('');
     clearResults();
@@ -139,9 +139,9 @@ const SearchBar: React.FC = () => {
         }, 500);
         break;
     }
-  };
+  }, [navigate, results, userRole]);
 
-  const getIcon = (type: typeof results[0]['type']) => {
+  const getIcon = useCallback((type: typeof results[0]['type']) => {
     switch (type) {
       case 'document':
         return <FileText size={16} className="text-blue-500" />;
@@ -156,7 +156,7 @@ const SearchBar: React.FC = () => {
       case 'validator':
         return <CheckCircle2 size={16} className="text-teal-500" />;
     }
-  };
+  }, []);
 
   const getMetadataText = (result: typeof results[0]) => {
     if (!result.metadata) return null;
@@ -239,4 +239,4 @@ const SearchBar: React.FC = () => {
   );
 };
 
-export default SearchBar; 
+export default React.memo(SearchBar); 

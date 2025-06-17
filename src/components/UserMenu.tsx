@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ChevronDown, LogOut, User, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -49,12 +49,12 @@ const UserMenu: React.FC = () => {
     fetchUserProfile();
   }, []);
 
-  const handleMenuToggle = () => {
+  const handleMenuToggle = useCallback(() => {
     if (!isOpen) {
       fetchUserProfile();
     }
     setIsOpen(!isOpen);
-  };
+  }, [isOpen]);
 
   // Close the menu when clicking outside
   useEffect(() => {
@@ -70,29 +70,29 @@ const UserMenu: React.FC = () => {
     };
   }, []);
 
-  const handleSignOut = async () => {
+  const handleSignOut = useCallback(async () => {
     try {
       await supabase.auth.signOut();
       navigate('/login');
     } catch (error) {
       console.error('Error signing out:', error);
     }
-  };
+  }, [navigate]);
 
-  const getInitials = (name: string) => {
+  const getInitials = useCallback((name: string) => {
     return name
       .split(' ')
       .map(word => word[0])
       .join('')
       .toUpperCase()
       .slice(0, 2);
-  };
+  }, []);
 
-  const handleSettingsClick = () => {
+  const handleSettingsClick = useCallback(() => {
     const settingsPath = userRole === 'supervisor' ? '/dashboard/supervisor/settings' : '/dashboard/settings';
     navigate(settingsPath);
     setIsOpen(false);
-  };
+  }, [navigate, userRole]);
 
   return (
     <div className="relative" ref={menuRef}>
@@ -148,4 +148,4 @@ const UserMenu: React.FC = () => {
   );
 };
 
-export default UserMenu;
+export default React.memo(UserMenu);

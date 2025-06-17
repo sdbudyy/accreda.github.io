@@ -1,9 +1,12 @@
-import React, { useEffect, useCallback, useRef, memo, useMemo, useState } from 'react';
+import React, { useEffect, useCallback, useRef, memo, useMemo, useState, Suspense } from 'react';
 import { Star, Circle, CheckCircle2, ChevronDown, Award, AlertTriangle, Check, CircleDot, FileText, Briefcase } from 'lucide-react';
 import { useSkillsStore, Skill, Category } from '../store/skills';
 import { useSAOsStore, SAO } from '../store/saos';
-import LinksPopup from '../components/skills/SAOPopup';
+import { lazy } from 'react';
 import { supabase } from '../lib/supabase';
+
+// Lazy load LinksPopup
+const LinksPopup = lazy(() => import('../components/skills/SAOPopup'));
 
 // Memoized Skill Item component
 const SkillItem = memo(({ 
@@ -97,13 +100,15 @@ const SkillItem = memo(({
         </div>
       </div>
 
-      <LinksPopup
-        isOpen={isLinksPopupOpen}
-        onClose={() => setIsLinksPopupOpen(false)}
-        skillName={skill.name}
-        saos={linkedSAOs}
-        jobs={linkedJobs}
-      />
+      <Suspense fallback={<div>Loading links...</div>}>
+        <LinksPopup
+          isOpen={isLinksPopupOpen}
+          onClose={() => setIsLinksPopupOpen(false)}
+          skillName={skill.name}
+          saos={linkedSAOs}
+          jobs={linkedJobs}
+        />
+      </Suspense>
     </>
   );
 });
@@ -533,4 +538,4 @@ const Skills: React.FC = () => {
   );
 };
 
-export default memo(Skills);
+export default React.memo(Skills);

@@ -16,7 +16,7 @@ const defaultAcceptedTypes = {
   'image/*': []
 };
 
-const FileUpload = forwardRef<FileUploadRef, FileUploadProps>(({
+const FileUpload = React.memo(forwardRef<FileUploadRef, FileUploadProps>(({
   onFileSelect,
   maxFiles = 5,
   acceptedFileTypes = defaultAcceptedTypes
@@ -54,7 +54,7 @@ const FileUpload = forwardRef<FileUploadRef, FileUploadProps>(({
     noClick: true // Disable the default click behavior
   });
 
-  const removeFile = (index: number) => {
+  const removeFile = useCallback((index: number) => {
     const newFiles = files.filter((_, i) => i !== index);
     setFiles(newFiles);
     
@@ -66,18 +66,18 @@ const FileUpload = forwardRef<FileUploadRef, FileUploadProps>(({
     setPreviewUrls(newPreviewUrls);
     
     onFileSelect(newFiles);
-  };
+  }, [files, previewUrls, onFileSelect]);
 
-  const getFileIcon = (file: File) => {
+  const getFileIcon = useCallback((file: File) => {
     if (file.type.startsWith('image/')) {
       return <Image className="w-8 h-8 text-blue-500" />;
     }
     return <File className="w-8 h-8 text-gray-500" />;
-  };
+  }, []);
 
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
     inputRef.current?.click();
-  };
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -135,7 +135,10 @@ const FileUpload = forwardRef<FileUploadRef, FileUploadProps>(({
                   </p>
                 </div>
                 <button
-                  onClick={() => removeFile(index)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeFile(index);
+                  }}
                   className="ml-2 p-1 text-slate-400 hover:text-slate-600"
                 >
                   <X size={16} />
@@ -147,6 +150,6 @@ const FileUpload = forwardRef<FileUploadRef, FileUploadProps>(({
       )}
     </div>
   );
-});
+}));
 
 export default FileUpload; 

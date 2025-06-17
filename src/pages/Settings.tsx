@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
 import { Check, Lock, Bell, Sun, Trash2, User as UserIcon, Mail, Calendar, FileText, X } from 'lucide-react';
@@ -34,6 +34,9 @@ async function getUserProfileTable(userId: string) {
 
   return null;
 }
+
+// Lazy load the PDF preview modal
+const PDFPreviewModal = React.lazy(() => import('../components/PDFPreviewModal'));
 
 const Settings: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -125,6 +128,9 @@ const Settings: React.FC = () => {
     const fetchUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
+      setEmail(user?.email || '');
+      setNewEmail(user?.email || '');
+      setAvatarUrl(user?.user_metadata?.avatar_url || '');
     };
     fetchUser();
   }, []);
@@ -149,6 +155,7 @@ const Settings: React.FC = () => {
         setTargetDate(eitProfile.data.target_date || '');
       }
       setFullName(profileName || user.email?.split('@')[0] || '');
+      setEmail(user.email || '');
       console.log('user.id:', user.id);
       console.log('eitProfile:', eitProfile);
       console.log('supervisorProfile:', supervisorProfile);
@@ -867,6 +874,19 @@ const Settings: React.FC = () => {
                     )}
                   </div>
                   <div className="flex-1 flex flex-col items-center">
+                    {/* Expected Progress */}
+                    {start_date && target_date && (
+                      <div className="text-sm font-medium text-slate-700 mb-2">
+                        Expected Progress: {(() => {
+                          const now = new Date().getTime();
+                          const start = new Date(start_date).getTime();
+                          const end = new Date(target_date).getTime();
+                          if (end <= start) return '0%';
+                          const percent = Math.max(0, Math.min(100, Math.round(((now - start) / (end - start)) * 100)));
+                          return `${percent}%`;
+                        })()}
+                      </div>
+                    )}
                     {/* Timeline bar */}
                     <div className="w-full max-w-xs flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-teal-500" />
@@ -1620,57 +1640,12 @@ const Settings: React.FC = () => {
 
       {/* Preview Modal */}
       {showPreviewModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-4xl w-full h-[90vh] flex flex-col">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-blue-800">CSAW Application Preview</h2>
-              <button
-                className="text-slate-400 hover:text-slate-600"
-                onClick={() => setShowPreviewModal(false)}
-                aria-label="Close"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-auto bg-white rounded-lg border border-slate-200">
-              {pdfUrl ? (
-                <iframe
-                  src={pdfUrl}
-                  className="w-full h-full"
-                  title="CSAW Application Preview"
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-slate-500">Loading preview...</p>
-                </div>
-              )}
-            </div>
-            <div className="mt-4 flex justify-end gap-3">
-              <button
-                onClick={() => setShowPreviewModal(false)}
-                className="btn btn-secondary"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => {
-                  if (pdfUrl) {
-                    const a = document.createElement('a');
-                    a.href = pdfUrl;
-                    a.download = `csaw_application_${new Date().toISOString().split('T')[0]}.pdf`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                  }
-                }}
-                className="btn btn-primary"
-                disabled={!pdfUrl}
-              >
-                Download PDF
-              </button>
-            </div>
-          </div>
-        </div>
+        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"><div className="bg-white rounded-lg shadow-lg p-8">Loading preview...</div></div>}>
+          <PDFPreviewModal
+            pdfUrl={pdfUrl}
+            onClose={() => setShowPreviewModal(false)}
+          />
+        </Suspense>
       )}
 
       {/* APEGA ID Warning Modal */}
