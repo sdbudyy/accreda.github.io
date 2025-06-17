@@ -230,7 +230,6 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
           employer
         );
         lastSavedValues.current = { ...current };
-        toast.success('Auto-saved');
       } catch (err: any) {
         toast.error(err.message || 'Failed to auto-save');
       }
