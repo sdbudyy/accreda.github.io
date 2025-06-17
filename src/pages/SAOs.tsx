@@ -361,10 +361,35 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
       ? [editSAO.feedback[editSAO.feedback.length - 1]]
       : [];
 
+  const handleBackdropClick = async (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      // Save changes before closing
+      if (editSAO) {
+        try {
+          await updateSAO(
+            editSAO.id,
+            title,
+            situation,
+            action,
+            outcome,
+            [selectedSkill || editSAO.skills[0]],
+            status,
+            employer
+          );
+          toast.success('Changes saved');
+        } catch (error: any) {
+          toast.error(error.message || 'Failed to save changes');
+          return; // Don't close if save fails
+        }
+      }
+      onClose();
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={handleBackdropClick}>
       <div className="bg-white rounded-lg p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">

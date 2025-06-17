@@ -281,10 +281,11 @@ const SupervisorReviews: React.FC = () => {
       )
     : Object.fromEntries(
         Object.entries(history)
-          .filter(([key, entries]) => 
-            key.startsWith(selectedEIT + '_') && 
-            entries.some(entry => new Date(entry.validated_at) >= twoWeeksAgo)
-          )
+          .filter(([key, entries]) => {
+            const [eitId] = key.split('_');
+            return eitId === selectedEIT && 
+              entries.some(entry => new Date(entry.validated_at) >= twoWeeksAgo);
+          })
       );
 
   // Filter SAOs history to show only last 2 weeks
@@ -484,14 +485,8 @@ const SupervisorReviews: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       await submitFeedback(saoId, feedback);
-      setAllSAOs((prev) =>
-        prev.map((f) =>
-          f.sao_id === saoId ? { ...f, feedback, status: 'submitted' } : f
-        )
-      );
-      setPendingSAOs((prev) =>
-        prev.filter((f) => !(f.sao_id === saoId && f.status !== 'pending'))
-      );
+      // Refresh feedback requests immediately after submission
+      await fetchFeedbackRequests();
       setIsSAOModalOpen(false);
       setSelectedSAO(null);
       // Mark related SAO validation_request notification as read

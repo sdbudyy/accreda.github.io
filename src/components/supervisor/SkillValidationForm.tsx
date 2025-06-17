@@ -145,6 +145,19 @@ const SkillValidationForm: React.FC<SkillValidationFormProps> = ({
       await sendScoreNotification(eitId, skillName, scoreToSubmit);
       console.log('Score notification sent!');
 
+      // Refresh validation status
+      const { data: validations, error } = await supabase
+        .from('skill_validations')
+        .select('*')
+        .eq('eit_id', eitId)
+        .eq('skill_id', skillId)
+        .order('validated_at', { ascending: false })
+        .limit(1);
+
+      if (!error && validations && validations.length > 0) {
+        setIsValidated(true);
+      }
+
       toast.success('Skill validated successfully');
       onValidationComplete();
     } catch (error) {
