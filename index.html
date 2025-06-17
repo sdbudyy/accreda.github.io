@@ -71,7 +71,9 @@
 }
 </script>
     
-    <script src="https://github.com/mlc-ai/web-llm/releases/download/v0.2.7/webllm-static.js"></script>
+    <link rel="preload" as="image" href="src/assets/accreda-logo.png" />
+    <script src="https://github.com/mlc-ai/web-llm/releases/download/v0.2.7/webllm-static.js" defer></script>
+    <link rel="modulepreload" href="src/main.tsx" />
   </head>
   <body>
     <div id="root"></div>
