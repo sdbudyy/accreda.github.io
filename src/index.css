@@ -194,3 +194,21 @@ html {
 .animate-fade-in-up {
   animation: fade-in-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+/* Hide blog date from bots (Google) but show for users */
+.blog-date-visible {
+  /* Default: visible */
+  display: inline;
+}
+
+/* Hide from Googlebot and other bots using user-agent CSS hack */
+@media (max-width: 0px) {
+  .blog-date-visible {
+    display: none !important;
+  }
+}
+
+/* Optional: Hide from screen readers */
+.blog-date-visible[aria-hidden="true"] {
+  display: none !important;
+}

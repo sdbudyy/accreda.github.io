@@ -62,7 +62,7 @@ const Blog: React.FC = () => {
                     {post.category}
                   </span>
                   <span className="mx-2">•</span>
-                  <span>{post.date}</span>
+                  <span className="blog-date-visible">{post.date}</span>
                   <span className="mx-2">•</span>
                   <span>{post.readTime}</span>
                 </div>

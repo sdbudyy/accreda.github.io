@@ -11,9 +11,9 @@ interface SEOProps {
 }
 
 const SEO: React.FC<SEOProps> = ({
-  title = 'Accreda - Professional Engineering Portfolio Management',
-  description = 'Accreda helps engineers manage their professional portfolios, track skills, and prepare for CSAW applications. Streamline your engineering career development.',
-  keywords = 'engineering portfolio, CSAW application, professional development, engineering skills, APEGA, engineering career',
+  title = 'Accreda - EIT & P.Eng Progress Tracker | Professional Engineering Portfolio Management',
+  description = 'Accreda helps engineers manage their professional portfolios, track skills, and prepare for CSAW applications. The best EIT tracker, P.Eng tracker, and Professional Engineer progress tool for Alberta and APEGA members. Streamline your engineering career development.',
+  keywords = 'EIT tracker, P.Eng tracker, Professional Engineer tracker, peng tracker, P.Eng progress, engineering portfolio, CSAW application, professional development, engineering skills, APEGA, engineering career',
   image = '/og-image.jpg',
   url = 'https://accreda.com',
   type = 'website'
