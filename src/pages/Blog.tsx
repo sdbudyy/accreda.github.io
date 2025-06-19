@@ -62,8 +62,6 @@ const Blog: React.FC = () => {
                     {post.category}
                   </span>
                   <span className="mx-2">•</span>
-                  <span className="blog-date-visible">{post.date}</span>
-                  <span className="mx-2">•</span>
                   <span>{post.readTime}</span>
                 </div>
                 <h2 className="text-xl font-semibold text-gray-900 mb-2">
