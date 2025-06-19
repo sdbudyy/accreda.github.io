@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import path from 'path';
 import Stripe from 'stripe';
 import bodyParser from 'body-parser';
+import googleDriveRoutes from './routes/googleDrive';
 
 // Load environment variables
 dotenv.config({ path: path.resolve(__dirname, '.env') });
@@ -324,4 +325,6 @@ if (process.env.NODE_ENV === 'production') {
 // Start server
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
-}); 
+});
+
+app.use('/api', googleDriveRoutes); 

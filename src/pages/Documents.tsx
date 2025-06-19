@@ -1,10 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { FileText, Download, Trash2, AlertCircle, Upload, Search, Filter, X, Edit2, Eye, Share2 } from 'lucide-react';
 import { useDocumentsStore, Document } from '../store/documents';
 import { supabase } from '../lib/supabase';
 import { useSubscriptionStore } from '../store/subscriptionStore';
 import DocumentPreview from '../components/documents/DocumentPreview';
 import Modal from '../components/common/Modal';
+import { analyzeAndCategorizeText } from '../utils/textAnalyzer';
+import mammoth from 'mammoth';
+import * as pdfjsLib from 'pdfjs-dist';
+import { toast } from 'react-hot-toast';
+import type { GoogleDriveFile } from '../utils/GoogleDriveService';
+
+// Configure PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 // @ts-ignore
 declare global {
@@ -147,6 +155,32 @@ const Documents: React.FC = () => {
     setShowImportModal(true);
   };
 
+  // Handle Google Drive file import
+  const handleGoogleDriveImport = async (file: GoogleDriveFile, content: string) => {
+    try {
+      // Analyze and categorize the content
+      const { situation, action, outcome } = analyzeAndCategorizeText(content);
+      
+      // Format the content with sections
+      const formattedContent = `Situation:\n${situation}\n\nAction:\n${action}\n\nOutcome:\n${outcome}`;
+
+      // Create a new document from the Google Drive file
+      await createDocument(
+        file.name,
+        formattedContent,
+        'other',
+        new File([content], file.name, { type: file.mimeType }),
+        'Other'
+      );
+      
+      toast.success('File imported successfully from Google Drive');
+      setImportMenuOpen(false);
+    } catch (error) {
+      console.error('Failed to save Google Drive file:', error);
+      toast.error('Failed to save file from Google Drive');
+    }
+  };
+
   useEffect(() => {
     console.log('Documents component mounted');
     loadUserDocuments();
@@ -237,11 +271,31 @@ const Documents: React.FC = () => {
       
       if (fileType.startsWith('text/')) {
         content = await file.text();
+      } else if (file.name.endsWith('.docx')) {
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.convertToHtml({ arrayBuffer });
+        content = result.value;
+      } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let text = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          text += content.items.map((item: any) => item.str).join(' ') + '\n';
+        }
+        content = text;
       } else {
         content = `File type (${fileType}) not directly viewable. Will be stored.`; // Simplified content for non-text
       }
+
+      // Analyze and categorize the content
+      const { situation, action, outcome } = analyzeAndCategorizeText(content);
       
-      await createDocument(file.name, content, 'other', file);
+      // Format the content with sections
+      const formattedContent = `Situation:\n${situation}\n\nAction:\n${action}\n\nOutcome:\n${outcome}`;
+      
+      await createDocument(file.name, formattedContent, 'other', file);
       console.log('Document creation completed successfully');
       // Clear the file input
       e.target.value = '';
@@ -405,12 +459,8 @@ const Documents: React.FC = () => {
               >
                 Upload from Device
               </button>
-              <button
-                className="w-full text-left px-4 py-2 hover:bg-slate-100"
-                onClick={handleImportGoogleDrive}
-              >
-                Import from Google Drive
-              </button>
+              {/* @ts-ignore */}
+              <GoogleDriveImport onFilePicked={handleGoogleDriveImport} />
               <button
                 className="w-full text-left px-4 py-2 hover:bg-slate-100"
                 onClick={handleImportOneDrive}

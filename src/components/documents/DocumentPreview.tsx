@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FileText, Download, X, AlertCircle } from 'lucide-react';
 import { Document } from '../../store/documents';
 
@@ -20,6 +20,7 @@ function base64ToUint8Array(base64: string): Uint8Array {
 const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   const getPreviewContent = () => {
     if (!document.file_type) return <div className="p-4 text-center">No file type information.</div>;
@@ -110,6 +111,20 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
       </div>
     );
   };
+
+  useEffect(() => {
+    if (document.file_type === 'application/pdf' && document.file) {
+      // If the content is a Blob or ArrayBuffer, create a Blob URL
+      const blob = document.file instanceof Blob
+        ? document.file
+        : new Blob([document.file], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      setPdfUrl(url);
+      return () => {
+        URL.revokeObjectURL(url);
+      };
+    }
+  }, [document]);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
