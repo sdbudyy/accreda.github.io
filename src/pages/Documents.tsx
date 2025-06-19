@@ -6,6 +6,44 @@ import { useSubscriptionStore } from '../store/subscriptionStore';
 import DocumentPreview from '../components/documents/DocumentPreview';
 import Modal from '../components/common/Modal';
 import { toast } from 'react-hot-toast';
+import type { Google, Gapi } from '../types/google';
+
+interface TokenResponse {
+  access_token: string;
+  error?: string;
+}
+
+interface PickerCallback {
+  action: string;
+  docs?: Array<{
+    id: string;
+    name: string;
+    mimeType: string;
+  }>;
+}
+
+interface DocumentObject {
+  id: string;
+  name: string;
+  mimeType: string;
+}
+
+interface ResponseObject {
+  action: string;
+  docs?: DocumentObject[];
+}
+
+declare global {
+  interface Window {
+    gapi: Gapi;
+    google: Google;
+  }
+}
+
+const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const API_DISCOVERY_DOCS = ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'];
+const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly';
 
 const Documents: React.FC = () => {
   const {
@@ -20,9 +58,8 @@ const Documents: React.FC = () => {
     shareDocumentWithSupervisors,
   } = useDocumentsStore();
 
-  const { documentLimit, fetchSubscription, tier } = useSubscriptionStore();
+  const { documentLimit, tier, fetchSubscription } = useSubscriptionStore();
   const [documentCreatedCount, setDocumentCreatedCount] = useState<number>(0);
-
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
@@ -43,6 +80,9 @@ const Documents: React.FC = () => {
   const [importedContent, setImportedContent] = useState<string | null>(null);
   const [showImportModal, setShowImportModal] = useState(false);
   const [uploadInputRef] = useState(() => React.createRef<HTMLInputElement>());
+  const [gapiInited, setGapiInited] = useState(false);
+  const [gisInited, setGisInited] = useState(false);
+  const [tokenClient, setTokenClient] = useState<any>(null);
 
   // Load OneDrive API when needed
   const loadOneDriveApi = () => {
@@ -62,6 +102,141 @@ const Documents: React.FC = () => {
     alert('OneDrive picker scaffolded. Add credentials and logic when ready.');
     setImportedContent('Imported content from OneDrive (simulated).');
     setShowImportModal(true);
+  };
+
+  // Add Google API initialization
+  useEffect(() => {
+    const loadGoogleAPI = async () => {
+      try {
+        // Load the Google API script
+        const script = document.createElement('script');
+        script.src = 'https://apis.google.com/js/api.js';
+        script.onload = () => {
+          window.gapi.load('client', async () => {
+            try {
+              await window.gapi.client.init({
+                apiKey: GOOGLE_API_KEY,
+                discoveryDocs: API_DISCOVERY_DOCS,
+              });
+              setGapiInited(true);
+              
+              // Load the Google Identity Services script
+              const scriptGIS = document.createElement('script');
+              scriptGIS.src = 'https://accounts.google.com/gsi/client';
+              scriptGIS.onload = () => {
+                const token = window.google.accounts.oauth2.initTokenClient({
+                  client_id: GOOGLE_CLIENT_ID,
+                  scope: SCOPES,
+                  callback: (response: TokenResponse) => {
+                    if (response.error) {
+                      console.error('OAuth error:', response.error);
+                      return;
+                    }
+                    handleTokenResponse(response);
+                  }
+                });
+                setTokenClient(token);
+                setGisInited(true);
+              };
+              document.body.appendChild(scriptGIS);
+            } catch (err) {
+              console.error('Error initializing GAPI client:', err);
+            }
+          });
+        };
+        document.body.appendChild(script);
+      } catch (err) {
+        console.error('Error loading Google API:', err);
+      }
+    };
+
+    if (!gapiInited) {
+      loadGoogleAPI();
+    }
+  }, [gapiInited]);
+
+  // Add Google Drive picker functionality
+  const handleGoogleDriveImport = () => {
+    if (!gapiInited || !gisInited) {
+      toast.error('Google Drive API not initialized yet. Please try again in a moment.');
+      return;
+    }
+
+    if (!tokenClient) {
+      toast.error('Authentication not ready. Please try again.');
+      return;
+    }
+
+    if (window.gapi.client.getToken() === null) {
+      tokenClient.requestAccessToken({ prompt: 'consent' });
+    } else {
+      tokenClient.requestAccessToken({ prompt: '' });
+    }
+  };
+
+  const handleTokenResponse = async (response: TokenResponse) => {
+    if (response.error) {
+      console.error('OAuth error:', response.error);
+      toast.error('Failed to authenticate with Google Drive');
+      return;
+    }
+
+    try {
+      // Load the Google Picker script if not already loaded
+      if (!window.google.picker) {
+        await new Promise<void>((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://apis.google.com/js/api.js?onload=onApiLoad';
+          script.onload = () => resolve();
+          script.onerror = reject;
+          document.body.appendChild(script);
+        });
+      }
+
+      // Create and configure the picker
+      if (window.google.picker) {
+        const docsView = new google.picker.DocsView()
+          .setIncludeFolders(true)
+          .setMimeTypes('application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain');
+        
+        const picker = new google.picker.PickerBuilder()
+          .enableFeature(google.picker.Feature.NAV_HIDDEN)
+          .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+          .setAppId(GOOGLE_CLIENT_ID)
+          .setOAuthToken(response.access_token)
+          .addView(docsView)
+          .setCallback((data: ResponseObject) => {
+            if (data.action === google.picker.Action.PICKED && data.docs && data.docs.length > 0) {
+              handlePickerSelection(data.docs[0]);
+            }
+          })
+          .build();
+        
+        picker.setVisible(true);
+      } else {
+        throw new Error('Google Picker failed to load');
+      }
+
+    } catch (err) {
+      console.error('Error accessing Google Drive:', err);
+      toast.error('Failed to access Google Drive');
+    }
+  };
+
+  const handlePickerSelection = async (file: DocumentObject) => {
+    try {
+      const response = await window.gapi.client.drive.files.get({
+        fileId: file.id,
+        alt: 'media'
+      });
+      
+      // Create document with the content
+      await createDocument(file.name, response.body, 'other');
+      toast.success('Document imported successfully!');
+    } catch (err) {
+      console.error('Error downloading file:', err);
+      toast.error('Failed to import document');
+    }
   };
 
   useEffect(() => {
@@ -321,9 +496,12 @@ const Documents: React.FC = () => {
               </button>
               <button
                 className="w-full text-left px-4 py-2 hover:bg-slate-100"
-                onClick={handleImportOneDrive}
+                onClick={() => {
+                  setImportMenuOpen(false);
+                  handleGoogleDriveImport();
+                }}
               >
-                Import from OneDrive
+                Import from Google Drive
               </button>
             </div>
           )}

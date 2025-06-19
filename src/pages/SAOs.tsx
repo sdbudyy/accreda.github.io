@@ -13,7 +13,6 @@ import toast from 'react-hot-toast';
 import RichTextEditor from '../components/documents/RichTextEditor';
 import mammoth from 'mammoth';
 import * as pdfjsLib from 'pdfjs-dist';
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker?worker';
 import DOMPurify from 'dompurify';
 import type { Google, Gapi } from '../types/google';
 
@@ -25,6 +24,11 @@ interface SAOModalProps {
   initialContent?: string | null;
   onInitialContentUsed?: () => void;
 }
+
+// Configure PDF.js
+const pdfjsVersion = '3.11.174';  // Use the version that matches your pdfjs-dist version
+const pdfjsWorkerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsVersion}/pdf.worker.min.js`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerSrc;
 
 // Utility to get the most recent feedback
 function getMostRecentFeedback(feedbackArr: { updated_at: string; status: string }[]): { updated_at: string; status: string } | null {
@@ -138,8 +142,23 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
   // Set initial content if provided
   useEffect(() => {
     if (isOpen && initialContent) {
-      setSituation(initialContent);
-      if (onInitialContentUsed) onInitialContentUsed();
+      try {
+        const parsedData = JSON.parse(initialContent);
+        if (parsedData.parsed) {
+          setTitle(parsedData.parsed.title || '');
+          setSituation(parsedData.parsed.situation || '');
+          setAction(parsedData.parsed.action || '');
+          setOutcome(parsedData.parsed.outcome || '');
+          setEmployer(parsedData.parsed.employer || '');
+        } else {
+          setSituation(initialContent);
+        }
+        if (onInitialContentUsed) onInitialContentUsed();
+      } catch (e) {
+        // If parsing fails, treat it as raw content
+        setSituation(initialContent);
+        if (onInitialContentUsed) onInitialContentUsed();
+      }
     }
   }, [isOpen, initialContent, onInitialContentUsed]);
 
@@ -971,7 +990,69 @@ const SAOs: React.FC = () => {
     loadUserSAOs();
   };
 
-  // File extraction logic
+  // Add this new function to parse SAO content
+  const parseSAOContent = (content: string) => {
+    const result = {
+      title: '',
+      employer: '',
+      situation: '',
+      action: '',
+      outcome: ''
+    };
+
+    // Try to find employer
+    const employerMatch = content.match(/employer\s*[:|-]\s*([^\n]+)/i) ||
+                         content.match(/company\s*[:|-]\s*([^\n]+)/i) ||
+                         content.match(/organization\s*[:|-]\s*([^\n]+)/i);
+    if (employerMatch) {
+      result.employer = employerMatch[1].trim();
+    }
+
+    // Try to find situation
+    const situationMatch = content.match(/situation\s*[:|-]\s*([^]*?)(?=action|outcome|$)/i);
+    if (situationMatch) {
+      result.situation = situationMatch[1].trim();
+    }
+
+    // Try to find action
+    const actionMatch = content.match(/action\s*[:|-]\s*([^]*?)(?=situation|outcome|$)/i);
+    if (actionMatch) {
+      result.action = actionMatch[1].trim();
+    }
+
+    // Try to find outcome
+    const outcomeMatch = content.match(/outcome\s*[:|-]\s*([^]*?)(?=situation|action|$)/i);
+    if (outcomeMatch) {
+      result.outcome = outcomeMatch[1].trim();
+    }
+
+    // If no explicit sections found, try to intelligently split the content
+    if (!result.situation && !result.action && !result.outcome) {
+      const paragraphs = content.split(/\n\s*\n/).filter(p => p.trim());
+      if (paragraphs.length >= 3) {
+        result.situation = paragraphs[0].trim();
+        result.action = paragraphs[1].trim();
+        result.outcome = paragraphs[2].trim();
+      } else if (paragraphs.length === 2) {
+        result.situation = paragraphs[0].trim();
+        result.action = paragraphs[1].trim();
+      } else if (paragraphs.length === 1) {
+        result.situation = paragraphs[0].trim();
+      }
+    }
+
+    // Try to extract a title if none exists
+    if (!result.title) {
+      const firstLine = content.split('\n')[0].trim();
+      if (firstLine && firstLine.length < 100) {
+        result.title = firstLine;
+      }
+    }
+
+    return result;
+  };
+
+  // Modify the handleUploadFile function
   const handleUploadFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -986,26 +1067,61 @@ const SAOs: React.FC = () => {
         extracted = result.value;
         isDocx = true;
       } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-        pdfjsLib.GlobalWorkerOptions.workerPort = new pdfjsWorker();
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        let text = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const content = await page.getTextContent();
-          text += content.items.map((item: any) => item.str).join(' ') + '\n';
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          let text = '';
+          
+          // Show loading toast
+          const loadingToast = toast.loading('Processing PDF...');
+          
+          try {
+            for (let i = 1; i <= pdf.numPages; i++) {
+              const page = await pdf.getPage(i);
+              const content = await page.getTextContent();
+              text += content.items.map((item: any) => item.str).join(' ') + '\n';
+            }
+            toast.success('PDF processed successfully');
+          } catch (error) {
+            console.error('Error processing PDF pages:', error);
+            toast.error('Error processing PDF content');
+            throw error;
+          } finally {
+            toast.dismiss(loadingToast);
+          }
+          
+          extracted = text;
+          toast('PDF formatting is not preserved. Only plain text is extracted.', { 
+            icon: '⚠️',
+            duration: 4000 
+          });
+        } catch (pdfError) {
+          console.error('PDF processing error:', pdfError);
+          toast.error('Failed to process PDF. Please try a different file format.');
+          return;
         }
-        extracted = text;
-        toast('PDF formatting is not preserved. Only plain text is extracted.', { icon: '⚠️' });
       } else {
-        extracted = 'Unsupported file type.';
+        toast.error('Unsupported file type. Please use PDF, DOCX, or TXT files.');
+        return;
       }
+
+      // Parse the extracted content
+      const parsedContent = parseSAOContent(extracted);
+      
+      // Store both the raw and parsed content
+      setPendingSAOContent(JSON.stringify({
+        raw: extracted,
+        parsed: parsedContent
+      }));
+      
+      setIsModalOpen(true);
+      setImportMenuOpen(false);
+      
     } catch (err) {
-      extracted = 'Failed to extract content: ' + (err instanceof Error ? err.message : String(err));
+      console.error('File processing error:', err);
+      toast.error('Failed to process file: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
-    setPendingSAOContent(extracted);
-    setIsModalOpen(true);
-    setImportMenuOpen(false);
+    
     if (uploadInputRef.current) uploadInputRef.current.value = '';
   };
 
