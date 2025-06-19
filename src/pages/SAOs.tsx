@@ -15,13 +15,14 @@ import mammoth from 'mammoth';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker?worker';
 import DOMPurify from 'dompurify';
+import type { Google, Gapi } from '../utils/googleAuth';
 
 // @ts-ignore
 declare global {
   interface Window {
-    gapi?: any;
+    google: Google;
+    gapi: Gapi;
     OneDrive?: any;
-    google?: any;
   }
 }
 

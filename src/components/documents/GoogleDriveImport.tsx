@@ -75,7 +75,7 @@ const GoogleDriveImport: React.FC<GoogleDriveImportProps> = ({ onFilePicked }) =
     } catch (error) {
       console.error('Error importing from Google Drive:', error);
       toast.error('Failed to import file from Google Drive');
-    }
+        }
   }, [onFilePicked]);
 
   return (
