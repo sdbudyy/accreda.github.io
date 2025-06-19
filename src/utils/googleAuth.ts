@@ -1,3 +1,5 @@
+import type { Google, Gapi, TokenClient, TokenResponse } from '../types/google';
+
 // Types for Google APIs
 interface GoogleOAuth2 {
   initTokenClient(config: {
@@ -5,16 +7,6 @@ interface GoogleOAuth2 {
     scope: string;
     callback: (response: TokenResponse) => void;
   }): TokenClient;
-}
-
-interface TokenResponse {
-  access_token: string;
-  error?: string;
-}
-
-interface TokenClient {
-  requestAccessToken(): void;
-  callback: (response: TokenResponse) => void;
 }
 
 interface GooglePicker {
@@ -26,13 +18,6 @@ interface GooglePicker {
   PickerBuilder: any;
 }
 
-interface Google {
-  accounts: {
-    oauth2: GoogleOAuth2;
-  };
-  picker: GooglePicker;
-}
-
 interface GapiClient {
   init(config: any): Promise<void>;
   drive: {
@@ -41,11 +26,6 @@ interface GapiClient {
     };
   };
   load(api: string, version: string): Promise<void>;
-}
-
-interface Gapi {
-  load(api: string, callback?: { callback: () => void }): void;
-  client: GapiClient;
 }
 
 declare global {

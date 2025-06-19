@@ -113,16 +113,23 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
   };
 
   useEffect(() => {
-    if (document.file_type === 'application/pdf' && document.file) {
-      // If the content is a Blob or ArrayBuffer, create a Blob URL
-      const blob = document.file instanceof Blob
-        ? document.file
-        : new Blob([document.file], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      setPdfUrl(url);
-      return () => {
-        URL.revokeObjectURL(url);
-      };
+    if (document.file_type === 'application/pdf' && document.content) {
+      try {
+        // Convert base64 content to Blob
+        const binaryString = atob(document.content);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        setPdfUrl(url);
+        return () => {
+          URL.revokeObjectURL(url);
+        };
+      } catch (error) {
+        setError('Failed to process PDF content');
+      }
     }
   }, [document]);
 
