@@ -15,6 +15,7 @@ import mammoth from 'mammoth';
 import * as pdfjsLib from 'pdfjs-dist';
 import DOMPurify from 'dompurify';
 import type { Google, Gapi } from '../types/google';
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker?worker';
 
 interface SAOModalProps {
   isOpen: boolean;
@@ -932,6 +933,12 @@ function getSkillOrderIndex(skillName: string) {
   return idx === -1 ? 999 : idx;
 }
 
+// Add Google Drive configuration
+const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const API_DISCOVERY_DOCS = ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'];
+const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly';
+
 const SAOs: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSAO, setEditingSAO] = useState<SAO | undefined>();
@@ -947,6 +954,9 @@ const SAOs: React.FC = () => {
   const [uploadInputRef] = useState(() => React.createRef<HTMLInputElement>());
   const [pendingSAOContent, setPendingSAOContent] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<'recent' | 'skill'>('recent');
+  const [gapiInited, setGapiInited] = useState(false);
+  const [gisInited, setGisInited] = useState(false);
+  const [tokenClient, setTokenClient] = useState<any>(null);
 
   useEffect(() => {
     loadUserSAOs();
@@ -1052,13 +1062,60 @@ const SAOs: React.FC = () => {
     return result;
   };
 
-  // Modify the handleUploadFile function
+  // Utility to process PDF files
+  const processPDFFile = async (file: File | ArrayBuffer): Promise<string> => {
+    try {
+      // Show loading toast
+      const loadingToast = toast.loading('Processing PDF...');
+      
+      // Initialize PDF.js with the CDN worker
+      pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerSrc;
+      
+      // Load the PDF document
+      const data = file instanceof File ? await file.arrayBuffer() : file;
+      const pdf = await pdfjsLib.getDocument({ data }).promise;
+      
+      // Extract text from all pages
+      let fullText = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const pageText = content.items
+          .map((item: any) => item.str)
+          .join(' ')
+          .replace(/\s+/g, ' '); // Normalize whitespace
+        fullText += pageText + '\n\n'; // Add double newline between pages
+      }
+      
+      // Clean up the text
+      fullText = fullText.trim()
+        .replace(/\n{3,}/g, '\n\n') // Replace multiple newlines with double newlines
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .replace(/[^\S\n]+/g, ' '); // Replace multiple spaces with single space (except newlines)
+      
+      // Success toast
+      toast.success('PDF processed successfully!', { id: loadingToast });
+      return fullText;
+      
+    } catch (error) {
+      console.error('PDF processing error:', error);
+      // Show error toast and rethrow
+      toast.error('Failed to process PDF. Please try again or use a different format.');
+      throw new Error('Failed to process PDF: ' + (error instanceof Error ? error.message : String(error)));
+    }
+  };
+
+  // Update the file upload handler
   const handleUploadFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
     let extracted = '';
     let isDocx = false;
+    
     try {
+      const loadingToast = toast.loading('Processing document...');
+      
       if (file.type === 'text/plain') {
         extracted = await file.text();
       } else if (file.name.endsWith('.docx')) {
@@ -1067,48 +1124,14 @@ const SAOs: React.FC = () => {
         extracted = result.value;
         isDocx = true;
       } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-        try {
-          const arrayBuffer = await file.arrayBuffer();
-          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-          let text = '';
-          
-          // Show loading toast
-          const loadingToast = toast.loading('Processing PDF...');
-          
-          try {
-            for (let i = 1; i <= pdf.numPages; i++) {
-              const page = await pdf.getPage(i);
-              const content = await page.getTextContent();
-              text += content.items.map((item: any) => item.str).join(' ') + '\n';
-            }
-            toast.success('PDF processed successfully');
-          } catch (error) {
-            console.error('Error processing PDF pages:', error);
-            toast.error('Error processing PDF content');
-            throw error;
-          } finally {
-            toast.dismiss(loadingToast);
-          }
-          
-          extracted = text;
-          toast('PDF formatting is not preserved. Only plain text is extracted.', { 
-            icon: '⚠️',
-            duration: 4000 
-          });
-        } catch (pdfError) {
-          console.error('PDF processing error:', pdfError);
-          toast.error('Failed to process PDF. Please try a different file format.');
-          return;
-        }
+        extracted = await processPDFFile(file);
       } else {
-        toast.error('Unsupported file type. Please use PDF, DOCX, or TXT files.');
+        toast.error('Unsupported file type');
         return;
       }
 
       // Parse the extracted content
       const parsedContent = parseSAOContent(extracted);
-      
-      // Store both the raw and parsed content
       setPendingSAOContent(JSON.stringify({
         raw: extracted,
         parsed: parsedContent
@@ -1116,10 +1139,11 @@ const SAOs: React.FC = () => {
       
       setIsModalOpen(true);
       setImportMenuOpen(false);
+      toast.success('Document imported successfully!', { id: loadingToast });
       
     } catch (err) {
       console.error('File processing error:', err);
-      toast.error('Failed to process file: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      toast.error('Failed to process file: ' + (err instanceof Error ? err.message : String(err)));
     }
     
     if (uploadInputRef.current) uploadInputRef.current.value = '';
@@ -1137,6 +1161,164 @@ const SAOs: React.FC = () => {
       return aIdx - bIdx;
     });
   }
+
+  // Add Google API initialization
+  useEffect(() => {
+    const loadGoogleAPI = async () => {
+      try {
+        // Load the Google API script
+        const script = document.createElement('script');
+        script.src = 'https://apis.google.com/js/api.js';
+        script.onload = () => {
+          window.gapi.load('client', async () => {
+            try {
+              await window.gapi.client.init({
+                apiKey: GOOGLE_API_KEY,
+                discoveryDocs: API_DISCOVERY_DOCS,
+              });
+              setGapiInited(true);
+              
+              // Load the Google Identity Services script
+              const scriptGIS = document.createElement('script');
+              scriptGIS.src = 'https://accounts.google.com/gsi/client';
+              scriptGIS.onload = () => {
+                const token = window.google.accounts.oauth2.initTokenClient({
+                  client_id: GOOGLE_CLIENT_ID,
+                  scope: SCOPES,
+                  callback: (response: TokenResponse) => {
+                    if (response.error) {
+                      console.error('OAuth error:', response.error);
+                      return;
+                    }
+                    handleTokenResponse(response);
+                  }
+                });
+                setTokenClient(token);
+                setGisInited(true);
+              };
+              document.body.appendChild(scriptGIS);
+            } catch (err) {
+              console.error('Error initializing GAPI client:', err);
+            }
+          });
+        };
+        document.body.appendChild(script);
+      } catch (err) {
+        console.error('Error loading Google API:', err);
+      }
+    };
+
+    if (!gapiInited) {
+      loadGoogleAPI();
+    }
+  }, [gapiInited]);
+
+  // Add Google Drive picker functionality
+  const handleGoogleDriveImport = () => {
+    if (!gapiInited || !gisInited) {
+      toast.error('Google Drive API not initialized yet. Please try again in a moment.');
+      return;
+    }
+
+    if (!tokenClient) {
+      toast.error('Authentication not ready. Please try again.');
+      return;
+    }
+
+    if (window.gapi.client.getToken() === null) {
+      tokenClient.requestAccessToken({ prompt: 'consent' });
+    } else {
+      tokenClient.requestAccessToken({ prompt: '' });
+    }
+  };
+
+  const handleTokenResponse = async (response: TokenResponse) => {
+    if (response.error) {
+      console.error('OAuth error:', response.error);
+      toast.error('Failed to authenticate with Google Drive');
+      return;
+    }
+
+    try {
+      // Load the Google Picker script if not already loaded
+      if (!window.google.picker) {
+        await new Promise<void>((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://apis.google.com/js/api.js?onload=onApiLoad';
+          script.onload = () => resolve();
+          script.onerror = reject;
+          document.body.appendChild(script);
+        });
+      }
+
+      // Create and configure the picker
+      if (window.google.picker) {
+        const docsView = new window.google.picker.DocsView()
+          .setIncludeFolders(true)
+          .setMimeTypes('application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain');
+        
+        const picker = new window.google.picker.PickerBuilder()
+          .enableFeature(window.google.picker.Feature.NAV_HIDDEN)
+          .enableFeature(window.google.picker.Feature.MULTISELECT_ENABLED)
+          .setAppId(GOOGLE_CLIENT_ID)
+          .setOAuthToken(response.access_token)
+          .addView(docsView)
+          .setCallback((data: PickerResponse) => {
+            if (data.action === window.google.picker.Action.PICKED && data.docs && data.docs.length > 0) {
+              handlePickerSelection(data.docs[0]);
+            }
+          })
+          .build();
+        
+        picker.setVisible(true);
+      } else {
+        throw new Error('Google Picker failed to load');
+      }
+
+    } catch (err) {
+      console.error('Error accessing Google Drive:', err);
+      toast.error('Failed to access Google Drive');
+    }
+  };
+
+  const handlePickerSelection = async (file: DocumentObject) => {
+    try {
+      const loadingToast = toast.loading('Downloading file from Google Drive...');
+      
+      const response = await window.gapi.client.drive.files.get({
+        fileId: file.id,
+        alt: 'media'
+      });
+      
+      let content = response.body;
+      
+      // Process based on file type
+      if (file.mimeType === 'application/pdf') {
+        // Convert response body to ArrayBuffer for PDF processing
+        const buffer = new TextEncoder().encode(content).buffer;
+        content = await processPDFFile(buffer);
+      } else if (file.mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        const arrayBuffer = await (await fetch(`data:${file.mimeType};base64,${btoa(content)}`)).arrayBuffer();
+        const result = await mammoth.convertToHtml({ arrayBuffer });
+        content = result.value;
+      }
+
+      // Parse the content and open the SAO modal
+      const parsedContent = parseSAOContent(content);
+      setPendingSAOContent(JSON.stringify({
+        raw: content,
+        parsed: parsedContent
+      }));
+      
+      setIsModalOpen(true);
+      setImportMenuOpen(false);
+      toast.success('Document imported successfully!', { id: loadingToast });
+      
+    } catch (err) {
+      console.error('Google Drive file processing error:', err);
+      toast.error('Failed to process file: ' + (err instanceof Error ? err.message : String(err)));
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
@@ -1177,13 +1359,12 @@ const SAOs: React.FC = () => {
               </button>
               <button
                 className="w-full text-left px-4 py-2 hover:bg-slate-100"
+                onClick={() => {
+                  setImportMenuOpen(false);
+                  handleGoogleDriveImport();
+                }}
               >
                 Import from Google Drive
-              </button>
-              <button
-                className="w-full text-left px-4 py-2 hover:bg-slate-100"
-              >
-                Import from OneDrive
               </button>
             </div>
           )}
@@ -1300,6 +1481,31 @@ const SAOs: React.FC = () => {
     </div>
   );
 };
+
+// Add necessary types
+interface TokenResponse {
+  access_token: string;
+  error?: string;
+}
+
+interface DocumentObject {
+  id: string;
+  name: string;
+  mimeType: string;
+}
+
+interface PickerResponse {
+  action: string;
+  docs: DocumentObject[];
+}
+
+// Update Window interface to use proper types
+declare global {
+  interface Window {
+    gapi: Gapi;
+    google: Google;
+  }
+}
 
 export default SAOs;
 export { SAOModal }; 
