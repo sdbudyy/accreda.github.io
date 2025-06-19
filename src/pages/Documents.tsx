@@ -1,14 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { FileText, Download, Trash2, AlertCircle, Upload, Search, Filter, X, Edit2, Eye, Share2 } from 'lucide-react';
+import { FileText, Download, Trash2, Upload, Search, Filter, X, Edit2, Eye, Share2 } from 'lucide-react';
 import { useDocumentsStore, Document } from '../store/documents';
 import { supabase } from '../lib/supabase';
 import { useSubscriptionStore } from '../store/subscriptionStore';
 import DocumentPreview from '../components/documents/DocumentPreview';
 import Modal from '../components/common/Modal';
-import GoogleDriveImport from '../components/documents/GoogleDriveImport';
-import { GoogleDriveFile } from '../utils/GoogleDriveService';
 import { toast } from 'react-hot-toast';
-import type { Google, Gapi } from '../types/google';
 
 const Documents: React.FC = () => {
   const {
@@ -23,7 +20,7 @@ const Documents: React.FC = () => {
     shareDocumentWithSupervisors,
   } = useDocumentsStore();
 
-  const { tier, documentLimit, fetchSubscription } = useSubscriptionStore();
+  const { documentLimit, fetchSubscription, tier } = useSubscriptionStore();
   const [documentCreatedCount, setDocumentCreatedCount] = useState<number>(0);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,70 +44,7 @@ const Documents: React.FC = () => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [uploadInputRef] = useState(() => React.createRef<HTMLInputElement>());
 
-  // --- GOOGLE DRIVE IMPORT SCAFFOLD ---
-  // TODO: Replace with your credentials when you have a domain
-  const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID';
-  const GOOGLE_API_KEY = 'YOUR_GOOGLE_API_KEY';
-  const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
-  const GOOGLE_DISCOVERY_DOCS = [
-    'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
-  ];
-
-  // Loads the Google API script
-  const loadGoogleApi = () => {
-    return new Promise<void>((resolve, reject) => {
-      window.gapi.load('client', async () => {
-        try {
-          await window.gapi.client.init({
-            apiKey: import.meta.env.VITE_GOOGLE_API_KEY,
-            clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
-            scope: 'https://www.googleapis.com/auth/drive.readonly'
-          });
-          resolve();
-        } catch (error) {
-          console.error('Error initializing Google API:', error);
-          reject(error);
-        }
-      });
-    });
-  };
-
-  // Authenticate and open the Google Picker
-  const handleImportGoogleDrive = async () => {
-    try {
-      await loadGoogleApi();
-      const authResponse = await new Promise((resolve, reject) => {
-        window.gapi.auth.authorize(
-          {
-            client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-            scope: 'https://www.googleapis.com/auth/drive.readonly',
-            immediate: false
-          },
-          (response) => {
-            if (response && !response.error) {
-              resolve(response);
-            } else {
-              reject(new Error(response.error));
-            }
-          }
-        );
-      });
-
-      // Continue with file picker and import logic...
-      // ... rest of the existing handleImportGoogleDrive code ...
-    } catch (error) {
-      console.error('Error importing from Google Drive:', error);
-      toast.error('Failed to import from Google Drive');
-    }
-  };
-
-  // --- ONEDRIVE IMPORT SCAFFOLD ---
-  // TODO: Replace with your credentials when you have a domain
-  const ONEDRIVE_CLIENT_ID = 'YOUR_ONEDRIVE_CLIENT_ID';
-  const ONEDRIVE_SCOPES = 'files.read';
-
-  // Loads the OneDrive Picker script
+  // Load OneDrive API when needed
   const loadOneDriveApi = () => {
     if (window.OneDrive) return Promise.resolve();
     return new Promise((resolve) => {
@@ -121,14 +55,11 @@ const Documents: React.FC = () => {
     });
   };
 
-  // Authenticate and open the OneDrive Picker
+  // Handle OneDrive import
   const handleImportOneDrive = async () => {
     setImportMenuOpen(false);
     await loadOneDriveApi();
-    // TODO: Implement Picker logic here
-    // See: https://learn.microsoft.com/en-us/onedrive/developer/controls/file-pickers/js-v72/open-file?view=odsp-graph-online
     alert('OneDrive picker scaffolded. Add credentials and logic when ready.');
-    // Simulate import for now
     setImportedContent('Imported content from OneDrive (simulated).');
     setShowImportModal(true);
   };
@@ -151,11 +82,10 @@ const Documents: React.FC = () => {
       const el = documentRefs.current[documentId];
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        // Optional: Add a temporary highlight effect
         el.classList.add('ring', 'ring-teal-400', 'transition-all', 'duration-300');
         setTimeout(() => {
           el.classList.remove('ring', 'ring-teal-400');
-        }, 2000); // Highlight for 2 seconds
+        }, 2000);
       }
     };
     window.addEventListener('scroll-to-document', handleScrollToDocument as EventListener);
@@ -217,23 +147,21 @@ const Documents: React.FC = () => {
     try {
       console.log('Starting document creation process...');
       
-      // Read file content based on file type
       let content = '';
       const fileType = file.type;
       
       if (fileType.startsWith('text/')) {
         content = await file.text();
       } else {
-        content = `File type (${fileType}) not directly viewable. Will be stored.`; // Simplified content for non-text
+        content = `File type (${fileType}) not directly viewable. Will be stored.`;
       }
       
       await createDocument(file.name, content, 'other', file);
       console.log('Document creation completed successfully');
-      // Clear the file input
       e.target.value = '';
     } catch (err) {
       console.error('Document creation failed:', err);
-      alert('Failed to create document. Please try again.');
+      toast.error('Failed to create document. Please try again.');
     }
   };
 
@@ -391,24 +319,6 @@ const Documents: React.FC = () => {
               >
                 Upload from Device
               </button>
-              <GoogleDriveImport onFilePicked={async (file: GoogleDriveFile, content: string) => {
-                try {
-                  // Create a new document from the Google Drive file
-                  await createDocument(
-                    file.name,
-                    'Imported from Google Drive',
-                    'other',
-                    new File([content], file.name, { type: file.mimeType }),
-                    'Other'
-                  );
-                  
-                  toast.success('File imported successfully from Google Drive');
-                  setImportMenuOpen(false);
-                } catch (error) {
-                  console.error('Failed to save Google Drive file:', error);
-                  toast.error('Failed to save file from Google Drive');
-                }
-              }} />
               <button
                 className="w-full text-left px-4 py-2 hover:bg-slate-100"
                 onClick={handleImportOneDrive}
@@ -423,18 +333,17 @@ const Documents: React.FC = () => {
             className="hidden"
             ref={uploadInputRef}
             onChange={handleCreateDocument}
-            disabled={tier === 'free' && documentCreatedCount >= documentLimit && documentLimit !== -1 && documentLimit !== 2147483647}
           />
         </div>
       </div>
       {/* Document Limit Banner */}
       {tier === 'free' && (
         <div className="p-4 mb-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-900 text-center font-semibold">
-          {(documentLimit === -1 || documentLimit === 2147483647)
+          {documentLimit === -1 || documentLimit === 2147483647
             ? 'You have Unlimited documents on your plan.'
-            : (documentCreatedCount < documentLimit
+            : documentCreatedCount < documentLimit
               ? `You have ${documentLimit - documentCreatedCount} document${documentLimit - documentCreatedCount === 1 ? '' : 's'} left on the Free plan.`
-              : 'You have reached your document upload limit for the Free plan. Upgrade to add more.')}
+              : 'You have reached your document upload limit for the Free plan. Upgrade to add more.'}
         </div>
       )}
       <div className="flex items-center justify-between">
@@ -749,7 +658,7 @@ const Documents: React.FC = () => {
       {/* Error State */}
       {error && (
         <div className="text-center py-12">
-          <AlertCircle size={48} className="mx-auto text-red-400" />
+          <FileText size={48} className="mx-auto text-red-400" />
           <h3 className="mt-4 text-lg font-medium text-slate-900">Error loading documents</h3>
           <p className="mt-2 text-slate-500">{error}</p>
         </div>

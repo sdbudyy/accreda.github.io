@@ -1,9 +1,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
-import { Check, Lock, Bell, Sun, Trash2, User as UserIcon, Mail, Calendar, FileText, X } from 'lucide-react';
-import FileUpload from '../components/FileUpload';
-import ConnectionStatus from '../components/common/ConnectionStatus';
+import { Check, Lock, Bell, Sun, Trash2, User as UserIcon, Calendar, FileText } from 'lucide-react';
 import { useNotificationPreferences } from '../store/notificationPreferences';
 import { Switch } from '@headlessui/react';
 import { useSubscriptionStore } from '../store/subscriptionStore';
@@ -53,7 +51,6 @@ const Settings: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
-  const [currentPlan, setCurrentPlan] = useState('Free');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState('');
   const [userRole, setUserRole] = useState<'eit' | 'supervisor' | null>(null);
@@ -68,21 +65,12 @@ const Settings: React.FC = () => {
   const [mfaStatus, setMfaStatus] = useState<'idle' | 'enrolling' | 'verifying' | 'enabled' | 'error'>('idle');
   const [mfaError, setMfaError] = useState('');
   const [showContactModal, setShowContactModal] = useState(false);
-  const [showProModal, setShowProModal] = useState(false);
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
-  const [contactCorporation, setContactCorporation] = useState('');
   const [contactMessage, setContactMessage] = useState('');
   const [contactLoading, setContactLoading] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
   const [contactSuccess, setContactSuccess] = useState(false);
-  const [proName, setProName] = useState('');
-  const [proEmail, setProEmail] = useState('');
-  const [proMessage, setProMessage] = useState('');
-  const [proLoading, setProLoading] = useState(false);
-  const [proError, setProError] = useState<string | null>(null);
-  const [proSuccess, setProSuccess] = useState(false);
-  const [showDowngradeModal, setShowDowngradeModal] = useState(false);
   const [start_date, setStartDate] = useState('');
   const [target_date, setTargetDate] = useState('');
   const [plan_interval, setPlanInterval] = useState('monthly');
@@ -109,19 +97,12 @@ const Settings: React.FC = () => {
 
   const { 
     tier,
-    documentLimit,
-    saoLimit,
     supervisorLimit,
-    hasAiAccess,
-    fetchSubscription,
-    checkDocumentLimit,
-    checkSaoLimit,
-    checkSupervisorLimit
+    fetchSubscription
   } = useSubscriptionStore();
 
-  const { saos } = useSAOsStore();
-  const { loadUserSkills } = useSkillsStore();
   const { loadUserSAOs } = useSAOsStore();
+  const { loadUserSkills } = useSkillsStore();
 
   // Fetch the user on mount
   useEffect(() => {

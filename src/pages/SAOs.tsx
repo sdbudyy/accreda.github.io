@@ -929,112 +929,6 @@ const SAOs: React.FC = () => {
   const [pendingSAOContent, setPendingSAOContent] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<'recent' | 'skill'>('recent');
 
-  // --- GOOGLE DRIVE IMPORT SCAFFOLD ---
-  // TODO: Replace with your credentials when you have a domain
-  const GOOGLE_CLIENT_ID = '521009491275-0m5p9k9vm29fc1v6v919k25v4godaem.apps.googleusercontent.com'; // <-- Your real client ID
-  const GOOGLE_API_KEY = 'AIzaSyAb5WFdzFEplkP4nktf8KNvoHBUxOC0dDQ'; // <-- Fill in your API key from Google Cloud Console
-  const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
-  const GOOGLE_DISCOVERY_DOCS = [
-    'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
-  ];
-
-  // Loads the Google API script and Picker script
-  const loadGoogleApi = () => {
-    return new Promise<void>((resolve, reject) => {
-      window.gapi.load('client', async () => {
-        try {
-          await window.gapi.client.init({
-            apiKey: import.meta.env.VITE_GOOGLE_API_KEY,
-            clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
-            scope: 'https://www.googleapis.com/auth/drive.readonly'
-          });
-          resolve();
-        } catch (error) {
-          console.error('Error initializing Google API:', error);
-          reject(error);
-        }
-      });
-    });
-  };
-
-  // Authenticate and open the Google Picker
-  const handleImportGoogleDrive = async () => {
-    try {
-      await loadGoogleApi();
-      const authResponse = await new Promise((resolve, reject) => {
-        window.gapi.auth.authorize(
-          {
-            client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-            scope: 'https://www.googleapis.com/auth/drive.readonly',
-            immediate: false
-          },
-          (response) => {
-            if (response && !response.error) {
-              resolve(response);
-            } else {
-              reject(new Error(response.error));
-            }
-          }
-        );
-      });
-
-      // Continue with file picker and import logic...
-      // ... rest of the existing handleImportGoogleDrive code ...
-    } catch (error) {
-      console.error('Error importing from Google Drive:', error);
-      toast.error('Failed to import from Google Drive');
-    }
-  };
-
-  // --- ONEDRIVE IMPORT SCAFFOLD ---
-  // TODO: Replace with your credentials when you have a domain
-  const ONEDRIVE_CLIENT_ID = 'YOUR_ONEDRIVE_CLIENT_ID';
-  const ONEDRIVE_SCOPES = 'files.read';
-
-  // Loads the OneDrive Picker script
-  const loadOneDriveApi = () => {
-    if (window.OneDrive) return Promise.resolve();
-    return new Promise((resolve) => {
-      const script = document.createElement('script');
-      script.src = 'https://js.live.net/v7.2/OneDrive.js';
-      script.onload = resolve;
-      document.body.appendChild(script);
-    });
-  };
-
-  // Authenticate and open the OneDrive Picker
-  const handleImportOneDrive = async () => {
-    setImportMenuOpen(false);
-    await loadOneDriveApi();
-    // TODO: Implement Picker logic here
-    // See: https://learn.microsoft.com/en-us/onedrive/developer/controls/file-pickers/js-v72/open-file?view=odsp-graph-online
-    alert('OneDrive picker scaffolded. Add credentials and logic when ready.');
-    // Simulate import for now
-    setImportedContent('Imported content from OneDrive (simulated).');
-    setShowImportModal(true);
-  };
-
-  // Fetch the user's subscription to get sao_created_count
-  useEffect(() => {
-    const fetchCount = async () => {
-      await fetchSubscription();
-      // Fetch the count from the subscriptions table
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data } = await supabase
-          .from('subscriptions')
-          .select('sao_created_count')
-          .eq('user_id', user.id)
-          .single();
-        if (data && typeof data.sao_created_count === 'number') {
-          setSaoCreatedCount(data.sao_created_count);
-        }
-      }
-    };
-    fetchCount();
-  }, [isModalOpen]);
-
   useEffect(() => {
     loadUserSAOs();
   }, [loadUserSAOs]);
@@ -1167,13 +1061,11 @@ const SAOs: React.FC = () => {
               </button>
               <button
                 className="w-full text-left px-4 py-2 hover:bg-slate-100"
-                onClick={handleImportGoogleDrive}
               >
                 Import from Google Drive
               </button>
               <button
                 className="w-full text-left px-4 py-2 hover:bg-slate-100"
-                onClick={handleImportOneDrive}
               >
                 Import from OneDrive
               </button>
