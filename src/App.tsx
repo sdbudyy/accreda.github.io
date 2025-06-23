@@ -88,6 +88,21 @@ function App() {
         <Route path="/" element={!session ? <Landing /> : <RoleBasedDashboard />} />
         <Route path="/pricing" element={<Navigate to="/?scroll=pricing" replace />} />
         <Route path="/#pricing" element={<Navigate to="/?scroll=pricing" replace />} />
+        <Route path="/peng-requirements" element={<Navigate to="/" replace />} />
+        <Route path="/peng-lethbridge" element={<Navigate to="/" replace />} />
+        <Route path="/peng-edmonton" element={<Navigate to="/" replace />} />
+        <Route path="/calgary" element={<Navigate to="/" replace />} />
+        <Route path="/fort-mcmurray" element={<Navigate to="/" replace />} />
+        <Route path="/peng-progress" element={<Navigate to="/" replace />} />
+        <Route path="/apega" element={<Navigate to="/" replace />} />
+        <Route path="/peng-tracker" element={<Navigate to="/" replace />} />
+        <Route path="/peng-application" element={<Navigate to="/" replace />} />
+        <Route path="/edmonton" element={<Navigate to="/" replace />} />
+        <Route path="/engineer-in-training-alberta" element={<Navigate to="/" replace />} />
+        <Route path="/lethbridge" element={<Navigate to="/" replace />} />
+        <Route path="/alberta" element={<Navigate to="/" replace />} />
+        <Route path="/peng-alberta" element={<Navigate to="/" replace />} />
+        <Route path="/peng-calgary" element={<Navigate to="/" replace />} />
         <Route
           path="/login"
           element={!session ? <Login /> : <Navigate to="/dashboard" />}
