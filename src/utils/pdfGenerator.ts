@@ -1168,16 +1168,16 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     if (skill1_1_saos.length > 0) {
       try {
         const employerField = form.getTextField('employer11');
-        employerField.setText(skill1_1_saos[0].employer || '');
+        employerField.setText(skill1_1_saos[0].employer ? skill1_1_saos[0].employer : 'Not specified');
 
         // Fill in Situation, Action, and Outcome fields
         const situationField = form.getTextField('situation11');
         const actionField = form.getTextField('action11');
         const outcomeField = form.getTextField('outcome11');
 
-        situationField.setText(stripHtml(skill1_1_saos[0].situation) || '');
-        actionField.setText(stripHtml(skill1_1_saos[0].action) || '');
-        outcomeField.setText(stripHtml(skill1_1_saos[0].outcome) || '');
+        situationField.setText(stripHtml(skill1_1_saos[0].situation) ? stripHtml(skill1_1_saos[0].situation) : 'Not specified');
+        actionField.setText(stripHtml(skill1_1_saos[0].action) ? stripHtml(skill1_1_saos[0].action) : 'Not specified');
+        outcomeField.setText(stripHtml(skill1_1_saos[0].outcome) ? stripHtml(skill1_1_saos[0].outcome) : 'Not specified');
       } catch (e) {
         console.log('Error filling SAO fields for skill 1.1:', e);
       }
@@ -1187,16 +1187,16 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     if (skill1_2_saos.length > 0) {
       try {
         const employerField = form.getTextField('employer12');
-        employerField.setText(skill1_2_saos[0].employer || '');
+        employerField.setText(skill1_2_saos[0].employer ? skill1_2_saos[0].employer : 'Not specified');
 
         // Fill in Situation, Action, and Outcome fields
         const situationField = form.getTextField('situation12');
         const actionField = form.getTextField('action12');
         const outcomeField = form.getTextField('outcome12');
 
-        situationField.setText(stripHtml(skill1_2_saos[0].situation) || '');
-        actionField.setText(stripHtml(skill1_2_saos[0].action) || '');
-        outcomeField.setText(stripHtml(skill1_2_saos[0].outcome) || '');
+        situationField.setText(stripHtml(skill1_2_saos[0].situation) ? stripHtml(skill1_2_saos[0].situation) : 'Not specified');
+        actionField.setText(stripHtml(skill1_2_saos[0].action) ? stripHtml(skill1_2_saos[0].action) : 'Not specified');
+        outcomeField.setText(stripHtml(skill1_2_saos[0].outcome) ? stripHtml(skill1_2_saos[0].outcome) : 'Not specified');
       } catch (e) {
         console.log('Error filling SAO fields for skill 1.2:', e);
       }
@@ -1206,16 +1206,16 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     if (skill1_3_saos.length > 0) {
       try {
         const employerField = form.getTextField('employer13');
-        employerField.setText(skill1_3_saos[0].employer || '');
+        employerField.setText(skill1_3_saos[0].employer ? skill1_3_saos[0].employer : 'Not specified');
 
         // Fill in Situation, Action, and Outcome fields
         const situationField = form.getTextField('situation13');
         const actionField = form.getTextField('action13');
         const outcomeField = form.getTextField('outcome13');
 
-        situationField.setText(stripHtml(skill1_3_saos[0].situation) || '');
-        actionField.setText(stripHtml(skill1_3_saos[0].action) || '');
-        outcomeField.setText(stripHtml(skill1_3_saos[0].outcome) || '');
+        situationField.setText(stripHtml(skill1_3_saos[0].situation) ? stripHtml(skill1_3_saos[0].situation) : 'Not specified');
+        actionField.setText(stripHtml(skill1_3_saos[0].action) ? stripHtml(skill1_3_saos[0].action) : 'Not specified');
+        outcomeField.setText(stripHtml(skill1_3_saos[0].outcome) ? stripHtml(skill1_3_saos[0].outcome) : 'Not specified');
       } catch (e) {
         console.log('Error filling SAO fields for skill 1.3:', e);
       }
@@ -1225,16 +1225,16 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     if (skill1_4_saos.length > 0) {
       try {
         const employerField = form.getTextField('employer14');
-        employerField.setText(skill1_4_saos[0].employer || '');
+        employerField.setText(skill1_4_saos[0].employer ? skill1_4_saos[0].employer : 'Not specified');
 
         // Fill in Situation, Action, and Outcome fields
         const situationField = form.getTextField('situation14');
         const actionField = form.getTextField('action14');
         const outcomeField = form.getTextField('outcome14');
 
-        situationField.setText(stripHtml(skill1_4_saos[0].situation) || '');
-        actionField.setText(stripHtml(skill1_4_saos[0].action) || '');
-        outcomeField.setText(stripHtml(skill1_4_saos[0].outcome) || '');
+        situationField.setText(stripHtml(skill1_4_saos[0].situation) ? stripHtml(skill1_4_saos[0].situation) : 'Not specified');
+        actionField.setText(stripHtml(skill1_4_saos[0].action) ? stripHtml(skill1_4_saos[0].action) : 'Not specified');
+        outcomeField.setText(stripHtml(skill1_4_saos[0].outcome) ? stripHtml(skill1_4_saos[0].outcome) : 'Not specified');
       } catch (e) {
         console.log('Error filling SAO fields for skill 1.4:', e);
       }
@@ -1244,16 +1244,16 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     if (skill1_5_saos.length > 0) {
       try {
         const employerField = form.getTextField('employer15');
-        employerField.setText(skill1_5_saos[0].employer || '');
+        employerField.setText(skill1_5_saos[0].employer ? skill1_5_saos[0].employer : 'Not specified');
 
         // Fill in Situation, Action, and Outcome fields
         const situationField = form.getTextField('situation15');
         const actionField = form.getTextField('action15');
         const outcomeField = form.getTextField('outcome15');
 
-        situationField.setText(stripHtml(skill1_5_saos[0].situation) || '');
-        actionField.setText(stripHtml(skill1_5_saos[0].action) || '');
-        outcomeField.setText(stripHtml(skill1_5_saos[0].outcome) || '');
+        situationField.setText(stripHtml(skill1_5_saos[0].situation) ? stripHtml(skill1_5_saos[0].situation) : 'Not specified');
+        actionField.setText(stripHtml(skill1_5_saos[0].action) ? stripHtml(skill1_5_saos[0].action) : 'Not specified');
+        outcomeField.setText(stripHtml(skill1_5_saos[0].outcome) ? stripHtml(skill1_5_saos[0].outcome) : 'Not specified');
       } catch (e) {
         console.log('Error filling SAO fields for skill 1.5:', e);
       }
@@ -1263,16 +1263,16 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     if (skill1_6_saos.length > 0) {
       try {
         const employerField = form.getTextField('employer16');
-        employerField.setText(skill1_6_saos[0].employer || '');
+        employerField.setText(skill1_6_saos[0].employer ? skill1_6_saos[0].employer : 'Not specified');
 
         // Fill in Situation, Action, and Outcome fields
         const situationField = form.getTextField('situation16');
         const actionField = form.getTextField('action16');
         const outcomeField = form.getTextField('outcome16');
 
-        situationField.setText(stripHtml(skill1_6_saos[0].situation) || '');
-        actionField.setText(stripHtml(skill1_6_saos[0].action) || '');
-        outcomeField.setText(stripHtml(skill1_6_saos[0].outcome) || '');
+        situationField.setText(stripHtml(skill1_6_saos[0].situation) ? stripHtml(skill1_6_saos[0].situation) : 'Not specified');
+        actionField.setText(stripHtml(skill1_6_saos[0].action) ? stripHtml(skill1_6_saos[0].action) : 'Not specified');
+        outcomeField.setText(stripHtml(skill1_6_saos[0].outcome) ? stripHtml(skill1_6_saos[0].outcome) : 'Not specified');
       } catch (e) {
         console.log('Error filling SAO fields for skill 1.6:', e);
       }
@@ -1282,16 +1282,16 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     if (skill1_7_saos.length > 0) {
       try {
         const employerField = form.getTextField('employer17');
-        employerField.setText(skill1_7_saos[0].employer || '');
+        employerField.setText(skill1_7_saos[0].employer ? skill1_7_saos[0].employer : 'Not specified');
 
         // Fill in Situation, Action, and Outcome fields
         const situationField = form.getTextField('situation17');
         const actionField = form.getTextField('action17');
         const outcomeField = form.getTextField('outcome17');
 
-        situationField.setText(stripHtml(skill1_7_saos[0].situation) || '');
-        actionField.setText(stripHtml(skill1_7_saos[0].action) || '');
-        outcomeField.setText(stripHtml(skill1_7_saos[0].outcome) || '');
+        situationField.setText(stripHtml(skill1_7_saos[0].situation) ? stripHtml(skill1_7_saos[0].situation) : 'Not specified');
+        actionField.setText(stripHtml(skill1_7_saos[0].action) ? stripHtml(skill1_7_saos[0].action) : 'Not specified');
+        outcomeField.setText(stripHtml(skill1_7_saos[0].outcome) ? stripHtml(skill1_7_saos[0].outcome) : 'Not specified');
       } catch (e) {
         console.log('Error filling SAO fields for skill 1.7:', e);
       }
@@ -1301,16 +1301,16 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     if (skill1_8_saos.length > 0) {
       try {
         const employerField = form.getTextField('employer18');
-        employerField.setText(skill1_8_saos[0].employer || '');
+        employerField.setText(skill1_8_saos[0].employer ? skill1_8_saos[0].employer : 'Not specified');
 
         // Fill in Situation, Action, and Outcome fields
         const situationField = form.getTextField('situation18');
         const actionField = form.getTextField('action18');
         const outcomeField = form.getTextField('outcome18');
 
-        situationField.setText(stripHtml(skill1_8_saos[0].situation) || '');
-        actionField.setText(stripHtml(skill1_8_saos[0].action) || '');
-        outcomeField.setText(stripHtml(skill1_8_saos[0].outcome) || '');
+        situationField.setText(stripHtml(skill1_8_saos[0].situation) ? stripHtml(skill1_8_saos[0].situation) : 'Not specified');
+        actionField.setText(stripHtml(skill1_8_saos[0].action) ? stripHtml(skill1_8_saos[0].action) : 'Not specified');
+        outcomeField.setText(stripHtml(skill1_8_saos[0].outcome) ? stripHtml(skill1_8_saos[0].outcome) : 'Not specified');
       } catch (e) {
         console.log('Error filling SAO fields for skill 1.8:', e);
       }
@@ -1320,16 +1320,16 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     if (skill1_9_saos.length > 0) {
       try {
         const employerField = form.getTextField('employer19');
-        employerField.setText(skill1_9_saos[0].employer || '');
+        employerField.setText(skill1_9_saos[0].employer ? skill1_9_saos[0].employer : 'Not specified');
 
         // Fill in Situation, Action, and Outcome fields
         const situationField = form.getTextField('situation19');
         const actionField = form.getTextField('action19');
         const outcomeField = form.getTextField('outcome19');
 
-        situationField.setText(stripHtml(skill1_9_saos[0].situation) || '');
-        actionField.setText(stripHtml(skill1_9_saos[0].action) || '');
-        outcomeField.setText(stripHtml(skill1_9_saos[0].outcome) || '');
+        situationField.setText(stripHtml(skill1_9_saos[0].situation) ? stripHtml(skill1_9_saos[0].situation) : 'Not specified');
+        actionField.setText(stripHtml(skill1_9_saos[0].action) ? stripHtml(skill1_9_saos[0].action) : 'Not specified');
+        outcomeField.setText(stripHtml(skill1_9_saos[0].outcome) ? stripHtml(skill1_9_saos[0].outcome) : 'Not specified');
       } catch (e) {
         console.log('Error filling SAO fields for skill 1.9:', e);
       }
@@ -1339,16 +1339,16 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     if (skill1_10_saos.length > 0) {
       try {
         const employerField = form.getTextField('employer110');
-        employerField.setText(skill1_10_saos[0].employer || '');
+        employerField.setText(skill1_10_saos[0].employer ? skill1_10_saos[0].employer : 'Not specified');
 
         // Fill in Situation, Action, and Outcome fields
         const situationField = form.getTextField('situation110');
         const actionField = form.getTextField('action110');
         const outcomeField = form.getTextField('outcome110');
 
-        situationField.setText(stripHtml(skill1_10_saos[0].situation) || '');
-        actionField.setText(stripHtml(skill1_10_saos[0].action) || '');
-        outcomeField.setText(stripHtml(skill1_10_saos[0].outcome) || '');
+        situationField.setText(stripHtml(skill1_10_saos[0].situation) ? stripHtml(skill1_10_saos[0].situation) : 'Not specified');
+        actionField.setText(stripHtml(skill1_10_saos[0].action) ? stripHtml(skill1_10_saos[0].action) : 'Not specified');
+        outcomeField.setText(stripHtml(skill1_10_saos[0].outcome) ? stripHtml(skill1_10_saos[0].outcome) : 'Not specified');
       } catch (e) {
         console.log('Error filling SAO fields for skill 1.10:', e);
       }
@@ -1358,16 +1358,16 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     if (skill2_1_saos.length > 0) {
       try {
         const employerField = form.getTextField('employer21');
-        employerField.setText(skill2_1_saos[0].employer || '');
+        employerField.setText(skill2_1_saos[0].employer ? skill2_1_saos[0].employer : 'Not specified');
 
         // Fill in Situation, Action, and Outcome fields
         const situationField = form.getTextField('situation21');
         const actionField = form.getTextField('action21');
         const outcomeField = form.getTextField('outcome21');
 
-        situationField.setText(stripHtml(skill2_1_saos[0].situation) || '');
-        actionField.setText(stripHtml(skill2_1_saos[0].action) || '');
-        outcomeField.setText(stripHtml(skill2_1_saos[0].outcome) || '');
+        situationField.setText(stripHtml(skill2_1_saos[0].situation) ? stripHtml(skill2_1_saos[0].situation) : 'Not specified');
+        actionField.setText(stripHtml(skill2_1_saos[0].action) ? stripHtml(skill2_1_saos[0].action) : 'Not specified');
+        outcomeField.setText(stripHtml(skill2_1_saos[0].outcome) ? stripHtml(skill2_1_saos[0].outcome) : 'Not specified');
       } catch (e) {
         console.log('Error filling SAO fields for skill 2.1:', e);
       }
@@ -1377,16 +1377,16 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     if (skill2_2_saos.length > 0) {
       try {
         const employerField = form.getTextField('employer22');
-        employerField.setText(skill2_2_saos[0].employer || '');
+        employerField.setText(skill2_2_saos[0].employer ? skill2_2_saos[0].employer : 'Not specified');
 
         // Fill in Situation, Action, and Outcome fields
         const situationField = form.getTextField('situation22');
         const actionField = form.getTextField('action22');
         const outcomeField = form.getTextField('outcome22');
 
-        situationField.setText(stripHtml(skill2_2_saos[0].situation) || '');
-        actionField.setText(stripHtml(skill2_2_saos[0].action) || '');
-        outcomeField.setText(stripHtml(skill2_2_saos[0].outcome) || '');
+        situationField.setText(stripHtml(skill2_2_saos[0].situation) ? stripHtml(skill2_2_saos[0].situation) : 'Not specified');
+        actionField.setText(stripHtml(skill2_2_saos[0].action) ? stripHtml(skill2_2_saos[0].action) : 'Not specified');
+        outcomeField.setText(stripHtml(skill2_2_saos[0].outcome) ? stripHtml(skill2_2_saos[0].outcome) : 'Not specified');
       } catch (e) {
         console.log('Error filling SAO fields for skill 2.2:', e);
       }
@@ -1396,16 +1396,16 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     if (skill2_3_saos.length > 0) {
       try {
         const employerField = form.getTextField('employer23');
-        employerField.setText(skill2_3_saos[0].employer || '');
+        employerField.setText(skill2_3_saos[0].employer ? skill2_3_saos[0].employer : 'Not specified');
 
         // Fill in Situation, Action, and Outcome fields
         const situationField = form.getTextField('situation23');
         const actionField = form.getTextField('action23');
         const outcomeField = form.getTextField('outcome23');
 
-        situationField.setText(stripHtml(skill2_3_saos[0].situation) || '');
-        actionField.setText(stripHtml(skill2_3_saos[0].action) || '');
-        outcomeField.setText(stripHtml(skill2_3_saos[0].outcome) || '');
+        situationField.setText(stripHtml(skill2_3_saos[0].situation) ? stripHtml(skill2_3_saos[0].situation) : 'Not specified');
+        actionField.setText(stripHtml(skill2_3_saos[0].action) ? stripHtml(skill2_3_saos[0].action) : 'Not specified');
+        outcomeField.setText(stripHtml(skill2_3_saos[0].outcome) ? stripHtml(skill2_3_saos[0].outcome) : 'Not specified');
       } catch (e) {
         console.log('Error filling SAO fields for skill 2.3:', e);
       }
@@ -1415,16 +1415,16 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     if (skill3_1_saos.length > 0) {
       try {
         const employerField = form.getTextField('employer31');
-        employerField.setText(skill3_1_saos[0].employer || '');
+        employerField.setText(skill3_1_saos[0].employer ? skill3_1_saos[0].employer : 'Not specified');
 
         // Fill in Situation, Action, and Outcome fields
         const situationField = form.getTextField('situation31');
         const actionField = form.getTextField('action31');
         const outcomeField = form.getTextField('outcome31');
 
-        situationField.setText(stripHtml(skill3_1_saos[0].situation) || '');
-        actionField.setText(stripHtml(skill3_1_saos[0].action) || '');
-        outcomeField.setText(stripHtml(skill3_1_saos[0].outcome) || '');
+        situationField.setText(stripHtml(skill3_1_saos[0].situation) ? stripHtml(skill3_1_saos[0].situation) : 'Not specified');
+        actionField.setText(stripHtml(skill3_1_saos[0].action) ? stripHtml(skill3_1_saos[0].action) : 'Not specified');
+        outcomeField.setText(stripHtml(skill3_1_saos[0].outcome) ? stripHtml(skill3_1_saos[0].outcome) : 'Not specified');
       } catch (e) {
         console.log('Error filling SAO fields for skill 3.1:', e);
       }
@@ -1434,16 +1434,16 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     if (skill3_2_saos.length > 0) {
       try {
         const employerField = form.getTextField('employer32');
-        employerField.setText(skill3_2_saos[0].employer || '');
+        employerField.setText(skill3_2_saos[0].employer ? skill3_2_saos[0].employer : 'Not specified');
 
         // Fill in Situation, Action, and Outcome fields
         const situationField = form.getTextField('situation32');
         const actionField = form.getTextField('action32');
         const outcomeField = form.getTextField('outcome32');
 
-        situationField.setText(stripHtml(skill3_2_saos[0].situation) || '');
-        actionField.setText(stripHtml(skill3_2_saos[0].action) || '');
-        outcomeField.setText(stripHtml(skill3_2_saos[0].outcome) || '');
+        situationField.setText(stripHtml(skill3_2_saos[0].situation) ? stripHtml(skill3_2_saos[0].situation) : 'Not specified');
+        actionField.setText(stripHtml(skill3_2_saos[0].action) ? stripHtml(skill3_2_saos[0].action) : 'Not specified');
+        outcomeField.setText(stripHtml(skill3_2_saos[0].outcome) ? stripHtml(skill3_2_saos[0].outcome) : 'Not specified');
       } catch (e) {
         console.log('Error filling SAO fields for skill 3.2:', e);
       }
@@ -1453,16 +1453,16 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     if (skill4_1_saos.length > 0) {
       try {
         const employerField = form.getTextField('employer41');
-        employerField.setText(skill4_1_saos[0].employer || '');
+        employerField.setText(skill4_1_saos[0].employer ? skill4_1_saos[0].employer : 'Not specified');
 
         // Fill in Situation, Action, and Outcome fields
         const situationField = form.getTextField('situation41');
         const actionField = form.getTextField('action41');
         const outcomeField = form.getTextField('outcome41');
 
-        situationField.setText(stripHtml(skill4_1_saos[0].situation) || '');
-        actionField.setText(stripHtml(skill4_1_saos[0].action) || '');
-        outcomeField.setText(stripHtml(skill4_1_saos[0].outcome) || '');
+        situationField.setText(stripHtml(skill4_1_saos[0].situation) ? stripHtml(skill4_1_saos[0].situation) : 'Not specified');
+        actionField.setText(stripHtml(skill4_1_saos[0].action) ? stripHtml(skill4_1_saos[0].action) : 'Not specified');
+        outcomeField.setText(stripHtml(skill4_1_saos[0].outcome) ? stripHtml(skill4_1_saos[0].outcome) : 'Not specified');
       } catch (e) {
         console.log('Error filling SAO fields for skill 4.1:', e);
       }
@@ -1472,16 +1472,16 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     if (skill5_1_saos.length > 0) {
       try {
         const employerField = form.getTextField('employer51');
-        employerField.setText(skill5_1_saos[0].employer || '');
+        employerField.setText(skill5_1_saos[0].employer ? skill5_1_saos[0].employer : 'Not specified');
 
         // Fill in Situation, Action, and Outcome fields
         const situationField = form.getTextField('situation51');
         const actionField = form.getTextField('action51');
         const outcomeField = form.getTextField('outcome51');
 
-        situationField.setText(stripHtml(skill5_1_saos[0].situation) || '');
-        actionField.setText(stripHtml(skill5_1_saos[0].action) || '');
-        outcomeField.setText(stripHtml(skill5_1_saos[0].outcome) || '');
+        situationField.setText(stripHtml(skill5_1_saos[0].situation) ? stripHtml(skill5_1_saos[0].situation) : 'Not specified');
+        actionField.setText(stripHtml(skill5_1_saos[0].action) ? stripHtml(skill5_1_saos[0].action) : 'Not specified');
+        outcomeField.setText(stripHtml(skill5_1_saos[0].outcome) ? stripHtml(skill5_1_saos[0].outcome) : 'Not specified');
       } catch (e) {
         console.log('Error filling SAO fields for skill 5.1:', e);
       }
@@ -1491,16 +1491,16 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     if (skill6_1_saos.length > 0) {
       try {
         const employerField = form.getTextField('employer61');
-        employerField.setText(skill6_1_saos[0].employer || '');
+        employerField.setText(skill6_1_saos[0].employer ? skill6_1_saos[0].employer : 'Not specified');
 
         // Fill in Situation, Action, and Outcome fields
         const situationField = form.getTextField('situation61');
         const actionField = form.getTextField('action61');
         const outcomeField = form.getTextField('outcome61');
 
-        situationField.setText(stripHtml(skill6_1_saos[0].situation) || '');
-        actionField.setText(stripHtml(skill6_1_saos[0].action) || '');
-        outcomeField.setText(stripHtml(skill6_1_saos[0].outcome) || '');
+        situationField.setText(stripHtml(skill6_1_saos[0].situation) ? stripHtml(skill6_1_saos[0].situation) : 'Not specified');
+        actionField.setText(stripHtml(skill6_1_saos[0].action) ? stripHtml(skill6_1_saos[0].action) : 'Not specified');
+        outcomeField.setText(stripHtml(skill6_1_saos[0].outcome) ? stripHtml(skill6_1_saos[0].outcome) : 'Not specified');
       } catch (e) {
         console.log('Error filling SAO fields for skill 6.1:', e);
       }
@@ -1510,16 +1510,16 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     if (skill6_2_saos.length > 0) {
       try {
         const employerField = form.getTextField('employer62');
-        employerField.setText(skill6_2_saos[0].employer || '');
+        employerField.setText(skill6_2_saos[0].employer ? skill6_2_saos[0].employer : 'Not specified');
 
         // Fill in Situation, Action, and Outcome fields
         const situationField = form.getTextField('situation62');
         const actionField = form.getTextField('action62');
         const outcomeField = form.getTextField('outcome62');
 
-        situationField.setText(stripHtml(skill6_2_saos[0].situation) || '');
-        actionField.setText(stripHtml(skill6_2_saos[0].action) || '');
-        outcomeField.setText(stripHtml(skill6_2_saos[0].outcome) || '');
+        situationField.setText(stripHtml(skill6_2_saos[0].situation) ? stripHtml(skill6_2_saos[0].situation) : 'Not specified');
+        actionField.setText(stripHtml(skill6_2_saos[0].action) ? stripHtml(skill6_2_saos[0].action) : 'Not specified');
+        outcomeField.setText(stripHtml(skill6_2_saos[0].outcome) ? stripHtml(skill6_2_saos[0].outcome) : 'Not specified');
       } catch (e) {
         console.log('Error filling SAO fields for skill 6.2:', e);
       }
@@ -1529,16 +1529,16 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     if (skill6_3_saos.length > 0) {
       try {
         const employerField = form.getTextField('employer63');
-        employerField.setText(skill6_3_saos[0].employer || '');
+        employerField.setText(skill6_3_saos[0].employer ? skill6_3_saos[0].employer : 'Not specified');
 
         // Fill in Situation, Action, and Outcome fields
         const situationField = form.getTextField('situation63');
         const actionField = form.getTextField('action63');
         const outcomeField = form.getTextField('outcome63');
 
-        situationField.setText(stripHtml(skill6_3_saos[0].situation) || '');
-        actionField.setText(stripHtml(skill6_3_saos[0].action) || '');
-        outcomeField.setText(stripHtml(skill6_3_saos[0].outcome) || '');
+        situationField.setText(stripHtml(skill6_3_saos[0].situation) ? stripHtml(skill6_3_saos[0].situation) : 'Not specified');
+        actionField.setText(stripHtml(skill6_3_saos[0].action) ? stripHtml(skill6_3_saos[0].action) : 'Not specified');
+        outcomeField.setText(stripHtml(skill6_3_saos[0].outcome) ? stripHtml(skill6_3_saos[0].outcome) : 'Not specified');
       } catch (e) {
         console.log('Error filling SAO fields for skill 6.3:', e);
       }
@@ -1548,16 +1548,16 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     if (skill6_4_saos.length > 0) {
       try {
         const employerField = form.getTextField('employer64');
-        employerField.setText(skill6_4_saos[0].employer || '');
+        employerField.setText(skill6_4_saos[0].employer ? skill6_4_saos[0].employer : 'Not specified');
 
         // Fill in Situation, Action, and Outcome fields
         const situationField = form.getTextField('situation64');
         const actionField = form.getTextField('action64');
         const outcomeField = form.getTextField('outcome64');
 
-        situationField.setText(stripHtml(skill6_4_saos[0].situation) || '');
-        actionField.setText(stripHtml(skill6_4_saos[0].action) || '');
-        outcomeField.setText(stripHtml(skill6_4_saos[0].outcome) || '');
+        situationField.setText(stripHtml(skill6_4_saos[0].situation) ? stripHtml(skill6_4_saos[0].situation) : 'Not specified');
+        actionField.setText(stripHtml(skill6_4_saos[0].action) ? stripHtml(skill6_4_saos[0].action) : 'Not specified');
+        outcomeField.setText(stripHtml(skill6_4_saos[0].outcome) ? stripHtml(skill6_4_saos[0].outcome) : 'Not specified');
       } catch (e) {
         console.log('Error filling SAO fields for skill 6.4:', e);
       }
@@ -1567,16 +1567,16 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     if (skill6_5_saos.length > 0) {
       try {
         const employerField = form.getTextField('employer65');
-        employerField.setText(skill6_5_saos[0].employer || '');
+        employerField.setText(skill6_5_saos[0].employer ? skill6_5_saos[0].employer : 'Not specified');
 
         // Fill in Situation, Action, and Outcome fields
         const situationField = form.getTextField('situation65');
         const actionField = form.getTextField('action65');
         const outcomeField = form.getTextField('outcome65');
 
-        situationField.setText(stripHtml(skill6_5_saos[0].situation) || '');
-        actionField.setText(stripHtml(skill6_5_saos[0].action) || '');
-        outcomeField.setText(stripHtml(skill6_5_saos[0].outcome) || '');
+        situationField.setText(stripHtml(skill6_5_saos[0].situation) ? stripHtml(skill6_5_saos[0].situation) : 'Not specified');
+        actionField.setText(stripHtml(skill6_5_saos[0].action) ? stripHtml(skill6_5_saos[0].action) : 'Not specified');
+        outcomeField.setText(stripHtml(skill6_5_saos[0].outcome) ? stripHtml(skill6_5_saos[0].outcome) : 'Not specified');
       } catch (e) {
         console.log('Error filling SAO fields for skill 6.5:', e);
       }

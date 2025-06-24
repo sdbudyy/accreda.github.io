@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { MessageSquare, CheckCircle2, XCircle, Sparkles } from 'lucide-react';
 import { SAOFeedback } from '../../store/saos';
 import { supabase } from '../../lib/supabase';
-import { enhanceSAOClarity } from '../../lib/webllm';
 import DOMPurify from 'dompurify';
 
 interface SAOFeedbackProps {
@@ -23,8 +22,6 @@ const SAOFeedbackComponent: React.FC<SAOFeedbackProps> = ({
   const [newFeedback, setNewFeedback] = useState('');
   const [loading, setLoading] = useState(false);
   const [annotationCount, setAnnotationCount] = useState(0);
-  const [isEnhancing, setIsEnhancing] = useState(false);
-  const [enhancedText, setEnhancedText] = useState<string | null>(null);
 
   useEffect(() => {
     // Fetch annotation count for this SAO
@@ -52,35 +49,6 @@ const SAOFeedbackComponent: React.FC<SAOFeedbackProps> = ({
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleEnhanceClarity = async () => {
-    if (!saoContent) return;
-    
-    setIsEnhancing(true);
-    try {
-      const enhanced = await enhanceSAOClarity(saoContent);
-      setEnhancedText(enhanced);
-    } catch (error) {
-      console.error('Error in handleEnhanceClarity:', error);
-      alert(error instanceof Error ? error.message : 'Failed to enhance text. Please try again.');
-    } finally {
-      setIsEnhancing(false);
-    }
-  };
-
-  const handleAcceptEnhancement = () => {
-    if (enhancedText) {
-      setNewFeedback(prev => {
-        const enhancedContent = enhancedText.replace(/~~(.*?)~~/g, '').replace(/\*\*(.*?)\*\*/g, '$1');
-        return prev ? `${prev}\n\nEnhanced Version:\n${enhancedContent}` : `Enhanced Version:\n${enhancedContent}`;
-      });
-      setEnhancedText(null);
-    }
-  };
-
-  const handleDeclineEnhancement = () => {
-    setEnhancedText(null);
   };
 
   const getStatusIcon = (status: string) => {
@@ -130,42 +98,6 @@ const SAOFeedbackComponent: React.FC<SAOFeedbackProps> = ({
 
       {isSupervisor && feedback.length > 0 && feedback[0].status === 'pending' && (
         <form onSubmit={handleSubmitFeedback} className="mt-4">
-          {saoContent && (
-            <div className="mb-4">
-              <button
-                type="button"
-                onClick={handleEnhanceClarity}
-                disabled={!saoContent || loading || isEnhancing}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-teal-600 hover:text-teal-700 hover:bg-teal-50 rounded-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Sparkles size={16} className={isEnhancing ? 'animate-pulse' : ''} />
-                {isEnhancing ? 'Enhancing...' : 'Enhance with AI'}
-              </button>
-            </div>
-          )}
-          
-          {enhancedText && (
-            <div className="mb-4 p-4 bg-slate-50 rounded-lg">
-              <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: enhancedText }} />
-              <div className="mt-3 flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleAcceptEnhancement}
-                  className="px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-md transition-all duration-300 hover:scale-105 active:scale-95"
-                >
-                  Accept Changes
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDeclineEnhancement}
-                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-all duration-300 hover:scale-105 active:scale-95"
-                >
-                  Decline
-                </button>
-              </div>
-            </div>
-          )}
-
           <textarea
             value={newFeedback}
             onChange={(e) => setNewFeedback(e.target.value)}

@@ -40,6 +40,9 @@ import { SpeedInsights } from '@vercel/speed-insights/react'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import ThankYou from './pages/ThankYou'
 import Enterprise from './pages/Enterprise'
+import { UserProfileProvider } from './context/UserProfileContext'
+import Privacy from './pages/Privacy'
+import Terms from './pages/Terms'
 
 function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -80,12 +83,13 @@ function App() {
   }, []);
 
   return (
-    <>
+    <UserProfileProvider>
       {session && <RealtimeNotifications userId={session.user.id} />}
       <Toaster position="top-right" />
       <Routes>
         {/* Public routes */}
         <Route path="/" element={!session ? <Landing /> : <RoleBasedDashboard />} />
+        <Route path="/privacy" element={<Privacy />} />
         <Route path="/pricing" element={<Navigate to="/?scroll=pricing" replace />} />
         <Route path="/#pricing" element={<Navigate to="/?scroll=pricing" replace />} />
         <Route path="/peng-requirements" element={<Navigate to="/" replace />} />
@@ -103,6 +107,7 @@ function App() {
         <Route path="/alberta" element={<Navigate to="/" replace />} />
         <Route path="/peng-alberta" element={<Navigate to="/" replace />} />
         <Route path="/peng-calgary" element={<Navigate to="/" replace />} />
+        <Route path="/terms" element={<Terms />} />
         <Route
           path="/login"
           element={!session ? <Login /> : <Navigate to="/dashboard" />}
@@ -125,9 +130,13 @@ function App() {
         />
         <Route path="/thank-you" element={<ThankYou />} />
 
+        {/* Role-based dashboard entry point for root dashboard paths */}
+        <Route path="/dashboard" element={<RoleBasedDashboard />} />
+        <Route path="/dashboard/supervisor" element={<RoleBasedDashboard />} />
+
         {/* Protected EIT routes */}
         <Route
-          path="/dashboard"
+          path="/dashboard/*"
           element={
             <ProtectedRoute requiredRole="eit">
               <Layout appLoaded={!loading} />
@@ -148,7 +157,7 @@ function App() {
 
         {/* Protected Supervisor routes */}
         <Route
-          path="/dashboard/supervisor"
+          path="/dashboard/supervisor/*"
           element={
             <ProtectedRoute requiredRole="supervisor">
               <SupervisorLayout appLoaded={!loading} />
@@ -169,7 +178,7 @@ function App() {
       </Routes>
       <Analytics />
       <SpeedInsights />
-    </>
+    </UserProfileProvider>
   )
 }
 

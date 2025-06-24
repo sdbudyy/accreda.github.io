@@ -9,6 +9,8 @@ import { sendSupervisorRequestNotification } from '../utils/notifications';
 import { generateCSAWPDF, createPDFBlobUrl, CSAWData } from '../utils/pdfGenerator';
 import { useSAOsStore } from '../store/saos';
 import { useSkillsStore } from '../store/skills';
+import { useUserProfile } from '../context/UserProfileContext';
+import { useProgressStore } from '../store/progress';
 
 const defaultAvatar =
   'https://ui-avatars.com/api/?name=User&background=E0F2FE&color=0891B2&size=128';
@@ -38,9 +40,6 @@ const PDFPreviewModal = React.lazy(() => import('../components/PDFPreviewModal')
 
 const Settings: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [newEmail, setNewEmail] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -53,7 +52,6 @@ const Settings: React.FC = () => {
   const [passwordError, setPasswordError] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState('');
-  const [userRole, setUserRole] = useState<'eit' | 'supervisor' | null>(null);
   const [supervisorEmail, setSupervisorEmail] = useState('');
   const [supervisorRequestStatus, setSupervisorRequestStatus] = useState<'idle' | 'success' | 'error' | 'notfound' | 'already' | 'pending'>('idle');
   const [supervisorRequestMessage, setSupervisorRequestMessage] = useState('');
@@ -84,6 +82,13 @@ const Settings: React.FC = () => {
   const [apegaIdSaving, setApegaIdSaving] = useState(false);
   const [apegaIdSaved, setApegaIdSaved] = useState(false);
 
+  const { profile, loading: profileLoading, error: profileError, refresh: refreshProfile } = useUserProfile();
+  const userRole = profile?.account_type || null;
+  const fullName = profile?.full_name || '';
+  const email = profile?.email || '';
+  const [editFullName, setEditFullName] = useState(fullName);
+  const [editEmail, setEditEmail] = useState(email);
+
   const {
     supervisorReviews,
     saoFeedback,
@@ -104,52 +109,26 @@ const Settings: React.FC = () => {
   const { loadUserSAOs } = useSAOsStore();
   const { loadUserSkills } = useSkillsStore();
 
+  const {
+    overallProgress,
+    completedSkills,
+    documentedExperiences,
+    supervisorApprovals,
+    loading: progressLoading,
+    updateProgress,
+    initialize,
+    initialized
+  } = useProgressStore();
+
   // Fetch the user on mount
   useEffect(() => {
     const fetchUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
-      setEmail(user?.email || '');
-      setNewEmail(user?.email || '');
-      setAvatarUrl(user?.user_metadata?.avatar_url || '');
+      setEditEmail(user?.email || '');
     };
     fetchUser();
   }, []);
-
-  // Fetch the profile and set userRole when user changes
-  useEffect(() => {
-    if (!user) return;
-    const getUserProfile = async () => {
-      // Fetch name from profile table
-      let profileName = '';
-      const [eitProfile, supervisorProfile] = await Promise.all([
-        supabase.from('eit_profiles').select('full_name, start_date, target_date').eq('id', user.id).single(),
-        supabase.from('supervisor_profiles').select('full_name').eq('id', user.id).single()
-      ]);
-      if (supervisorProfile.data && supervisorProfile.data.full_name) {
-        setUserRole('supervisor');
-        profileName = supervisorProfile.data.full_name;
-      } else if (eitProfile.data && eitProfile.data.full_name) {
-        setUserRole('eit');
-        profileName = eitProfile.data.full_name;
-        setStartDate(eitProfile.data.start_date || '');
-        setTargetDate(eitProfile.data.target_date || '');
-      }
-      setFullName(profileName || user.email?.split('@')[0] || '');
-      setEmail(user.email || '');
-      console.log('user.id:', user.id);
-      console.log('eitProfile:', eitProfile);
-      console.log('supervisorProfile:', supervisorProfile);
-    };
-    getUserProfile();
-    fetchSubscription();
-  }, [user]);
-
-  useEffect(() => {
-    if (userRole === 'eit' && user) {
-      fetchSupervisors(user.id);
-    }
-  }, [userRole, user]);
 
   useEffect(() => {
     // Check if user has TOTP enrolled
@@ -177,6 +156,18 @@ const Settings: React.FC = () => {
         });
     }
   }, [user]);
+
+  useEffect(() => {
+    setEditFullName(fullName);
+    setEditEmail(email);
+  }, [fullName, email]);
+
+  useEffect(() => {
+    if (profile && profile.account_type === 'eit') {
+      setStartDate(profile.start_date || '');
+      setTargetDate(profile.target_date || '');
+    }
+  }, [profile]);
 
   const handleAvatarSelect = (files: File[]) => {
     if (files.length > 0) {
@@ -249,10 +240,10 @@ const Settings: React.FC = () => {
     try {
       const updates: { data?: { full_name: string }, email?: string } = {};
       if (isEditingName) {
-        updates.data = { full_name: fullName };
+        updates.data = { full_name: editFullName };
       }
-      if (isEditingEmail && newEmail !== email) {
-        updates.email = newEmail;
+      if (isEditingEmail && editEmail !== email) {
+        updates.email = editEmail;
       }
       const { error } = await supabase.auth.updateUser(updates);
       if (error) throw error;
@@ -267,7 +258,7 @@ const Settings: React.FC = () => {
         }
         const { error: profileError } = await supabase
           .from(profileTable)
-          .update({ full_name: fullName })
+          .update({ full_name: editFullName })
           .eq('id', user.id);
         if (profileError) throw profileError;
       }
@@ -280,8 +271,7 @@ const Settings: React.FC = () => {
       const { data: { user: updatedUser } } = await supabase.auth.getUser();
       if (updatedUser) {
         setUser(updatedUser);
-        setEmail(updatedUser.email || '');
-        setNewEmail(updatedUser.email || '');
+        setEditEmail(updatedUser.email || '');
       }
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to update profile. Please try again.' });
@@ -805,8 +795,8 @@ const Settings: React.FC = () => {
                       <input
                         type="text"
                         id="fullName"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
+                        value={editFullName}
+                        onChange={(e) => setEditFullName(e.target.value)}
                         className="input"
                         placeholder="Enter your full name"
                       />
@@ -816,7 +806,7 @@ const Settings: React.FC = () => {
                     </div>
                   ) : (
                     <div className="flex items-center justify-between">
-                      <p>{fullName || 'Not set'}</p>
+                      <p>{editFullName || 'Not set'}</p>
                       <button type="button" onClick={() => setIsEditingName(true)} className="text-sm text-teal-600 hover:text-teal-700">Edit</button>
                     </div>
                   )}
@@ -828,8 +818,8 @@ const Settings: React.FC = () => {
                       <input
                         type="email"
                         id="newEmail"
-                        value={newEmail}
-                        onChange={(e) => setNewEmail(e.target.value)}
+                        value={editEmail}
+                        onChange={(e) => setEditEmail(e.target.value)}
                         className="input"
                         placeholder="Enter your new email"
                       />
@@ -840,7 +830,7 @@ const Settings: React.FC = () => {
                     </div>
                   ) : (
                     <div className="flex items-center justify-between">
-                      <p>{email}</p>
+                      <p>{editEmail}</p>
                       <button type="button" onClick={() => setIsEditingEmail(true)} className="text-sm text-teal-600 hover:text-teal-700">Edit</button>
                     </div>
                   )}
@@ -899,42 +889,57 @@ const Settings: React.FC = () => {
                     )}
                   </div>
                   <div className="flex-1 flex flex-col items-center">
-                    {/* Expected Progress */}
+                    {/* Expected & Actual Progress */}
                     {start_date && target_date && (
-                      <div className="text-sm font-medium text-slate-700 mb-2">
-                        Expected Progress: {(() => {
+                      <div className="flex flex-col items-center w-full mb-2">
+                        <div className="flex gap-4 text-sm font-medium text-slate-700 mb-1">
+                          <span>Expected Progress: {(() => {
+                            const now = new Date().getTime();
+                            const start = new Date(start_date).getTime();
+                            const end = new Date(target_date).getTime();
+                            if (end <= start) return '0%';
+                            const percent = Math.max(0, Math.min(100, Math.round(((now - start) / (end - start)) * 100)));
+                            return `${percent}%`;
+                          })()}</span>
+                          <span>Actual Progress: {overallProgress}%</span>
+                        </div>
+                        {/* Color logic for progress bar */}
+                        {(() => {
                           const now = new Date().getTime();
                           const start = new Date(start_date).getTime();
                           const end = new Date(target_date).getTime();
-                          if (end <= start) return '0%';
-                          const percent = Math.max(0, Math.min(100, Math.round(((now - start) / (end - start)) * 100)));
-                          return `${percent}%`;
+                          let expected = 0;
+                          if (end > start) {
+                            expected = Math.max(0, Math.min(100, Math.round(((now - start) / (end - start)) * 100)));
+                          }
+                          const delta = overallProgress - expected;
+                          let progressColor = 'bg-teal-500';
+                          if (delta > 5) progressColor = 'bg-teal-500';
+                          else if (delta >= -5) progressColor = 'bg-blue-500';
+                          else progressColor = 'bg-red-500';
+                          return (
+                            <div className="w-full max-w-xs flex items-center gap-2 mt-1">
+                              <span className="w-2 h-2 rounded-full bg-slate-300" />
+                              <div className="flex-1 h-2 bg-slate-200 rounded-full relative overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-500 ${progressColor}`}
+                                  style={{ width: `${overallProgress}%` }}
+                                />
+                              </div>
+                              <span className="w-2 h-2 rounded-full bg-slate-300" />
+                            </div>
+                          );
                         })()}
                       </div>
                     )}
-                    {/* Timeline bar */}
-                    <div className="w-full max-w-xs flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-teal-500" />
-                      <div className="flex-1 h-1 bg-slate-200 rounded-full relative">
-                        {start_date && target_date && (
-                          <div
-                            className="h-1 bg-teal-400 rounded-full absolute top-0 left-0"
-                            style={{
-                              width: (() => {
-                                const now = new Date().getTime();
-                                const start = new Date(start_date).getTime();
-                                const end = new Date(target_date).getTime();
-                                if (end <= start) return '0%';
-                                const percent = Math.max(0, Math.min(100, ((now - start) / (end - start)) * 100));
-                                return `${percent}%`;
-                              })(),
-                              transition: 'width 0.5s',
-                            }}
-                          />
-                        )}
+                    {/* Timeline bar (expected only, fallback) */}
+                    {(!start_date || !target_date) && (
+                      <div className="w-full max-w-xs flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-teal-500" />
+                        <div className="flex-1 h-1 bg-slate-200 rounded-full relative" />
+                        <span className="w-2 h-2 rounded-full bg-teal-500" />
                       </div>
-                      <span className="w-2 h-2 rounded-full bg-teal-500" />
-                    </div>
+                    )}
                     <div className="flex justify-between w-full max-w-xs text-xs text-slate-400 mt-1">
                       <span>{start_date ? new Date(start_date).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : ''}</span>
                       <span>{target_date ? new Date(target_date).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : ''}</span>

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useSkillsStore, Category, Skill } from '../../store/skills';
 import { Award } from 'lucide-react';
+import { useUserProfile } from '../../context/UserProfileContext';
 
 interface SkillCategoryProps {
   name: string;
@@ -10,8 +11,15 @@ interface SkillCategoryProps {
 }
 
 const SkillsOverview: React.FC = () => {
-  const { skillCategories } = useSkillsStore();
+  const { skillCategories, loadUserSkills } = useSkillsStore();
   const skillRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const { profile, loading: profileLoading } = useUserProfile();
+
+  useEffect(() => {
+    if (profile && profile.account_type === 'eit') {
+      loadUserSkills();
+    }
+  }, [profile, loadUserSkills]);
 
   useEffect(() => {
     const handleScrollToSkill = (e: CustomEvent) => {
@@ -26,6 +34,13 @@ const SkillsOverview: React.FC = () => {
     window.addEventListener('scroll-to-skill', handleScrollToSkill as EventListener);
     return () => window.removeEventListener('scroll-to-skill', handleScrollToSkill as EventListener);
   }, []);
+
+  if (profileLoading) {
+    return <div>Loading skills...</div>;
+  }
+  if (!profile || profile.account_type !== 'eit') {
+    return <div>Skills not available.</div>;
+  }
 
   const categoryColors = ['bg-teal-500', 'bg-blue-500', 'bg-indigo-500', 'bg-purple-500', 'bg-pink-500', 'bg-green-500'];
   const categoryProgress: SkillCategoryProps[] = skillCategories.map((category: Category, index: number) => {

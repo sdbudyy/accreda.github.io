@@ -21,6 +21,7 @@ export default function SignUp() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [step, setStep] = useState(1)
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
   const navigate = useNavigate()
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -243,8 +244,28 @@ export default function SignUp() {
                   </button>
                 </div>
               </div>
+              <div className="flex items-center mt-4">
+                <input
+                  id="terms-checkbox"
+                  type="checkbox"
+                  checked={agreedToTerms}
+                  onChange={e => setAgreedToTerms(e.target.checked)}
+                  className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded"
+                  required
+                />
+                <label htmlFor="terms-checkbox" className="ml-2 block text-sm text-[#1a365d] select-none">
+                  I agree to the{' '}
+                  <Link
+                    to="/terms"
+                    className="underline font-semibold text-teal-700 hover:text-teal-900 transition-colors cursor-pointer"
+                    style={{ textDecorationThickness: '2px', textUnderlineOffset: '3px', background: 'linear-gradient(90deg, #a7f3d0 0%, #5eead4 100%)', backgroundClip: 'text', WebkitBackgroundClip: 'text', color: '#0f766e' }}
+                  >
+                    Terms and Conditions
+                  </Link>
+                </label>
+              </div>
               <div className="flex justify-end mt-6">
-                <button type="submit" className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-6 rounded-xl shadow-md transition-all duration-150 text-lg">Next</button>
+                <button type="submit" className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-6 rounded-xl shadow-md transition-all duration-150 text-lg" disabled={!agreedToTerms}>Next</button>
               </div>
             </motion.form>
           )}

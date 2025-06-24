@@ -106,14 +106,6 @@ const Dashboard: React.FC = () => {
   const completedSAOs = saos.filter(sao => sao.status === 'complete');
   const progressStats: ProgressStat[] = [
     { 
-      title: 'Overall Progress', 
-      value: overallProgress,
-      description: overallProgress >= 75 ? 'Excellent progress!' : 
-                 overallProgress >= 50 ? 'Good progress!' : 
-                 overallProgress >= 25 ? 'Keep going!' : 'Just getting started!',
-      color: 'teal' 
-    },
-    { 
       title: 'Completed Skills', 
       value: completedSkills,
       total: totalSkills,
@@ -146,13 +138,13 @@ const Dashboard: React.FC = () => {
       const delta = overallProgress - percent;
       if (delta > 5) {
         progressColor = 'teal';
-        progressDescription = 'Ahead of schedule';
+        progressDescription = `Ahead of schedule (Expected: ${percent}%) — Great job! Keep up the momentum.`;
       } else if (delta >= -5) {
         progressColor = 'blue';
-        progressDescription = 'On track';
+        progressDescription = `On track (Expected: ${percent}%) — Stay consistent and keep updating your progress.`;
       } else {
-        progressColor = 'purple'; // Use purple for 'behind' as ProgressCard supports it
-        progressDescription = 'Behind schedule';
+        progressColor = 'purple';
+        progressDescription = `Behind schedule (Expected: ${percent}%) — Consider updating your records or catching up soon.`;
       }
     }
   }
@@ -224,14 +216,14 @@ const Dashboard: React.FC = () => {
             total={100}
             description={
               userRole === 'eit' && expectedProgress !== null
-                ? `${progressDescription} (Expected: ${expectedProgress}%)`
+                ? progressDescription
                 : overallProgress >= 75 ? 'Excellent progress!' : 
                   overallProgress >= 50 ? 'Good progress!' : 
                   overallProgress >= 25 ? 'Keep going!' : 'Just getting started!'
             }
             color={userRole === 'eit' && expectedProgress !== null ? progressColor : 'teal'}
           />
-          {progressStats.slice(1).map((stat, index) => (
+          {progressStats.map((stat, index) => (
             <ProgressCard key={index} {...stat} />
           ))}
         </div>

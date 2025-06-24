@@ -4,7 +4,6 @@ import { useSkillsStore, Category, Skill } from '../store/skills';
 import { useSAOsStore, SAO } from '../store/saos';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { enhanceSAO } from '../lib/webllm';
 import SAOFeedbackComponent from '../components/saos/SAOFeedback';
 import Modal from '../components/common/Modal';
 import { useSubscriptionStore } from '../store/subscriptionStore';
@@ -55,8 +54,6 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
   const [status, setStatus] = useState<'draft' | 'complete'>('draft');
   const [isSkillsModalOpen, setIsSkillsModalOpen] = useState(false);
-  const [isEnhancing, setIsEnhancing] = useState(false);
-  const [enhancedText, setEnhancedText] = useState<string | null>(null);
   const [selectedSupervisor, setSelectedSupervisor] = useState<string>('');
   const [supervisors, setSupervisors] = useState<Array<{ id: string; name: string }>>([]);
   const { skillCategories } = useSkillsStore();
@@ -313,37 +310,6 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
     } catch (error: any) {
       toast.error(error.message || 'Failed to save SAO');
     }
-  };
-
-  const handleEnhanceWithAI = async () => {
-    if (!situation.trim() && !action.trim() && !outcome.trim()) return;
-    
-    setIsEnhancing(true);
-    try {
-      console.log('Starting enhancement process...');
-      const enhanced = await enhanceSAO(situation + '\n' + action + '\n' + outcome);
-      console.log('Enhancement completed:', enhanced);
-      setEnhancedText(enhanced);
-    } catch (error) {
-      console.error('Error in handleEnhanceWithAI:', error);
-      // Show error to user
-      alert(error instanceof Error ? error.message : 'Failed to enhance text. Please try again.');
-    } finally {
-      setIsEnhancing(false);
-    }
-  };
-
-  const handleAcceptEnhancement = () => {
-    if (enhancedText) {
-      setSituation(enhancedText.split('\n')[0]);
-      setAction(enhancedText.split('\n')[1]);
-      setOutcome(enhancedText.split('\n')[2]);
-      setEnhancedText(null);
-    }
-  };
-
-  const handleDeclineEnhancement = () => {
-    setEnhancedText(null);
   };
 
   // Rule check and request feedback
@@ -960,7 +926,8 @@ const SAOs: React.FC = () => {
 
   useEffect(() => {
     loadUserSAOs();
-  }, [loadUserSAOs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   useEffect(() => {
     if (saoId && saos.length > 0) {

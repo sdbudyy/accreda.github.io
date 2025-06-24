@@ -1,58 +1,21 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ChevronDown, LogOut, User, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { useUserProfile } from '../context/UserProfileContext';
 
 const UserMenu: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [userName, setUserName] = useState('');
-  const [userEmail, setUserEmail] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState('');
-  const [userRole, setUserRole] = useState<'eit' | 'supervisor' | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const { profile, loading } = useUserProfile();
 
-  const fetchUserProfile = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      setUserEmail(user.email || '');
-      let profileName = '';
-      let avatar = user.user_metadata?.avatar_url || '';
-      // Try supervisor profile first
-      const { data: supervisorProfile } = await supabase
-        .from('supervisor_profiles')
-        .select('full_name')
-        .eq('id', user.id)
-        .single();
-      if (supervisorProfile && supervisorProfile.full_name) {
-        profileName = supervisorProfile.full_name;
-        setUserRole('supervisor');
-      }
-      // Try EIT profile if not supervisor
-      if (!profileName) {
-        const { data: eitProfile } = await supabase
-          .from('eit_profiles')
-          .select('full_name')
-          .eq('id', user.id)
-          .single();
-        if (eitProfile && eitProfile.full_name) {
-          profileName = eitProfile.full_name;
-          setUserRole('eit');
-        }
-      }
-      setUserName(profileName || user.email?.split('@')[0] || 'User');
-      setAvatarUrl(avatar);
-    }
-  };
-
-  useEffect(() => {
-    fetchUserProfile();
-  }, []);
+  const userName = profile?.full_name || profile?.email?.split('@')[0] || 'User';
+  const userEmail = profile?.email || '';
+  const userRole = profile?.account_type || null;
+  // Optionally, add avatarUrl if you store it in the profile
+  const avatarUrl = '';
 
   const handleMenuToggle = useCallback(() => {
-    if (!isOpen) {
-      fetchUserProfile();
-    }
     setIsOpen(!isOpen);
   }, [isOpen]);
 
@@ -63,7 +26,6 @@ const UserMenu: React.FC = () => {
         setIsOpen(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
@@ -72,7 +34,8 @@ const UserMenu: React.FC = () => {
 
   const handleSignOut = useCallback(async () => {
     try {
-      await supabase.auth.signOut();
+      // You may want to clear context here if needed
+      await import('../lib/supabase').then(({ supabase }) => supabase.auth.signOut());
       navigate('/login');
     } catch (error) {
       console.error('Error signing out:', error);
@@ -99,6 +62,7 @@ const UserMenu: React.FC = () => {
       <button
         className="flex items-center space-x-2 focus:outline-none"
         onClick={handleMenuToggle}
+        disabled={loading}
       >
         {avatarUrl ? (
           <img

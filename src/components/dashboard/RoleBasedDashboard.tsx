@@ -29,8 +29,8 @@ const RoleBasedDashboard = () => {
 
       // Check both profile tables in parallel
       const [eitProfile, supervisorProfile] = await Promise.all([
-        supabase.from('eit_profiles').select('account_type').eq('id', user.id).single(),
-        supabase.from('supervisor_profiles').select('account_type').eq('id', user.id).single()
+        supabase.from('eit_profiles').select('id').eq('id', user.id).single(),
+        supabase.from('supervisor_profiles').select('id').eq('id', user.id).single()
       ]);
 
       if (eitProfile.error && supervisorProfile.error) {
