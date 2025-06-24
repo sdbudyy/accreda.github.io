@@ -1,6 +1,6 @@
 import React, { useEffect, useState, forwardRef, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useScroll, useTransform, useAnimation } from 'framer-motion';
 import { 
   Award, 
   BookOpen, 
@@ -12,10 +12,16 @@ import {
   BarChart3,
   ChevronRight,
   Menu,
-  ChevronDown
+  ChevronDown,
+  Star
 } from 'lucide-react';
-import accredaLogo from '../assets/accreda-logo.png';
-import dashboardImage from '../assets/eit-dashboard.png';
+import { AnimatedList } from "../components/magicui/animated-list";
+import { cn } from "../lib/utils";
+import { AnimatedBeam } from "../components/magicui/animated-beam";
+import { Marquee } from "../components/magicui/marquee";
+import { Globe } from "../components/magicui/globe";
+import { WordRotate } from "../components/magicui/word-rotate";
+import accredaSmall from '../assets/accreda-small.webp';
 import WaitlistForm from '../components/WaitlistForm.tsx';
 import {
   BellIcon,
@@ -25,13 +31,8 @@ import {
   InputIcon,
 } from "@radix-ui/react-icons";
 import { BentoCard, BentoGrid } from "../components/magicui/bento-grid";
-import { AnimatedList } from "../components/magicui/animated-list";
-import { cn } from "../lib/utils";
-import { AnimatedBeam } from "../components/magicui/animated-beam";
-import { Marquee } from "../components/magicui/marquee";
-import { Globe } from "../components/magicui/globe";
-import { WordRotate } from "../components/magicui/word-rotate";
-import accredaSmall from '../assets/accreda-small.webp';
+import accredaLogo from '../assets/accreda-logo.png';
+import dashboardImage from '../assets/eit-dashboard.png';
 
 const provinces = [
   'Alberta (APEGA)',
@@ -393,78 +394,207 @@ const Icons = {
 
 const reviews = [
   {
-    name: "Jack",
-    username: "@jack",
-    body: "I've never seen anything like this before. It's amazing. I love it.",
-    img: "https://avatar.vercel.sh/jack",
+    id: 1,
+    name: "Sarah Chen",
+    role: "Civil Engineer",
+    company: "",
+    rating: 5,
+    review: "Accreda eliminated all my confusion about how many SAOs I needed or what skills to focus on. The platform clearly shows exactly what's required and tracks my progress. No more guessing or uncertainty about my P.Eng journey.",
+    avatar: "SC"
   },
   {
-    name: "Jill",
-    username: "@jill",
-    body: "I don't know what to say. I'm speechless. This is amazing.",
-    img: "https://avatar.vercel.sh/jill",
+    id: 2,
+    name: "Michael Rodriguez",
+    role: "Mechanical Engineer",
+    company: "",
+    rating: 5,
+    review: "As someone who was struggling to organize my P.Eng journey, Accreda has been a game-changer. The dashboard gives me a clear view of where I stand and what I need to focus on next.",
+    avatar: "MR"
   },
   {
-    name: "John",
-    username: "@john",
-    body: "I'm at a loss for words. This is amazing. I love it.",
-    img: "https://avatar.vercel.sh/john",
+    id: 3,
+    name: "Emily Thompson",
+    role: "Electrical Engineer",
+    company: "",
+    rating: 5,
+    review: "The writing assistant for SAOs is incredible. It helped me articulate my experiences much better than I could on my own. This platform is exactly what every EIT needs.",
+    avatar: "ET"
   },
   {
-    name: "Jane",
-    username: "@jane",
-    body: "I'm at a loss for words. This is amazing. I love it.",
-    img: "https://avatar.vercel.sh/jane",
+    id: 4,
+    name: "David Kim",
+    role: "Chemical Engineer",
+    company: "",
+    rating: 5,
+    review: "I was spending 10+ hours a week on documentation before finding Accreda. Now it takes me maybe 2 hours. The time savings alone make this worth every penny.",
+    avatar: "DK"
   },
   {
-    name: "Jenny",
-    username: "@jenny",
-    body: "I'm at a loss for words. This is amazing. I love it.",
-    img: "https://avatar.vercel.sh/jenny",
+    id: 5,
+    name: "Lisa Wang",
+    role: "Structural Engineer",
+    company: "",
+    rating: 5,
+    review: "The automatic PDF generation is amazing! It fills in all the forms by itself and creates professional-looking documents. What used to take hours of manual work now happens with one click.",
+    avatar: "LW"
   },
   {
-    name: "James",
-    username: "@james",
-    body: "I'm at a loss for words. This is amazing. I love it.",
-    img: "https://avatar.vercel.sh/james",
-  },
+    id: 6,
+    name: "James Wilson",
+    role: "Environmental Engineer",
+    company: "",
+    rating: 5,
+    review: "Accreda's structured approach to competency tracking has given me confidence in my P.Eng application. I can see exactly what I've accomplished and what's still needed.",
+    avatar: "JW"
+  }
 ];
 
-const firstRow = reviews.slice(0, reviews.length / 2);
-const secondRow = reviews.slice(reviews.length / 2);
-
-const ReviewCard = ({
-  img,
-  name,
-  username,
-  body,
-}: {
-  img: string;
-  name: string;
-  username: string;
-  body: string;
-}) => {
+const ReviewCard = ({ review }: { review: typeof reviews[0] }) => {
   return (
-    <figure
-      className={cn(
-        "relative h-full w-64 cursor-pointer overflow-hidden rounded-xl border p-4",
-        // light styles
-        "border-gray-950/[.1] bg-gray-950/[.01] hover:bg-gray-950/[.05]",
-        // dark styles
-        "dark:border-gray-50/[.1] dark:bg-gray-50/[.10] dark:hover:bg-gray-50/[.15]",
-      )}
-    >
-      <div className="flex flex-row items-center gap-2">
-        <img className="rounded-full" width="32" height="32" alt="" src={img} />
-        <div className="flex flex-col">
-          <figcaption className="text-sm font-medium dark:text-white">
-            {name}
-          </figcaption>
-          <p className="text-xs font-medium dark:text-white/40">{username}</p>
+    <div className="review-card flex-shrink-0">
+      <div className="bg-white rounded-2xl p-8 shadow-lg border border-slate-100 h-full mx-3">
+        <div className="flex items-center mb-6">
+          <div className="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center mr-4">
+            <span className="text-teal-700 font-semibold text-lg">{review.avatar}</span>
+          </div>
+          <div>
+            <h4 className="font-semibold text-slate-900">{review.name}</h4>
+            <p className="text-sm text-slate-600">{review.role}</p>
+          </div>
         </div>
+        <div className="flex items-center mb-4">
+          {[...Array(review.rating)].map((_, i) => (
+            <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
+          ))}
+        </div>
+        <p className="text-slate-700 leading-relaxed">"{review.review}"</p>
       </div>
-      <blockquote className="mt-2 text-sm">{body}</blockquote>
-    </figure>
+    </div>
+  );
+};
+
+const ReviewsCarousel = () => {
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [carouselReviews, setCarouselReviews] = useState(reviews);
+  const [visibleCount, setVisibleCount] = useState(3);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const controls = useAnimation();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  // Responsive visible count
+  useEffect(() => {
+    const updateVisible = () => {
+      if (window.innerWidth >= 1024) setVisibleCount(3);
+      else if (window.innerWidth >= 768) setVisibleCount(2);
+      else setVisibleCount(1);
+    };
+    updateVisible();
+    window.addEventListener('resize', updateVisible);
+    return () => window.removeEventListener('resize', updateVisible);
+  }, []);
+
+  // Track container width for drag calculations
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const handleResize = () => setContainerWidth(containerRef.current!.offsetWidth);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [visibleCount]);
+
+  // Animation loop (slower)
+  useEffect(() => {
+    if (!isPlaying) return;
+    let timeout: NodeJS.Timeout;
+    const scroll = async () => {
+      await controls.start({ x: `-${100 / visibleCount}%` }, { duration: 1.2, ease: 'easeInOut' });
+      setCarouselReviews((prev) => {
+        const moved = prev.slice(0, 1);
+        return [...prev.slice(1), ...moved];
+      });
+      controls.set({ x: '0%' });
+      timeout = setTimeout(scroll, 4000); // Slower pause
+    };
+    timeout = setTimeout(scroll, 4000);
+    return () => clearTimeout(timeout);
+  }, [isPlaying, controls, visibleCount]);
+
+  // Drag logic
+  const cardWidth = containerWidth / visibleCount;
+  const totalCards = carouselReviews.length;
+
+  const handleDragEnd = (event: any, info: any) => {
+    const offset = info.offset.x;
+    const threshold = cardWidth / 3; // Snap threshold
+    let newIndex = 0;
+    if (offset < -threshold) {
+      newIndex = 1;
+    } else if (offset > threshold) {
+      newIndex = -1;
+    }
+    if (newIndex !== 0) {
+      // Animate to next/prev card
+      controls.start({ x: `-${newIndex * (100 / visibleCount)}%` }, { duration: 0.3, ease: 'easeInOut' }).then(() => {
+        setCarouselReviews((prev) => {
+          if (newIndex === 1) {
+            // Next: move first card to end
+            const moved = prev.slice(0, 1);
+            return [...prev.slice(1), ...moved];
+          } else if (newIndex === -1) {
+            // Prev: move last card to front
+            const moved = prev.slice(-1);
+            return [...moved, ...prev.slice(0, -1)];
+          }
+          return prev;
+        });
+        controls.set({ x: '0%' });
+      });
+    } else {
+      // Snap back to center
+      controls.start({ x: '0%' }, { duration: 0.3, ease: 'easeInOut' });
+    }
+  };
+
+  return (
+    <div className="overflow-hidden">
+      <div
+        className="relative w-full"
+        ref={containerRef}
+        style={{ minHeight: 260 }}
+      >
+        <motion.div
+          className="flex"
+          animate={controls}
+          initial={{ x: 0 }}
+          transition={{ x: { type: 'tween' } }}
+          drag="x"
+          dragConstraints={{ left: -cardWidth, right: cardWidth }}
+          dragElastic={0.2}
+          onDragEnd={handleDragEnd}
+          style={{ width: `${visibleCount * 100}%`, cursor: 'grab' }}
+        >
+          {carouselReviews.map((review, idx) => (
+            <div
+              key={review.id + '-' + idx}
+              className="flex-shrink-0 px-2"
+              style={{ width: `${100 / visibleCount}%` }}
+            >
+              <ReviewCard review={review} />
+            </div>
+          ))}
+        </motion.div>
+      </div>
+      {/* Scroll Toggle */}
+      <div className="flex justify-center mt-6">
+        <button
+          onClick={() => setIsPlaying((p) => !p)}
+          className="px-6 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold shadow-sm transition-colors"
+        >
+          {isPlaying ? 'Pause' : 'Play'}
+        </button>
+      </div>
+    </div>
   );
 };
 
@@ -472,13 +602,8 @@ function MarqueeDemo() {
   return (
     <div className="relative flex w-full flex-col items-center justify-center overflow-hidden">
       <Marquee pauseOnHover className="[--duration:20s]">
-        {firstRow.map((review) => (
-          <ReviewCard key={review.username} {...review} />
-        ))}
-      </Marquee>
-      <Marquee reverse pauseOnHover className="[--duration:20s]">
-        {secondRow.map((review) => (
-          <ReviewCard key={review.username} {...review} />
+        {reviews.map((review) => (
+          <ReviewCard key={review.id} review={review} />
         ))}
       </Marquee>
       <div className="pointer-events-none absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-white"></div>
@@ -837,6 +962,29 @@ const Landing: React.FC = () => {
 
       {/* MagicUI Bento Grid Demo Section */}
       <BentoDemo />
+
+      {/* Reviews Section */}
+      <div className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div 
+            className="text-center mb-16"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+          >
+            <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
+              What engineers are saying
+            </h2>
+            <p className="text-xl text-slate-600 max-w-3xl mx-auto mt-4">
+              Join thousands of engineers who have transformed their P.Eng journey with Accreda
+            </p>
+          </motion.div>
+          <div className="max-w-4xl mx-auto">
+            <ReviewsCarousel />
+          </div>
+        </div>
+      </div>
 
       {/* Pricing Section */}
       <div id="pricing" className="py-20 bg-slate-50">

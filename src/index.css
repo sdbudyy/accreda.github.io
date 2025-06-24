@@ -198,17 +198,133 @@ html {
 /* Hide blog date from bots (Google) but show for users */
 .blog-date-visible {
   /* Default: visible */
-  display: inline;
 }
 
-/* Hide from Googlebot and other bots using user-agent CSS hack */
-@media (max-width: 0px) {
-  .blog-date-visible {
-    display: none !important;
+/* Embla Carousel Styles */
+.embla {
+  overflow: hidden;
+  width: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.embla__container {
+  display: flex;
+  gap: 1.5rem;
+  padding: 0.5rem 0;
+  transition: transform 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  will-change: transform;
+}
+
+.embla__slide {
+  flex: 0 0 100%;
+  min-width: 0;
+  transition: transform 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  will-change: transform;
+}
+
+.embla__slide * {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+@media (min-width: 768px) {
+  .embla__slide {
+    flex: 0 0 calc(50% - 0.75rem);
   }
 }
 
-/* Optional: Hide from screen readers */
-.blog-date-visible[aria-hidden="true"] {
-  display: none !important;
+@media (min-width: 1024px) {
+  .embla__slide {
+    flex: 0 0 calc(33.333% - 1rem);
+  }
+}
+
+@media (min-width: 1280px) {
+  .embla__slide {
+    flex: 0 0 calc(33.333% - 1rem);
+  }
+}
+
+/* Infinite Scroll Reviews */
+.reviews-container {
+  overflow-x: auto;
+  overflow-y: hidden;
+  width: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.reviews-container::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+.reviews-track {
+  gap: 1.5rem;
+  padding: 0.5rem 0;
+  will-change: transform;
+  min-width: max-content;
+}
+
+.review-card {
+  flex: 0 0 100%;
+  min-width: 0;
+  will-change: transform;
+}
+
+.review-card * {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+@media (min-width: 768px) {
+  .review-card {
+    flex: 0 0 calc(50% - 0.75rem);
+  }
+}
+
+@media (min-width: 1024px) {
+  .review-card {
+    flex: 0 0 calc(33.333% - 1rem);
+  }
+}
+
+@media (min-width: 1280px) {
+  .review-card {
+    flex: 0 0 calc(33.333% - 1rem);
+  }
+}
+
+/* Infinite scroll animation */
+@keyframes scroll-reviews {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-33.333%);
+  }
+}
+
+.animate-scroll .reviews-track {
+  animation: scroll-reviews 24s linear infinite;
+}
+
+.paused .reviews-track {
+  animation-play-state: paused;
+}
+
+/* Manual scroll styles */
+.reviews-container:not(.animate-scroll) .reviews-track {
+  animation: none;
+  transform: none;
 }
