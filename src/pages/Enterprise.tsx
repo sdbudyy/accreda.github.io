@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import accredaLogo from '../assets/accreda-logo.png';
 import accredaSmall from '../assets/accreda-small.webp';
 import { Users, BarChart3, FileText, CheckCircle2, Clock, Menu, Award, Bell, MessageSquare, TrendingUp, Shield, Zap, Mail, Send, AlertCircle } from 'lucide-react';
+import SuperFlowSlider from '../components/SuperFlowSlider';
 
 const Enterprise: React.FC = () => {
   // Scroll to top on mount for clean navigation
@@ -114,55 +115,15 @@ const Enterprise: React.FC = () => {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              {
-                icon: <Users className="w-8 h-8 text-teal-600" />,
-                title: "Team Overview",
-                description: "Get a comprehensive view of your entire team's progress with real-time dashboards and analytics."
-              },
-              {
-                icon: <BarChart3 className="w-8 h-8 text-teal-600" />,
-                title: "Skill Analytics",
-                description: "Compare EIT self-assessments with your evaluations and track progress against required competencies."
-              },
-              {
-                icon: <FileText className="w-8 h-8 text-teal-600" />,
-                title: "Documentation Review",
-                description: "Streamline the review and approval process with structured templates and automated workflows."
-              },
-              {
-                icon: <CheckCircle2 className="w-8 h-8 text-teal-600" />,
-                title: "Progress Tracking",
-                description: "Monitor progress across all 22 required skills with automated alerts and milestone tracking."
-              },
-              {
-                icon: <Bell className="w-8 h-8 text-teal-600" />,
-                title: "Smart Notifications",
-                description: "Stay informed with intelligent alerts for pending reviews, approvals, and important deadlines."
-              },
-              {
-                icon: <Shield className="w-8 h-8 text-teal-600" />,
-                title: "Compliance Management",
-                description: "Ensure your team meets all regulatory requirements with comprehensive tracking and reporting."
-              }
-            ].map((benefit, index) => (
-              <motion.div
-                key={benefit.title}
-                className="bg-slate-50 rounded-xl p-8 hover:bg-slate-100 transition-colors"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
-                <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center mb-6 shadow-sm">
-                  {benefit.icon}
-                </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-4">{benefit.title}</h3>
-                <p className="text-slate-600 leading-relaxed">{benefit.description}</p>
-              </motion.div>
-            ))}
-          </div>
+          {/* Super Flow Slider */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            <SuperFlowSlider />
+          </motion.div>
         </div>
       </div>
 

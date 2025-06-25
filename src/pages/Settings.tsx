@@ -84,6 +84,7 @@ const Settings: React.FC = () => {
   const [apegaIdSaved, setApegaIdSaved] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [termsAcceptanceData, setTermsAcceptanceData] = useState<TermsAcceptance | null>(null);
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
 
   const { profile, loading: profileLoading, error: profileError, refresh: refreshProfile } = useUserProfile();
   const userRole = profile?.account_type || null;
@@ -187,6 +188,12 @@ const Settings: React.FC = () => {
     };
 
     fetchTermsAcceptance();
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchConnections(user.id);
+    }
   }, [user]);
 
   const handleAvatarSelect = (files: File[]) => {
@@ -340,18 +347,33 @@ const Settings: React.FC = () => {
     }
   };
 
-  const fetchSupervisors = async (eitId: string) => {
-    const { data } = await supabase
+  const fetchConnections = async (userId: string) => {
+    // Fetch active connections (where user is eit or supervisor)
+    const { data: activeData } = await supabase
       .from('supervisor_eit_relationships')
-      .select('supervisor_profiles (id, full_name, email)')
-      .eq('eit_id', eitId)
+      .select(`id, status, supervisor_id, eit_id, supervisor_profiles (id, full_name, email), eit_profiles (id, full_name, email)`)
+      .or(`eit_id.eq.${userId},supervisor_id.eq.${userId}`)
       .eq('status', 'active');
-    if (data) {
+    if (activeData) {
       setSupervisors(
-        data
-          .map((rel: any) => rel.supervisor_profiles)
-          .filter((sup: any) => sup)
+        activeData.map((rel: any) => {
+          // Show the other party
+          if (rel.eit_id === userId) {
+            return rel.supervisor_profiles;
+          } else {
+            return rel.eit_profiles;
+          }
+        }).filter((sup: any) => sup)
       );
+    }
+    // Fetch pending requests (where user is eit or supervisor)
+    const { data: pendingData } = await supabase
+      .from('supervisor_eit_relationships')
+      .select(`id, status, supervisor_id, eit_id, supervisor_profiles (id, full_name, email), eit_profiles (id, full_name, email)`)
+      .or(`eit_id.eq.${userId},supervisor_id.eq.${userId}`)
+      .eq('status', 'pending');
+    if (pendingData) {
+      setPendingRequests(pendingData);
     }
   };
 
@@ -431,7 +453,7 @@ const Settings: React.FC = () => {
       setSupervisorRequestMessage('Request sent! Your supervisor will see it in their dashboard.');
       setSupervisorEmail(''); // Clear the input after successful request
       if (user) {
-        fetchSupervisors(user.id); // Refresh supervisor connections
+        fetchConnections(user.id); // Refresh supervisor connections
       }
     } catch (err) {
       console.error(err);
@@ -746,6 +768,36 @@ const Settings: React.FC = () => {
     );
   }
 
+  const handleAcceptRequest = async (id: string) => {
+    setLoading(true);
+    try {
+      await supabase
+        .from('supervisor_eit_relationships')
+        .update({ status: 'active', updated_at: new Date().toISOString() })
+        .eq('id', id);
+      if (user) fetchConnections(user.id);
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Failed to accept request.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDenyRequest = async (id: string) => {
+    setLoading(true);
+    try {
+      await supabase
+        .from('supervisor_eit_relationships')
+        .update({ status: 'rejected', updated_at: new Date().toISOString() })
+        .eq('id', id);
+      if (user) fetchConnections(user.id);
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Failed to deny request.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -865,7 +917,7 @@ const Settings: React.FC = () => {
             </section>
           </div>
 
-          {/* EIT Start/Target Date Section */}
+          {/* Program Timeline Section (move this up) */}
           {userRole === 'eit' && (
             <section className="card p-6">
               <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
@@ -991,6 +1043,102 @@ const Settings: React.FC = () => {
                   )}
                 </div>
               </form>
+            </section>
+          )}
+
+          {/* Supervisor Connections Section (EIT or Supervisor) */}
+          {(userRole === 'eit' || userRole === 'supervisor') && (
+            <section className="card p-6 mb-6">
+              <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
+                <UserIcon /> Supervisor Connections
+              </h2>
+              <div className="space-y-6">
+                {/* Current Connections */}
+                <div>
+                  <h3 className="text-sm font-medium text-slate-700 mb-3">Current Connections</h3>
+                  {supervisors.length === 0 ? (
+                    <div className="text-slate-400">No active connections.</div>
+                  ) : (
+                    <ul className="divide-y divide-slate-200">
+                      {supervisors.map((sup) => (
+                        <li key={sup.id} className="py-2 flex md:flex-row flex-col md:items-center md:justify-between">
+                          <span className="font-medium text-slate-800 md:w-1/2 w-full">{sup.full_name}</span>
+                          <span className="text-slate-500 text-sm md:w-1/2 w-full md:text-right mt-1 md:mt-0">{sup.email}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                {/* Divider */}
+                <div className="border-t border-slate-200 my-4"></div>
+                {/* Pending Requests */}
+                {pendingRequests.length > 0 && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                    <h3 className="text-sm font-medium text-yellow-800 mb-2">Pending Requests</h3>
+                    <ul className="divide-y divide-yellow-100">
+                      {pendingRequests.map((req) => {
+                        const isRecipient = (user && ((user.id === req.eit_id && req.supervisor_id !== user.id) || (user.id === req.supervisor_id && req.eit_id !== user.id)));
+                        const otherParty = user && user.id === req.eit_id ? req.supervisor_profiles : req.eit_profiles;
+                        return (
+                          <li key={req.id} className="py-2 flex md:flex-row flex-col md:items-center md:justify-between gap-2">
+                            <div className="flex flex-col md:flex-row md:items-center md:gap-4 md:w-1/2 w-full">
+                              <span className="font-medium text-yellow-900">{otherParty?.full_name}</span>
+                              <span className="text-yellow-700 text-sm">{otherParty?.email}</span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-2 md:mt-0 md:w-1/2 w-full md:justify-end">
+                              <span className="text-xs text-yellow-600">Pending Approval</span>
+                              {isRecipient && (
+                                <>
+                                  <button className="btn btn-primary btn-sm" onClick={() => handleAcceptRequest(req.id)} disabled={loading}>Accept</button>
+                                  <button className="btn btn-danger btn-sm" onClick={() => handleDenyRequest(req.id)} disabled={loading}>Deny</button>
+                                </>
+                              )}
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+                {/* Divider */}
+                <div className="border-t border-slate-200 my-4"></div>
+                {/* Connect with New Supervisor Form (EIT only) */}
+                {userRole === 'eit' && (
+                  <div>
+                    <h3 className="text-sm font-medium text-slate-700 mb-3">Connect with a New Supervisor</h3>
+                    <form className="flex flex-col md:flex-row gap-4 items-start md:items-end" onSubmit={handleSupervisorRequest}>
+                      <div className="flex-1 w-full">
+                        <label htmlFor="supervisorEmail" className="label">Supervisor Email</label>
+                        <input
+                          type="email"
+                          id="supervisorEmail"
+                          className="input w-full"
+                          placeholder="Enter supervisor's email"
+                          value={supervisorEmail}
+                          onChange={e => setSupervisorEmail(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <button type="submit" className="btn btn-primary whitespace-nowrap" disabled={loading}>
+                        {loading ? 'Sending...' : 'Send Request'}
+                      </button>
+                    </form>
+                    {supervisorRequestStatus !== 'idle' && supervisorRequestMessage && (
+                      <div
+                        className={`mt-3 text-sm p-2 rounded-md ${
+                          supervisorRequestStatus === 'success'
+                            ? 'bg-green-50 text-green-700 border border-green-200'
+                            : supervisorRequestStatus === 'pending'
+                            ? 'bg-yellow-50 text-yellow-800 border border-yellow-200'
+                            : 'bg-red-50 text-red-700 border border-red-200'
+                        }`}
+                      >
+                        {supervisorRequestMessage}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </section>
           )}
 
