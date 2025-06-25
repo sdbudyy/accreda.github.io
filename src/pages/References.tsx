@@ -4,6 +4,7 @@ import Timeline from '../components/references/Timeline';
 import { useSkillsStore } from '../store/skills';
 import { supabase } from '../lib/supabase';
 import SupervisorAutocomplete from '../components/references/SupervisorAutocomplete';
+import SupervisorEmailAutocomplete from '../components/references/SupervisorEmailAutocomplete';
 import { sendValidationRequestNotification } from '../utils/notifications';
 import { toast } from 'react-hot-toast';
 import ReferenceAutocomplete from '../components/references/ReferenceAutocomplete';
@@ -128,6 +129,15 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
       }
     }
   }, [isOpen, existingValidator, skillId]);
+
+  const handleEmailChange = (email: string, firstName?: string, lastName?: string) => {
+    setFormData(prev => ({
+      ...prev,
+      email,
+      ...(firstName && { firstName }),
+      ...(lastName && { lastName })
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -304,13 +314,9 @@ const ValidatorPopup: React.FC<ValidatorPopupProps> = ({
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-            <input
-              type="email"
+            <SupervisorEmailAutocomplete
               value={formData.email}
-              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-              placeholder="Enter validator's email"
-              required
+              onChange={handleEmailChange}
               disabled={status !== 'draft'}
             />
           </div>

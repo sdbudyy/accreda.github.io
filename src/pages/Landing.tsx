@@ -16,7 +16,11 @@ import {
   Star,
   Zap,
   TrendingUp,
-  Shield
+  Shield,
+  MessageSquare,
+  Mail,
+  Send,
+  AlertCircle
 } from 'lucide-react';
 import { AnimatedList } from "../components/magicui/animated-list";
 import { cn } from "../lib/utils";
@@ -37,6 +41,7 @@ import { BentoCard, BentoGrid } from "../components/magicui/bento-grid";
 import accredaLogo from '../assets/accreda-logo.png';
 import dashboardImage from '../assets/eit-dashboard.png';
 import MobileLandingMenu from '../components/MobileLandingMenu';
+import LandingFeatureSlider from '../components/LandingFeatureSlider';
 
 const provinces = [
   'Alberta (APEGA)',
@@ -190,13 +195,13 @@ function AnimatedBeamMultipleOutputDemo({ className }: { className?: string }) {
             <Icons.googleDocs />
           </Circle>
           <Circle ref={div3Ref}>
-            <Icons.whatsapp />
+            <Icons.microsoftOneDrive />
           </Circle>
           <Circle ref={div4Ref}>
-            <Icons.messenger />
+            <Icons.microsoftWord />
           </Circle>
           <Circle ref={div5Ref}>
-            <Icons.notion />
+            <Icons.microsoftTeams />
           </Circle>
         </div>
         <div className="flex flex-col justify-center">
@@ -245,10 +250,32 @@ const Circle = forwardRef<
 Circle.displayName = "Circle";
 
 const Icons = {
-  notion: () => (
-    <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M6.017 4.313l55.333 -4.087c6.797 -0.583 8.543 -0.19 12.817 2.917l17.663 12.443c2.913 2.14 3.883 2.723 3.883 5.053v68.243c0 4.277 -1.553 6.807 -6.99 7.193L24.467 99.967c-4.08 0.193 -6.023 -0.39 -8.16 -3.113L3.3 79.94c-2.333 -3.113 -3.3 -5.443 -3.3 -8.167V11.113c0 -3.497 1.553 -6.413 6.017 -6.8z" fill="#ffffff" />
-      <path d="M61.35 0.227l-55.333 4.087C1.553 4.7 0 7.617 0 11.113v60.66c0 2.723 0.967 5.053 3.3 8.167l13.007 16.913c2.137 2.723 4.08 3.307 8.16 3.113l64.257 -3.89c5.433 -0.387 6.99 -2.917 6.99 -7.193V20.64c0 -2.21 -0.873 -2.847 -3.443 -4.733L74.167 3.143c-4.273 -3.107 -6.02 -3.5 -12.817 -2.917zM25.92 19.523c-5.247 0.353 -6.437 0.433 -9.417 -1.99L8.927 11.507c-0.77 -0.78 -0.383 -1.753 1.557 -1.947l53.193 -3.887c4.467 -0.39 6.793 1.167 8.54 2.527l9.123 6.61c0.39 0.197 1.36 1.36 0.193 1.36l-54.933 3.307 -0.68 0.047zM19.803 88.3V30.367c0 -2.53 0.777 -3.697 3.103 -3.893L86 22.78c2.14 -0.193 3.107 1.167 3.107 3.693v57.547c0 2.53 -0.39 4.67 -3.883 4.863l-60.377 3.5c-3.493 0.193 -5.043 -0.97 -5.043 -4.083zm59.6 -54.827c0.387 1.75 0 3.5 -1.75 3.7l-2.91 0.577v42.773c-2.527 1.36 -4.853 2.137 -6.797 2.137 -3.107 0 -3.883 -0.973 -6.21 -3.887l-19.03 -29.94v28.967l6.02 1.363s0 3.5 -4.857 3.5l-13.39 0.777c-0.39 -0.78 0 -2.723 1.357 -3.11l3.497 -0.97v-38.3L30.48 40.667c-0.39 -1.75 0.58 -4.277 3.3 -4.473l14.367 -0.967 19.8 30.327v-26.83l-5.047 -0.58c-0.39 -2.143 1.163 -3.7 3.103 -3.89l13.4 -0.78z" fill="#000000" fillRule="evenodd" clipRule="evenodd" />
+  microsoftOneDrive: () => (
+    <svg width="100" height="100" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.818-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.437 2.25c-.415-.165-.866-.25-1.336-.25-2.11 0-3.818 1.79-3.818 4 0 .494.083.964.237 1.4-1.272.65-2.147 2.018-2.147 3.6 0 1.83 1.66 3.2 3.5 3.2.47 0 .92-.086 1.335-.25.62 1.334 1.926 2.25 3.437 2.25 1.512 0 2.818-.916 3.437-2.25.415.163.865.248 1.336.248 1.84 0 3.5-1.37 3.5-3.2zm-6.5-1.5c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 1 .448 1 1zm-6 0c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 1 .448 1 1z" fill="#0078d4"/>
+    </svg>
+  ),
+  microsoftWord: () => (
+    <svg width="100" height="100" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <g>
+        <rect width="48" height="48" rx="8" fill="#185ABD"/>
+        <path d="M14.5 14.5h19v19h-19z" fill="#fff"/>
+        <path d="M19.5 19.5h9v9h-9z" fill="#185ABD"/>
+        <path d="M17.5 17.5h13v13h-13z" fill="#103F91"/>
+        <path d="M21.5 21.5h5v5h-5z" fill="#fff"/>
+        <path d="M24 24h0.01" stroke="#185ABD" strokeWidth="2"/>
+      </g>
+    </svg>
+  ),
+  microsoftTeams: () => (
+    <svg width="100" height="100" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <g>
+        <rect width="48" height="48" rx="8" fill="#6264A7"/>
+        <circle cx="34" cy="18" r="4" fill="#B3B8F8"/>
+        <rect x="14" y="14" width="16" height="20" rx="4" fill="#B3B8F8"/>
+        <rect x="18" y="18" width="8" height="12" rx="2" fill="#6264A7"/>
+        <circle cx="34" cy="30" r="4" fill="#B3B8F8"/>
+      </g>
     </svg>
   ),
   openai: () => (
@@ -264,41 +291,6 @@ const Icons = {
       <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d" />
       <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc" />
       <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00" />
-    </svg>
-  ),
-  whatsapp: () => (
-    <svg width="100" height="100" viewBox="0 0 175.216 175.552" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="b" x1="85.915" x2="86.535" y1="32.567" y2="137.092" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#57d163" />
-          <stop offset="1" stopColor="#23b33a" />
-        </linearGradient>
-        <filter id="a" width="1.115" height="1.114" x="-.057" y="-.057" colorInterpolationFilters="sRGB">
-          <feGaussianBlur stdDeviation="3.531" />
-        </filter>
-      </defs>
-      <path d="m54.532 138.45 2.235 1.324c9.387 5.571 20.15 8.518 31.126 8.523h.023c33.707 0 61.139-27.426 61.153-61.135.006-16.335-6.349-31.696-17.895-43.251A60.75 60.75 0 0 0 87.94 25.983c-33.733 0-61.166 27.423-61.178 61.13a60.98 60.98 0 0 0 9.349 32.535l1.455 2.312-6.179 22.558zm-40.811 23.544L24.16 123.88c-6.438-11.154-9.825-23.808-9.821-36.772.017-40.556 33.021-73.55 73.578-73.55 19.681.01 38.154 7.669 52.047 21.572s21.537 32.383 21.53 52.037c-.018 40.553-33.027 73.553-73.578 73.553h-.032c-12.313-.005-24.412-3.094-35.159-8.954zm0 0" fill="#b3b3b3" filter="url(#a)" />
-      <path d="m12.966 161.238 10.439-38.114a73.42 73.42 0 0 1-9.821-36.772c.017-40.556 33.021-73.55 73.578-73.55 19.681.01 38.154 7.669 52.047 21.572s21.537 32.383 21.53 52.037c-.018 40.553-33.027 73.553-73.578 73.553h-.032c-12.313-.005-24.412-3.094-35.159-8.954z" fill="#ffffff" />
-      <path d="M87.184 25.227c-33.733 0-61.166 27.423-61.178 61.13a60.98 60.98 0 0 0 9.349 32.535l1.455 2.312-6.179 22.559 23.146-6.069 2.235 1.324c9.387 5.571 20.15 8.518 31.126 8.524h.023c33.707 0 61.14-27.426 61.153-61.135a60.75 60.75 0 0 0-17.895-43.251 60.75 60.75 0 0 0-43.235-17.929z" fill="url(#linearGradient1780)" />
-      <path d="M87.184 25.227c-33.733 0-61.166 27.423-61.178 61.13a60.98 60.98 0 0 0 9.349 32.535l1.455 2.313-6.179 22.558 23.146-6.069 2.235 1.324c9.387 5.571 20.15 8.517 31.126 8.523h.023c33.707 0 61.14-27.426 61.153-61.135a60.75 60.75 0 0 0-17.895-43.251 60.75 60.75 0 0 0-43.235-17.928z" fill="url(#b)" />
-      <path d="M68.772 55.603c-1.378-3.061-2.828-3.123-4.137-3.176l-3.524-.043c-1.226 0-3.218.46-4.902 2.3s-6.435 6.287-6.435 15.332 6.588 17.785 7.506 19.013 12.718 20.381 31.405 27.75c15.529 6.124 18.689 4.906 22.061 4.6s10.877-4.447 12.408-8.74 1.532-7.971 1.073-8.74-1.685-1.226-3.525-2.146-10.877-5.367-12.562-5.981-2.91-.919-4.137.921-4.746 5.979-5.819 7.206-2.144 1.381-3.984.462-7.76-2.861-14.784-9.124c-5.465-4.873-9.154-10.891-10.228-12.73s-.114-2.835.808-3.751c.825-.824 1.838-2.147 2.759-3.22s1.224-1.84 1.836-3.065.307-2.301-.153-3.22-4.032-10.011-5.666-13.647" fill="#ffffff" fillRule="evenodd" />
-    </svg>
-  ),
-  messenger: () => (
-    <svg width="100" height="100" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-      <radialGradient id="8O3wK6b5ASW2Wn6hRCB5xa_YFbzdUk7Q3F8_gr1" cx="11.087" cy="7.022" r="47.612" gradientTransform="matrix(1 0 0 -1 0 50)" gradientUnits="userSpaceOnUse">
-        <stop offset="0" stopColor="#1292ff"></stop>
-        <stop offset=".079" stopColor="#2982ff"></stop>
-        <stop offset=".23" stopColor="#4e69ff"></stop>
-        <stop offset=".351" stopColor="#6559ff"></stop>
-        <stop offset=".428" stopColor="#6d53ff"></stop>
-        <stop offset=".754" stopColor="#df47aa"></stop>
-        <stop offset=".946" stopColor="#ff6257"></stop>
-      </radialGradient>
-      <path fill="url(#8O3wK6b5ASW2Wn6hRCB5xa_YFbzdUk7Q3F8_gr1)" d="M44,23.5C44,34.27,35.05,43,24,43c-1.651,0-3.25-0.194-4.784-0.564\tc-0.465-0.112-0.951-0.069-1.379,0.145L13.46,44.77C12.33,45.335,11,44.513,11,43.249v-4.025c0-0.575-0.257-1.111-0.681-1.499C6.425,34.165,4,29.11,4,23.5C4,12.73,12.95,4,24,4S44,12.73,44,23.5z" />
-      <path d="M34.992,17.292c-0.428,0-0.843,0.142-1.2,0.411l-5.694,4.215\tc-0.133,0.1-0.28,0.15-0.435,0.15c-0.15,0-0.291-0.047-0.41-0.136l-3.972-2.99c-0.808-0.601-1.76-0.918-2.757-0.918\tc-1.576,0-3.025,0.791-3.876,2.116l-1.211,1.891l-4.12,6.695c-0.392,0.614-0.422,1.372-0.071,2.014c0.358,0.654,1.034,1.06,1.764,1.06c0.428,0,0.843-0.142,1.2-0.411l5.694-4.215c0.133-0.1,0.28-0.15,0.435-0.15c0.15,0,0.291,0.047,0.41,0.136l3.972,2.99c0.809,0.602,1.76,0.918,2.757,0.918c1.576,0,3.025-0.791,3.876-2.116l1.211-1.891l4.12-6.695c0.392-0.614,0.422-1.372,0.071-2.014C36.398,17.698,35.722,17.292,34.992,17.292L34.992,17.292z" opacity=".05" />
-      <path d="M34.992,17.792c-0.319,0-0.63,0.107-0.899,0.31l-5.697,4.218\tc-0.216,0.163-0.468,0.248-0.732,0.248c-0.259,0-0.504-0.082-0.71-0.236l-3.973-2.991c-0.719-0.535-1.568-0.817-2.457-0.817\tc-1.405,0-2.696,0.705-3.455,1.887l-1.21,1.891l-4.115,6.688c-0.297,0.465-0.32,1.033-0.058,1.511c0.266,0.486,0.787,0.8,1.325,0.8c0.319,0,0.63-0.107,0.899-0.31l5.697-4.218c0.216-0.163,0.468-0.248,0.732-0.248c0.259,0,0.504,0.082,0.71,0.236l3.973,2.991c0.719,0.535,1.568,0.817,2.457,0.817c1.405,0,2.696-0.705,3.455-1.887l1.21-1.891l4.115-6.688c0.297-0.465,0.32-1.033,0.058-1.511C36.051,18.106,35.531,17.792,34.992,17.792L34.992,17.792z" opacity=".07" />
-      <path fill="#ffffff" d="M34.394,18.501l-5.7,4.22c-0.61,0.46-1.44,0.46-2.04,0.01L22.68,19.74\tc-1.68-1.25-4.06-0.82-5.19,0.94l-1.21,1.89l-4.11,6.68c-0.6,0.94,0.55,2.01,1.44,1.34l5.7-4.22c0.61-0.46,1.44-0.46,2.04-0.01l3.974,2.991c1.68,1.25,4.06,0.82,5.19-0.94l1.21-1.89l4.11-6.68C36.434,18.901,35.284,17.831,34.394,18.501z" />
     </svg>
   ),
   googleDocs: () => (
@@ -940,40 +932,7 @@ const Landing: React.FC = () => {
               <span className="text-teal-600">EIT management system</span>
             </h2>
           </motion.div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                title: "Progress Tracking",
-                description: "Track your progress across all required engineering competencies with our intuitive skill assessment system.",
-                icon: <BarChart3 className="w-8 h-8 text-teal-600" />
-              },
-              {
-                title: "Documentation",
-                description: "Document your engineering experiences with our structured templates and guidance.",
-                icon: <FileText className="w-8 h-8 text-teal-600" />
-              },
-              {
-                title: "SAO Management",
-                description: "Create and manage your Self-Assessment Outcomes with our AI-powered writing assistant.",
-                icon: <BookOpen className="w-8 h-8 text-teal-600" />
-              }
-            ].map((feature, index) => (
-              <motion.div
-                key={index}
-                className="bg-slate-50 rounded-xl p-8"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
-                <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center mb-6 shadow-sm">
-                  {feature.icon}
-                </div>
-                <h3 className="text-2xl font-bold text-slate-900 mb-4">{feature.title}</h3>
-                <p className="text-lg text-slate-600">{feature.description}</p>
-              </motion.div>
-            ))}
-          </div>
+          <LandingFeatureSlider />
         </div>
       </div>
 
