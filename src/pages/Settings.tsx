@@ -632,10 +632,12 @@ const Settings: React.FC = () => {
       // Fetch validator for skill 1.1
       const SKILL_1_1_ID = 'b5fb4469-5f9a-47da-86c6-9f17864b8070';
       console.log('Fetching validators...');
-      // Note: This query only fetches active validators since deleted validators are removed from the database
+      // Fetch all validators for the current user - deleted validators are permanently removed from the database
+      // This ensures that only current, active validators are used in the PDF generation
       const { data: allValidators, error: allValidatorsError } = await supabase
         .from('validators')
-        .select('first_name, last_name, skill_id, updated_at, eit_id, position');
+        .select('first_name, last_name, skill_id, updated_at, eit_id, position, status')
+        .eq('eit_id', user.id); // Only fetch validators for the current user
 
       if (allValidatorsError) {
         console.error('Error fetching validators:', allValidatorsError);

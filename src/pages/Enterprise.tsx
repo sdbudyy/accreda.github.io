@@ -5,6 +5,7 @@ import accredaLogo from '../assets/accreda-logo.png';
 import accredaSmall from '../assets/accreda-small.webp';
 import { Users, BarChart3, FileText, CheckCircle2, Clock, Menu, Award, Bell, MessageSquare, TrendingUp, Shield, Zap, Mail, Send, AlertCircle } from 'lucide-react';
 import SuperFlowSlider from '../components/SuperFlowSlider';
+import MobileLandingMenu from '../components/MobileLandingMenu';
 
 const Enterprise: React.FC = () => {
   // Scroll to top on mount for clean navigation
@@ -22,6 +23,9 @@ const Enterprise: React.FC = () => {
   const [contactLoading, setContactLoading] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
   const [contactSuccess, setContactSuccess] = useState(false);
+
+  // Add mobile menu state
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-white">
@@ -55,12 +59,22 @@ const Enterprise: React.FC = () => {
                 Book a Demo
               </a>
             </div>
-            <button className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100">
+            <button 
+              className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100"
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Open menu"
+            >
               <Menu size={24} />
             </button>
           </div>
         </div>
       </motion.nav>
+
+      {/* Mobile Menu */}
+      <MobileLandingMenu 
+        isOpen={mobileMenuOpen} 
+        onClose={() => setMobileMenuOpen(false)} 
+      />
 
       {/* Hero Section */}
       <div className="pt-36 pb-20 bg-gradient-to-br from-slate-50 via-white to-teal-50">

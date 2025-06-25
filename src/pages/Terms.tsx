@@ -1,14 +1,18 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import accredaLogo from '../assets/accreda-logo.png';
 import accredaSmall from '../assets/accreda-small.webp';
 import { Menu } from 'lucide-react';
+import MobileLandingMenu from '../components/MobileLandingMenu';
 
 const Terms: React.FC = () => {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
+
+  // Add mobile menu state
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-white">
@@ -42,12 +46,23 @@ const Terms: React.FC = () => {
                 Book a Demo
               </a>
             </div>
-            <button className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100">
+            <button 
+              className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100"
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Open menu"
+            >
               <Menu size={24} />
             </button>
           </div>
         </div>
       </motion.nav>
+
+      {/* Mobile Menu */}
+      <MobileLandingMenu 
+        isOpen={mobileMenuOpen} 
+        onClose={() => setMobileMenuOpen(false)} 
+      />
+
       <div className="pt-36 pb-12 bg-white">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div 

@@ -142,6 +142,35 @@ function drawWrappedText(
 
 export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
   try {
+    // Filter out any invalid or incomplete validators to ensure only valid validators are used
+    const activeValidators = (data.allValidators || []).filter(validator => {
+      // Only include validators that have all required fields
+      const isValid = validator && 
+             validator.first_name && 
+             validator.last_name && 
+             validator.skill_id && 
+             validator.eit_id;
+      
+      if (!isValid) {
+        console.log('PDFGEN: Filtering out invalid validator:', validator);
+      }
+      
+      return isValid;
+    });
+
+    console.log(`PDFGEN: Processing ${activeValidators.length} valid validators out of ${data.allValidators?.length || 0} total validators`);
+    console.log('PDFGEN: Valid validators:', activeValidators.map(v => ({ 
+      name: `${v.first_name} ${v.last_name}`, 
+      skill_id: v.skill_id, 
+      eit_id: v.eit_id 
+    })));
+
+    // Replace the allValidators data with filtered active validators
+    const filteredData = {
+      ...data,
+      allValidators: activeValidators
+    };
+
     // Load the template PDF
     const templateBytes = await fetch(templatePDF).then(res => res.arrayBuffer());
     const pdfDoc = await PDFDocument.load(templateBytes);
@@ -1585,7 +1614,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     // --- DETAILED LOGGING AND ROBUST MATCHING FOR VALIDATOR FIELDS ---
     const FORCE_OVERRIDE = false; // Set to true to always use the first validator for testing
 
-    let skill1_1_validators = (data.allValidators || []).filter(
+    let skill1_1_validators = (filteredData.allValidators || []).filter(
       v => {
         const skillIdStr = v.skill_id ? String(v.skill_id).trim().toLowerCase() : '';
         const eitIdStr = v.eit_id ? String(v.eit_id).trim().toLowerCase() : '';
@@ -1593,7 +1622,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     );
 
-    let skill1_2_validators = (data.allValidators || []).filter(
+    let skill1_2_validators = (filteredData.allValidators || []).filter(
       v => {
         const skillIdStr = v.skill_id ? String(v.skill_id).trim().toLowerCase() : '';
         const eitIdStr = v.eit_id ? String(v.eit_id).trim().toLowerCase() : '';
@@ -1601,7 +1630,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     );
 
-    let skill1_3_validators = (data.allValidators || []).filter(
+    let skill1_3_validators = (filteredData.allValidators || []).filter(
       v => {
         const skillIdStr = v.skill_id ? String(v.skill_id).trim().toLowerCase() : '';
         const eitIdStr = v.eit_id ? String(v.eit_id).trim().toLowerCase() : '';
@@ -1609,7 +1638,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     );
 
-    let skill1_4_validators = (data.allValidators || []).filter(
+    let skill1_4_validators = (filteredData.allValidators || []).filter(
       v => {
         const skillIdStr = v.skill_id ? String(v.skill_id).trim().toLowerCase() : '';
         const eitIdStr = v.eit_id ? String(v.eit_id).trim().toLowerCase() : '';
@@ -1617,7 +1646,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     );
 
-    let skill1_5_validators = (data.allValidators || []).filter(
+    let skill1_5_validators = (filteredData.allValidators || []).filter(
       v => {
         const skillIdStr = v.skill_id ? String(v.skill_id).trim().toLowerCase() : '';
         const eitIdStr = v.eit_id ? String(v.eit_id).trim().toLowerCase() : '';
@@ -1625,7 +1654,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     );
 
-    let skill1_6_validators = (data.allValidators || []).filter(
+    let skill1_6_validators = (filteredData.allValidators || []).filter(
       v => {
         const skillIdStr = v.skill_id ? String(v.skill_id).trim().toLowerCase() : '';
         const eitIdStr = v.eit_id ? String(v.eit_id).trim().toLowerCase() : '';
@@ -1633,7 +1662,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     );
 
-    let skill1_7_validators = (data.allValidators || []).filter(
+    let skill1_7_validators = (filteredData.allValidators || []).filter(
       v => {
         const skillIdStr = v.skill_id ? String(v.skill_id).trim().toLowerCase() : '';
         const eitIdStr = v.eit_id ? String(v.eit_id).trim().toLowerCase() : '';
@@ -1641,7 +1670,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     );
 
-    let skill1_8_validators = (data.allValidators || []).filter(
+    let skill1_8_validators = (filteredData.allValidators || []).filter(
       v => {
         const skillIdStr = v.skill_id ? String(v.skill_id).trim().toLowerCase() : '';
         const eitIdStr = v.eit_id ? String(v.eit_id).trim().toLowerCase() : '';
@@ -1649,7 +1678,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     );
 
-    let skill1_9_validators = (data.allValidators || []).filter(
+    let skill1_9_validators = (filteredData.allValidators || []).filter(
       v => {
         const skillIdStr = v.skill_id ? String(v.skill_id).trim().toLowerCase() : '';
         const eitIdStr = v.eit_id ? String(v.eit_id).trim().toLowerCase() : '';
@@ -1657,7 +1686,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     );
 
-    let skill1_10_validators = (data.allValidators || []).filter(
+    let skill1_10_validators = (filteredData.allValidators || []).filter(
       v => {
         const skillIdStr = v.skill_id ? String(v.skill_id).trim().toLowerCase() : '';
         const eitIdStr = v.eit_id ? String(v.eit_id).trim().toLowerCase() : '';
@@ -1665,7 +1694,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     );
 
-    let skill2_1_validators = (data.allValidators || []).filter(
+    let skill2_1_validators = (filteredData.allValidators || []).filter(
       v => {
         const skillIdStr = v.skill_id ? String(v.skill_id).trim().toLowerCase() : '';
         const eitIdStr = v.eit_id ? String(v.eit_id).trim().toLowerCase() : '';
@@ -1673,7 +1702,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     );
 
-    let skill2_2_validators = (data.allValidators || []).filter(
+    let skill2_2_validators = (filteredData.allValidators || []).filter(
       v => {
         const skillIdStr = v.skill_id ? String(v.skill_id).trim().toLowerCase() : '';
         const eitIdStr = v.eit_id ? String(v.eit_id).trim().toLowerCase() : '';
@@ -1681,7 +1710,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     );
 
-    let skill2_3_validators = (data.allValidators || []).filter(
+    let skill2_3_validators = (filteredData.allValidators || []).filter(
       v => {
         const skillIdStr = v.skill_id ? String(v.skill_id).trim().toLowerCase() : '';
         const eitIdStr = v.eit_id ? String(v.eit_id).trim().toLowerCase() : '';
@@ -1689,7 +1718,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     );
 
-    let skill3_1_validators = (data.allValidators || []).filter(
+    let skill3_1_validators = (filteredData.allValidators || []).filter(
       v => {
         const skillIdStr = v.skill_id ? String(v.skill_id).trim().toLowerCase() : '';
         const eitIdStr = v.eit_id ? String(v.eit_id).trim().toLowerCase() : '';
@@ -1697,7 +1726,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     );
 
-    let skill3_2_validators = (data.allValidators || []).filter(
+    let skill3_2_validators = (filteredData.allValidators || []).filter(
       v => {
         const skillIdStr = v.skill_id ? String(v.skill_id).trim().toLowerCase() : '';
         const eitIdStr = v.eit_id ? String(v.eit_id).trim().toLowerCase() : '';
@@ -1705,7 +1734,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     );
 
-    let skill4_1_validators = (data.allValidators || []).filter(
+    let skill4_1_validators = (filteredData.allValidators || []).filter(
       v => {
         const skillIdStr = v.skill_id ? String(v.skill_id).trim().toLowerCase() : '';
         const eitIdStr = v.eit_id ? String(v.eit_id).trim().toLowerCase() : '';
@@ -1713,7 +1742,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     );
 
-    let skill5_1_validators = (data.allValidators || []).filter(
+    let skill5_1_validators = (filteredData.allValidators || []).filter(
       v => {
         const skillIdStr = v.skill_id ? String(v.skill_id).trim().toLowerCase() : '';
         const eitIdStr = v.eit_id ? String(v.eit_id).trim().toLowerCase() : '';
@@ -1721,7 +1750,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     );
 
-    let skill6_1_validators = (data.allValidators || []).filter(
+    let skill6_1_validators = (filteredData.allValidators || []).filter(
       v => {
         const skillIdStr = v.skill_id ? String(v.skill_id).trim().toLowerCase() : '';
         const eitIdStr = v.eit_id ? String(v.eit_id).trim().toLowerCase() : '';
@@ -1729,7 +1758,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     );
 
-    let skill6_2_validators = (data.allValidators || []).filter(
+    let skill6_2_validators = (filteredData.allValidators || []).filter(
       v => {
         const skillIdStr = v.skill_id ? String(v.skill_id).trim().toLowerCase() : '';
         const eitIdStr = v.eit_id ? String(v.eit_id).trim().toLowerCase() : '';
@@ -1737,7 +1766,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     );
 
-    let skill6_3_validators = (data.allValidators || []).filter(
+    let skill6_3_validators = (filteredData.allValidators || []).filter(
       v => {
         const skillIdStr = v.skill_id ? String(v.skill_id).trim().toLowerCase() : '';
         const eitIdStr = v.eit_id ? String(v.eit_id).trim().toLowerCase() : '';
@@ -1745,7 +1774,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     );
 
-    let skill6_4_validators = (data.allValidators || []).filter(
+    let skill6_4_validators = (filteredData.allValidators || []).filter(
       v => {
         const skillIdStr = v.skill_id ? String(v.skill_id).trim().toLowerCase() : '';
         const eitIdStr = v.eit_id ? String(v.eit_id).trim().toLowerCase() : '';
@@ -1753,7 +1782,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     );
 
-    let skill6_5_validators = (data.allValidators || []).filter(
+    let skill6_5_validators = (filteredData.allValidators || []).filter(
       v => {
         const skillIdStr = v.skill_id ? String(v.skill_id).trim().toLowerCase() : '';
         const eitIdStr = v.eit_id ? String(v.eit_id).trim().toLowerCase() : '';
@@ -1785,115 +1814,140 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     skill6_4_validators.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
     skill6_5_validators.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 
+    // Log validator assignments for debugging
+    console.log('PDFGEN: Validator assignments by skill:');
+    console.log('Skill 1.1:', skill1_1_validators.length > 0 ? `${skill1_1_validators[0].first_name} ${skill1_1_validators[0].last_name}` : 'None');
+    console.log('Skill 1.2:', skill1_2_validators.length > 0 ? `${skill1_2_validators[0].first_name} ${skill1_2_validators[0].last_name}` : 'None');
+    console.log('Skill 1.3:', skill1_3_validators.length > 0 ? `${skill1_3_validators[0].first_name} ${skill1_3_validators[0].last_name}` : 'None');
+    console.log('Skill 1.4:', skill1_4_validators.length > 0 ? `${skill1_4_validators[0].first_name} ${skill1_4_validators[0].last_name}` : 'None');
+    console.log('Skill 1.5:', skill1_5_validators.length > 0 ? `${skill1_5_validators[0].first_name} ${skill1_5_validators[0].last_name}` : 'None');
+    console.log('Skill 1.6:', skill1_6_validators.length > 0 ? `${skill1_6_validators[0].first_name} ${skill1_6_validators[0].last_name}` : 'None');
+    console.log('Skill 1.7:', skill1_7_validators.length > 0 ? `${skill1_7_validators[0].first_name} ${skill1_7_validators[0].last_name}` : 'None');
+    console.log('Skill 1.8:', skill1_8_validators.length > 0 ? `${skill1_8_validators[0].first_name} ${skill1_8_validators[0].last_name}` : 'None');
+    console.log('Skill 1.9:', skill1_9_validators.length > 0 ? `${skill1_9_validators[0].first_name} ${skill1_9_validators[0].last_name}` : 'None');
+    console.log('Skill 1.10:', skill1_10_validators.length > 0 ? `${skill1_10_validators[0].first_name} ${skill1_10_validators[0].last_name}` : 'None');
+    console.log('Skill 2.1:', skill2_1_validators.length > 0 ? `${skill2_1_validators[0].first_name} ${skill2_1_validators[0].last_name}` : 'None');
+    console.log('Skill 2.2:', skill2_2_validators.length > 0 ? `${skill2_2_validators[0].first_name} ${skill2_2_validators[0].last_name}` : 'None');
+    console.log('Skill 2.3:', skill2_3_validators.length > 0 ? `${skill2_3_validators[0].first_name} ${skill2_3_validators[0].last_name}` : 'None');
+    console.log('Skill 3.1:', skill3_1_validators.length > 0 ? `${skill3_1_validators[0].first_name} ${skill3_1_validators[0].last_name}` : 'None');
+    console.log('Skill 3.2:', skill3_2_validators.length > 0 ? `${skill3_2_validators[0].first_name} ${skill3_2_validators[0].last_name}` : 'None');
+    console.log('Skill 4.1:', skill4_1_validators.length > 0 ? `${skill4_1_validators[0].first_name} ${skill4_1_validators[0].last_name}` : 'None');
+    console.log('Skill 5.1:', skill5_1_validators.length > 0 ? `${skill5_1_validators[0].first_name} ${skill5_1_validators[0].last_name}` : 'None');
+    console.log('Skill 6.1:', skill6_1_validators.length > 0 ? `${skill6_1_validators[0].first_name} ${skill6_1_validators[0].last_name}` : 'None');
+    console.log('Skill 6.2:', skill6_2_validators.length > 0 ? `${skill6_2_validators[0].first_name} ${skill6_2_validators[0].last_name}` : 'None');
+    console.log('Skill 6.3:', skill6_3_validators.length > 0 ? `${skill6_3_validators[0].first_name} ${skill6_3_validators[0].last_name}` : 'None');
+    console.log('Skill 6.4:', skill6_4_validators.length > 0 ? `${skill6_4_validators[0].first_name} ${skill6_4_validators[0].last_name}` : 'None');
+    console.log('Skill 6.5:', skill6_5_validators.length > 0 ? `${skill6_5_validators[0].first_name} ${skill6_5_validators[0].last_name}` : 'None');
+
     // --- FORCE OVERRIDE: Use first validator if no match and override is enabled ---
-    if (FORCE_OVERRIDE && (!skill1_1_validators || skill1_1_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
+    if (FORCE_OVERRIDE && (!skill1_1_validators || skill1_1_validators.length === 0) && ((filteredData.allValidators ?? []).length > 0)) {
       console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 1.1.');
-      skill1_1_validators = [data.allValidators![0]];
+      skill1_1_validators = [filteredData.allValidators![0]];
     }
 
-    if (FORCE_OVERRIDE && (!skill1_2_validators || skill1_2_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
+    if (FORCE_OVERRIDE && (!skill1_2_validators || skill1_2_validators.length === 0) && ((filteredData.allValidators ?? []).length > 0)) {
       console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 1.2.');
-      skill1_2_validators = [data.allValidators![0]];
+      skill1_2_validators = [filteredData.allValidators![0]];
     }
 
-    if (FORCE_OVERRIDE && (!skill1_3_validators || skill1_3_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
+    if (FORCE_OVERRIDE && (!skill1_3_validators || skill1_3_validators.length === 0) && ((filteredData.allValidators ?? []).length > 0)) {
       console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 1.3.');
-      skill1_3_validators = [data.allValidators![0]];
+      skill1_3_validators = [filteredData.allValidators![0]];
     }
 
-    if (FORCE_OVERRIDE && (!skill1_4_validators || skill1_4_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
+    if (FORCE_OVERRIDE && (!skill1_4_validators || skill1_4_validators.length === 0) && ((filteredData.allValidators ?? []).length > 0)) {
       console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 1.4.');
-      skill1_4_validators = [data.allValidators![0]];
+      skill1_4_validators = [filteredData.allValidators![0]];
     }
 
-    if (FORCE_OVERRIDE && (!skill1_5_validators || skill1_5_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
+    if (FORCE_OVERRIDE && (!skill1_5_validators || skill1_5_validators.length === 0) && ((filteredData.allValidators ?? []).length > 0)) {
       console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 1.5.');
-      skill1_5_validators = [data.allValidators![0]];
+      skill1_5_validators = [filteredData.allValidators![0]];
     }
 
-    if (FORCE_OVERRIDE && (!skill1_6_validators || skill1_6_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
+    if (FORCE_OVERRIDE && (!skill1_6_validators || skill1_6_validators.length === 0) && ((filteredData.allValidators ?? []).length > 0)) {
       console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 1.6.');
-      skill1_6_validators = [data.allValidators![0]];
+      skill1_6_validators = [filteredData.allValidators![0]];
     }
 
-    if (FORCE_OVERRIDE && (!skill1_7_validators || skill1_7_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
+    if (FORCE_OVERRIDE && (!skill1_7_validators || skill1_7_validators.length === 0) && ((filteredData.allValidators ?? []).length > 0)) {
       console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 1.7.');
-      skill1_7_validators = [data.allValidators![0]];
+      skill1_7_validators = [filteredData.allValidators![0]];
     }
 
-    if (FORCE_OVERRIDE && (!skill1_8_validators || skill1_8_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
+    if (FORCE_OVERRIDE && (!skill1_8_validators || skill1_8_validators.length === 0) && ((filteredData.allValidators ?? []).length > 0)) {
       console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 1.8.');
-      skill1_8_validators = [data.allValidators![0]];
+      skill1_8_validators = [filteredData.allValidators![0]];
     }
 
-    if (FORCE_OVERRIDE && (!skill1_9_validators || skill1_9_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
+    if (FORCE_OVERRIDE && (!skill1_9_validators || skill1_9_validators.length === 0) && ((filteredData.allValidators ?? []).length > 0)) {
       console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 1.9.');
-      skill1_9_validators = [data.allValidators![0]];
+      skill1_9_validators = [filteredData.allValidators![0]];
     }
 
-    if (FORCE_OVERRIDE && (!skill1_10_validators || skill1_10_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
+    if (FORCE_OVERRIDE && (!skill1_10_validators || skill1_10_validators.length === 0) && ((filteredData.allValidators ?? []).length > 0)) {
       console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 1.10.');
-      skill1_10_validators = [data.allValidators![0]];
+      skill1_10_validators = [filteredData.allValidators![0]];
     }
 
-    if (FORCE_OVERRIDE && (!skill2_1_validators || skill2_1_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
+    if (FORCE_OVERRIDE && (!skill2_1_validators || skill2_1_validators.length === 0) && ((filteredData.allValidators ?? []).length > 0)) {
       console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 2.1.');
-      skill2_1_validators = [data.allValidators![0]];
+      skill2_1_validators = [filteredData.allValidators![0]];
     }
 
-    if (FORCE_OVERRIDE && (!skill2_2_validators || skill2_2_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
+    if (FORCE_OVERRIDE && (!skill2_2_validators || skill2_2_validators.length === 0) && ((filteredData.allValidators ?? []).length > 0)) {
       console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 2.2.');
-      skill2_2_validators = [data.allValidators![0]];
+      skill2_2_validators = [filteredData.allValidators![0]];
     }
 
-    if (FORCE_OVERRIDE && (!skill2_3_validators || skill2_3_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
+    if (FORCE_OVERRIDE && (!skill2_3_validators || skill2_3_validators.length === 0) && ((filteredData.allValidators ?? []).length > 0)) {
       console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 2.3.');
-      skill2_3_validators = [data.allValidators![0]];
+      skill2_3_validators = [filteredData.allValidators![0]];
     }
 
-    if (FORCE_OVERRIDE && (!skill3_1_validators || skill3_1_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
+    if (FORCE_OVERRIDE && (!skill3_1_validators || skill3_1_validators.length === 0) && ((filteredData.allValidators ?? []).length > 0)) {
       console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 3.1.');
-      skill3_1_validators = [data.allValidators![0]];
+      skill3_1_validators = [filteredData.allValidators![0]];
     }
 
-    if (FORCE_OVERRIDE && (!skill3_2_validators || skill3_2_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
+    if (FORCE_OVERRIDE && (!skill3_2_validators || skill3_2_validators.length === 0) && ((filteredData.allValidators ?? []).length > 0)) {
       console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 3.2.');
-      skill3_2_validators = [data.allValidators![0]];
+      skill3_2_validators = [filteredData.allValidators![0]];
     }
 
-    if (FORCE_OVERRIDE && (!skill4_1_validators || skill4_1_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
+    if (FORCE_OVERRIDE && (!skill4_1_validators || skill4_1_validators.length === 0) && ((filteredData.allValidators ?? []).length > 0)) {
       console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 4.1.');
-      skill4_1_validators = [data.allValidators![0]];
+      skill4_1_validators = [filteredData.allValidators![0]];
     }
 
-    if (FORCE_OVERRIDE && (!skill5_1_validators || skill5_1_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
+    if (FORCE_OVERRIDE && (!skill5_1_validators || skill5_1_validators.length === 0) && ((filteredData.allValidators ?? []).length > 0)) {
       console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 5.1.');
-      skill5_1_validators = [data.allValidators![0]];
+      skill5_1_validators = [filteredData.allValidators![0]];
     }
 
-    if (FORCE_OVERRIDE && (!skill6_1_validators || skill6_1_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
+    if (FORCE_OVERRIDE && (!skill6_1_validators || skill6_1_validators.length === 0) && ((filteredData.allValidators ?? []).length > 0)) {
       console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 6.1.');
-      skill6_1_validators = [data.allValidators![0]];
+      skill6_1_validators = [filteredData.allValidators![0]];
     }
 
-    if (FORCE_OVERRIDE && (!skill6_2_validators || skill6_2_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
+    if (FORCE_OVERRIDE && (!skill6_2_validators || skill6_2_validators.length === 0) && ((filteredData.allValidators ?? []).length > 0)) {
       console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 6.2.');
-      skill6_2_validators = [data.allValidators![0]];
+      skill6_2_validators = [filteredData.allValidators![0]];
     }
 
-    if (FORCE_OVERRIDE && (!skill6_3_validators || skill6_3_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
+    if (FORCE_OVERRIDE && (!skill6_3_validators || skill6_3_validators.length === 0) && ((filteredData.allValidators ?? []).length > 0)) {
       console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 6.3.');
-      skill6_3_validators = [data.allValidators![0]];
+      skill6_3_validators = [filteredData.allValidators![0]];
     }
 
-    if (FORCE_OVERRIDE && (!skill6_4_validators || skill6_4_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
+    if (FORCE_OVERRIDE && (!skill6_4_validators || skill6_4_validators.length === 0) && ((filteredData.allValidators ?? []).length > 0)) {
       console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 6.4.');
-      skill6_4_validators = [data.allValidators![0]];
+      skill6_4_validators = [filteredData.allValidators![0]];
     }
 
-    if (FORCE_OVERRIDE && (!skill6_5_validators || skill6_5_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
+    if (FORCE_OVERRIDE && (!skill6_5_validators || skill6_5_validators.length === 0) && ((filteredData.allValidators ?? []).length > 0)) {
       console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 6.5.');
-      skill6_5_validators = [data.allValidators![0]];
+      skill6_5_validators = [filteredData.allValidators![0]];
     }
 
     if (skill1_1_validators.length > 0) {
@@ -1911,7 +1965,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     } else {
       // Try fallback: match only on skill_id for skill 1.1
-      let skill1_1_candidates = (data.allValidators || []).filter(
+      let skill1_1_candidates = (filteredData.allValidators || []).filter(
         v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_1_1_ID
       );
       // Sort fallback candidates by updated_at descending as well
@@ -1947,7 +2001,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     } else {
       // Try fallback: match only on skill_id for skill 1.2
-      let skill1_2_candidates = (data.allValidators || []).filter(
+      let skill1_2_candidates = (filteredData.allValidators || []).filter(
         v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_1_2_ID
       );
       // Sort fallback candidates by updated_at descending as well
@@ -1983,7 +2037,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     } else {
       // Try fallback: match only on skill_id for skill 1.3
-      let skill1_3_candidates = (data.allValidators || []).filter(
+      let skill1_3_candidates = (filteredData.allValidators || []).filter(
         v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_1_3_ID
       );
       // Sort fallback candidates by updated_at descending as well
@@ -2019,7 +2073,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     } else {
       // Try fallback: match only on skill_id for skill 1.4
-      let skill1_4_candidates = (data.allValidators || []).filter(
+      let skill1_4_candidates = (filteredData.allValidators || []).filter(
         v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_1_4_ID
       );
       // Sort fallback candidates by updated_at descending as well
@@ -2055,7 +2109,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     } else {
       // Try fallback: match only on skill_id for skill 1.5
-      let skill1_5_candidates = (data.allValidators || []).filter(
+      let skill1_5_candidates = (filteredData.allValidators || []).filter(
         v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_1_5_ID
       );
       // Sort fallback candidates by updated_at descending as well
@@ -2091,7 +2145,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     } else {
       // Try fallback: match only on skill_id for skill 1.6
-      let skill1_6_candidates = (data.allValidators || []).filter(
+      let skill1_6_candidates = (filteredData.allValidators || []).filter(
         v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_1_6_ID
       );
       // Sort fallback candidates by updated_at descending as well
@@ -2127,7 +2181,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     } else {
       // Try fallback: match only on skill_id for skill 1.7
-      let skill1_7_candidates = (data.allValidators || []).filter(
+      let skill1_7_candidates = (filteredData.allValidators || []).filter(
         v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_1_7_ID
       );
       // Sort fallback candidates by updated_at descending as well
@@ -2163,7 +2217,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     } else {
       // Try fallback: match only on skill_id for skill 1.8
-      let skill1_8_candidates = (data.allValidators || []).filter(
+      let skill1_8_candidates = (filteredData.allValidators || []).filter(
         v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_1_8_ID
       );
       // Sort fallback candidates by updated_at descending as well
@@ -2199,7 +2253,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     } else {
       // Try fallback: match only on skill_id for skill 1.9
-      let skill1_9_candidates = (data.allValidators || []).filter(
+      let skill1_9_candidates = (filteredData.allValidators || []).filter(
         v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_1_9_ID
       );
       // Sort fallback candidates by updated_at descending as well
@@ -2235,7 +2289,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     } else {
       // Try fallback: match only on skill_id for skill 1.10
-      let skill1_10_candidates = (data.allValidators || []).filter(
+      let skill1_10_candidates = (filteredData.allValidators || []).filter(
         v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_1_10_ID
       );
       // Sort fallback candidates by updated_at descending as well
@@ -2271,7 +2325,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     } else {
       // Try fallback: match only on skill_id for skill 2.1
-      let skill2_1_candidates = (data.allValidators || []).filter(
+      let skill2_1_candidates = (filteredData.allValidators || []).filter(
         v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_2_1_ID
       );
       // Sort fallback candidates by updated_at descending as well
@@ -2307,7 +2361,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     } else {
       // Try fallback: match only on skill_id for skill 2.2
-      let skill2_2_candidates = (data.allValidators || []).filter(
+      let skill2_2_candidates = (filteredData.allValidators || []).filter(
         v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_2_2_ID
       );
       // Sort fallback candidates by updated_at descending as well
@@ -2343,7 +2397,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     } else {
       // Try fallback: match only on skill_id for skill 2.3
-      let skill2_3_candidates = (data.allValidators || []).filter(
+      let skill2_3_candidates = (filteredData.allValidators || []).filter(
         v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_2_3_ID
       );
       // Sort fallback candidates by updated_at descending as well
@@ -2379,7 +2433,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     } else {
       // Try fallback: match only on skill_id for skill 3.1
-      let skill3_1_candidates = (data.allValidators || []).filter(
+      let skill3_1_candidates = (filteredData.allValidators || []).filter(
         v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_3_1_ID
       );
       // Sort fallback candidates by updated_at descending as well
@@ -2415,7 +2469,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     } else {
       // Try fallback: match only on skill_id for skill 3.2
-      let skill3_2_candidates = (data.allValidators || []).filter(
+      let skill3_2_candidates = (filteredData.allValidators || []).filter(
         v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_3_2_ID
       );
       // Sort fallback candidates by updated_at descending as well
@@ -2451,7 +2505,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     } else {
       // Try fallback: match only on skill_id for skill 4.1
-      let skill4_1_candidates = (data.allValidators || []).filter(
+      let skill4_1_candidates = (filteredData.allValidators || []).filter(
         v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_4_1_ID
       );
       // Sort fallback candidates by updated_at descending as well
@@ -2487,7 +2541,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     } else {
       // Try fallback: match only on skill_id for skill 5.1
-      let skill5_1_candidates = (data.allValidators || []).filter(
+      let skill5_1_candidates = (filteredData.allValidators || []).filter(
         v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_5_1_ID
       );
       // Sort fallback candidates by updated_at descending as well
@@ -2523,7 +2577,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     } else {
       // Try fallback: match only on skill_id for skill 6.1
-      let skill6_1_candidates = (data.allValidators || []).filter(
+      let skill6_1_candidates = (filteredData.allValidators || []).filter(
         v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_6_1_ID
       );
       // Sort fallback candidates by updated_at descending as well
@@ -2559,7 +2613,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     } else {
       // Try fallback: match only on skill_id for skill 6.2
-      let skill6_2_candidates = (data.allValidators || []).filter(
+      let skill6_2_candidates = (filteredData.allValidators || []).filter(
         v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_6_2_ID
       );
       // Sort fallback candidates by updated_at descending as well
@@ -2595,7 +2649,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     } else {
       // Try fallback: match only on skill_id for skill 6.3
-      let skill6_3_candidates = (data.allValidators || []).filter(
+      let skill6_3_candidates = (filteredData.allValidators || []).filter(
         v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_6_3_ID
       );
       // Sort fallback candidates by updated_at descending as well
@@ -2631,7 +2685,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     } else {
       // Try fallback: match only on skill_id for skill 6.4
-      let skill6_4_candidates = (data.allValidators || []).filter(
+      let skill6_4_candidates = (filteredData.allValidators || []).filter(
         v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_6_4_ID
       );
       // Sort fallback candidates by updated_at descending as well
@@ -2667,910 +2721,7 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
       }
     } else {
       // Try fallback: match only on skill_id for skill 6.5
-      let skill6_5_candidates = (data.allValidators || []).filter(
-        v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_6_5_ID
-      );
-      // Sort fallback candidates by updated_at descending as well
-      skill6_5_candidates.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-      if (skill6_5_candidates.length > 0) {
-        const fallbackValidator = skill6_5_candidates[0];
-        console.log('PDFGEN: Fallback validator for skill 6.5:', fallbackValidator);
-        try {
-          const vfNameField = form.getTextField('fn65');
-          const vlNameField = form.getTextField('ln65');
-          const vPosField = form.getTextField('vpos65');
-          vfNameField.setText(fallbackValidator.first_name || '');
-          vlNameField.setText(fallbackValidator.last_name || '');
-          vPosField.setText(fallbackValidator.position || '');
-        } catch (e) {
-          console.log('Error filling validator fields for skill 6.5 (fallback):', e);
-        }
-      }
-    }
-
-    // --- FORCE OVERRIDE: Use first validator if no match and override is enabled ---
-    if (FORCE_OVERRIDE && (!skill1_1_validators || skill1_1_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
-      console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 1.1.');
-      skill1_1_validators = [data.allValidators![0]];
-    }
-
-    if (FORCE_OVERRIDE && (!skill1_2_validators || skill1_2_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
-      console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 1.2.');
-      skill1_2_validators = [data.allValidators![0]];
-    }
-
-    if (FORCE_OVERRIDE && (!skill1_3_validators || skill1_3_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
-      console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 1.3.');
-      skill1_3_validators = [data.allValidators![0]];
-    }
-
-    if (FORCE_OVERRIDE && (!skill1_4_validators || skill1_4_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
-      console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 1.4.');
-      skill1_4_validators = [data.allValidators![0]];
-    }
-
-    if (FORCE_OVERRIDE && (!skill1_5_validators || skill1_5_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
-      console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 1.5.');
-      skill1_5_validators = [data.allValidators![0]];
-    }
-
-    if (FORCE_OVERRIDE && (!skill1_6_validators || skill1_6_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
-      console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 1.6.');
-      skill1_6_validators = [data.allValidators![0]];
-    }
-
-    if (FORCE_OVERRIDE && (!skill1_7_validators || skill1_7_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
-      console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 1.7.');
-      skill1_7_validators = [data.allValidators![0]];
-    }
-
-    if (FORCE_OVERRIDE && (!skill1_8_validators || skill1_8_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
-      console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 1.8.');
-      skill1_8_validators = [data.allValidators![0]];
-    }
-
-    if (FORCE_OVERRIDE && (!skill1_9_validators || skill1_9_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
-      console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 1.9.');
-      skill1_9_validators = [data.allValidators![0]];
-    }
-
-    if (FORCE_OVERRIDE && (!skill1_10_validators || skill1_10_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
-      console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 1.10.');
-      skill1_10_validators = [data.allValidators![0]];
-    }
-
-    if (FORCE_OVERRIDE && (!skill2_1_validators || skill2_1_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
-      console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 2.1.');
-      skill2_1_validators = [data.allValidators![0]];
-    }
-
-    if (FORCE_OVERRIDE && (!skill2_2_validators || skill2_2_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
-      console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 2.2.');
-      skill2_2_validators = [data.allValidators![0]];
-    }
-
-    if (FORCE_OVERRIDE && (!skill2_3_validators || skill2_3_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
-      console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 2.3.');
-      skill2_3_validators = [data.allValidators![0]];
-    }
-
-    if (FORCE_OVERRIDE && (!skill3_1_validators || skill3_1_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
-      console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 3.1.');
-      skill3_1_validators = [data.allValidators![0]];
-    }
-
-    if (FORCE_OVERRIDE && (!skill3_2_validators || skill3_2_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
-      console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 3.2.');
-      skill3_2_validators = [data.allValidators![0]];
-    }
-
-    if (FORCE_OVERRIDE && (!skill4_1_validators || skill4_1_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
-      console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 4.1.');
-      skill4_1_validators = [data.allValidators![0]];
-    }
-
-    if (FORCE_OVERRIDE && (!skill5_1_validators || skill5_1_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
-      console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 5.1.');
-      skill5_1_validators = [data.allValidators![0]];
-    }
-
-    if (FORCE_OVERRIDE && (!skill6_1_validators || skill6_1_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
-      console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 6.1.');
-      skill6_1_validators = [data.allValidators![0]];
-    }
-
-    if (FORCE_OVERRIDE && (!skill6_2_validators || skill6_2_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
-      console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 6.2.');
-      skill6_2_validators = [data.allValidators![0]];
-    }
-
-    if (FORCE_OVERRIDE && (!skill6_3_validators || skill6_3_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
-      console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 6.3.');
-      skill6_3_validators = [data.allValidators![0]];
-    }
-
-    if (FORCE_OVERRIDE && (!skill6_4_validators || skill6_4_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
-      console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 6.4.');
-      skill6_4_validators = [data.allValidators![0]];
-    }
-
-    if (FORCE_OVERRIDE && (!skill6_5_validators || skill6_5_validators.length === 0) && ((data.allValidators ?? []).length > 0)) {
-      console.log('FORCE OVERRIDE ENABLED: Using first validator row regardless of match for skill 6.5.');
-      skill6_5_validators = [data.allValidators![0]];
-    }
-
-    if (skill1_1_validators.length > 0) {
-      const mostRecentValidator = skill1_1_validators[0];
-      console.log('PDFGEN: Most recent validator for skill 1.1:', mostRecentValidator);
-      try {
-        const vfNameField = form.getTextField('fn11');
-        const vlNameField = form.getTextField('ln11');
-        const vPosField = form.getTextField('vpos11');
-        vfNameField.setText(mostRecentValidator.first_name || '');
-        vlNameField.setText(mostRecentValidator.last_name || '');
-        vPosField.setText(mostRecentValidator.position || '');
-      } catch (e) {
-        console.log('Error filling validator fields for skill 1.1:', e);
-      }
-    } else {
-      // Try fallback: match only on skill_id for skill 1.1
-      let skill1_1_candidates = (data.allValidators || []).filter(
-        v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_1_1_ID
-      );
-      // Sort fallback candidates by updated_at descending as well
-      skill1_1_candidates.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-      if (skill1_1_candidates.length > 0) {
-        const fallbackValidator = skill1_1_candidates[0];
-        console.log('PDFGEN: Fallback validator for skill 1.1:', fallbackValidator);
-        try {
-          const vfNameField = form.getTextField('fn11');
-          const vlNameField = form.getTextField('ln11');
-          const vPosField = form.getTextField('vpos11');
-          vfNameField.setText(fallbackValidator.first_name || '');
-          vlNameField.setText(fallbackValidator.last_name || '');
-          vPosField.setText(fallbackValidator.position || '');
-        } catch (e) {
-          console.log('Error filling validator fields for skill 1.1 (fallback):', e);
-        }
-      }
-    }
-
-    if (skill1_2_validators.length > 0) {
-      const mostRecentValidator = skill1_2_validators[0];
-      console.log('PDFGEN: Most recent validator for skill 1.2:', mostRecentValidator);
-      try {
-        const vfNameField = form.getTextField('fn12');
-        const vlNameField = form.getTextField('ln12');
-        const vPosField = form.getTextField('vpos12');
-        vfNameField.setText(mostRecentValidator.first_name || '');
-        vlNameField.setText(mostRecentValidator.last_name || '');
-        vPosField.setText(mostRecentValidator.position || '');
-      } catch (e) {
-        console.log('Error filling validator fields for skill 1.2:', e);
-      }
-    } else {
-      // Try fallback: match only on skill_id for skill 1.2
-      let skill1_2_candidates = (data.allValidators || []).filter(
-        v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_1_2_ID
-      );
-      // Sort fallback candidates by updated_at descending as well
-      skill1_2_candidates.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-      if (skill1_2_candidates.length > 0) {
-        const fallbackValidator = skill1_2_candidates[0];
-        console.log('PDFGEN: Fallback validator for skill 1.2:', fallbackValidator);
-        try {
-          const vfNameField = form.getTextField('fn12');
-          const vlNameField = form.getTextField('ln12');
-          const vPosField = form.getTextField('vpos12');
-          vfNameField.setText(fallbackValidator.first_name || '');
-          vlNameField.setText(fallbackValidator.last_name || '');
-          vPosField.setText(fallbackValidator.position || '');
-        } catch (e) {
-          console.log('Error filling validator fields for skill 1.2 (fallback):', e);
-        }
-      }
-    }
-
-    if (skill1_3_validators.length > 0) {
-      const mostRecentValidator = skill1_3_validators[0];
-      console.log('PDFGEN: Most recent validator for skill 1.3:', mostRecentValidator);
-      try {
-        const vfNameField = form.getTextField('fn13');
-        const vlNameField = form.getTextField('ln13');
-        const vPosField = form.getTextField('vpos13');
-        vfNameField.setText(mostRecentValidator.first_name || '');
-        vlNameField.setText(mostRecentValidator.last_name || '');
-        vPosField.setText(mostRecentValidator.position || '');
-      } catch (e) {
-        console.log('Error filling validator fields for skill 1.3:', e);
-      }
-    } else {
-      // Try fallback: match only on skill_id for skill 1.3
-      let skill1_3_candidates = (data.allValidators || []).filter(
-        v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_1_3_ID
-      );
-      // Sort fallback candidates by updated_at descending as well
-      skill1_3_candidates.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-      if (skill1_3_candidates.length > 0) {
-        const fallbackValidator = skill1_3_candidates[0];
-        console.log('PDFGEN: Fallback validator for skill 1.3:', fallbackValidator);
-        try {
-          const vfNameField = form.getTextField('fn13');
-          const vlNameField = form.getTextField('ln13');
-          const vPosField = form.getTextField('vpos13');
-          vfNameField.setText(fallbackValidator.first_name || '');
-          vlNameField.setText(fallbackValidator.last_name || '');
-          vPosField.setText(fallbackValidator.position || '');
-        } catch (e) {
-          console.log('Error filling validator fields for skill 1.3 (fallback):', e);
-        }
-      }
-    }
-
-    if (skill1_4_validators.length > 0) {
-      const mostRecentValidator = skill1_4_validators[0];
-      console.log('PDFGEN: Most recent validator for skill 1.4:', mostRecentValidator);
-      try {
-        const vfNameField = form.getTextField('fn14');
-        const vlNameField = form.getTextField('ln14');
-        const vPosField = form.getTextField('vpos14');
-        vfNameField.setText(mostRecentValidator.first_name || '');
-        vlNameField.setText(mostRecentValidator.last_name || '');
-        vPosField.setText(mostRecentValidator.position || '');
-      } catch (e) {
-        console.log('Error filling validator fields for skill 1.4:', e);
-      }
-    } else {
-      // Try fallback: match only on skill_id for skill 1.4
-      let skill1_4_candidates = (data.allValidators || []).filter(
-        v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_1_4_ID
-      );
-      // Sort fallback candidates by updated_at descending as well
-      skill1_4_candidates.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-      if (skill1_4_candidates.length > 0) {
-        const fallbackValidator = skill1_4_candidates[0];
-        console.log('PDFGEN: Fallback validator for skill 1.4:', fallbackValidator);
-        try {
-          const vfNameField = form.getTextField('fn14');
-          const vlNameField = form.getTextField('ln14');
-          const vPosField = form.getTextField('vpos14');
-          vfNameField.setText(fallbackValidator.first_name || '');
-          vlNameField.setText(fallbackValidator.last_name || '');
-          vPosField.setText(fallbackValidator.position || '');
-        } catch (e) {
-          console.log('Error filling validator fields for skill 1.4 (fallback):', e);
-        }
-      }
-    }
-
-    if (skill1_5_validators.length > 0) {
-      const mostRecentValidator = skill1_5_validators[0];
-      console.log('PDFGEN: Most recent validator for skill 1.5:', mostRecentValidator);
-      try {
-        const vfNameField = form.getTextField('fn15');
-        const vlNameField = form.getTextField('ln15');
-        const vPosField = form.getTextField('vpos15');
-        vfNameField.setText(mostRecentValidator.first_name || '');
-        vlNameField.setText(mostRecentValidator.last_name || '');
-        vPosField.setText(mostRecentValidator.position || '');
-      } catch (e) {
-        console.log('Error filling validator fields for skill 1.5:', e);
-      }
-    } else {
-      // Try fallback: match only on skill_id for skill 1.5
-      let skill1_5_candidates = (data.allValidators || []).filter(
-        v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_1_5_ID
-      );
-      // Sort fallback candidates by updated_at descending as well
-      skill1_5_candidates.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-      if (skill1_5_candidates.length > 0) {
-        const fallbackValidator = skill1_5_candidates[0];
-        console.log('PDFGEN: Fallback validator for skill 1.5:', fallbackValidator);
-        try {
-          const vfNameField = form.getTextField('fn15');
-          const vlNameField = form.getTextField('ln15');
-          const vPosField = form.getTextField('vpos15');
-          vfNameField.setText(fallbackValidator.first_name || '');
-          vlNameField.setText(fallbackValidator.last_name || '');
-          vPosField.setText(fallbackValidator.position || '');
-        } catch (e) {
-          console.log('Error filling validator fields for skill 1.5 (fallback):', e);
-        }
-      }
-    }
-
-    if (skill1_6_validators.length > 0) {
-      const mostRecentValidator = skill1_6_validators[0];
-      console.log('PDFGEN: Most recent validator for skill 1.6:', mostRecentValidator);
-      try {
-        const vfNameField = form.getTextField('fn16');
-        const vlNameField = form.getTextField('ln16');
-        const vPosField = form.getTextField('vpos16');
-        vfNameField.setText(mostRecentValidator.first_name || '');
-        vlNameField.setText(mostRecentValidator.last_name || '');
-        vPosField.setText(mostRecentValidator.position || '');
-      } catch (e) {
-        console.log('Error filling validator fields for skill 1.6:', e);
-      }
-    } else {
-      // Try fallback: match only on skill_id for skill 1.6
-      let skill1_6_candidates = (data.allValidators || []).filter(
-        v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_1_6_ID
-      );
-      // Sort fallback candidates by updated_at descending as well
-      skill1_6_candidates.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-      if (skill1_6_candidates.length > 0) {
-        const fallbackValidator = skill1_6_candidates[0];
-        console.log('PDFGEN: Fallback validator for skill 1.6:', fallbackValidator);
-        try {
-          const vfNameField = form.getTextField('fn16');
-          const vlNameField = form.getTextField('ln16');
-          const vPosField = form.getTextField('vpos16');
-          vfNameField.setText(fallbackValidator.first_name || '');
-          vlNameField.setText(fallbackValidator.last_name || '');
-          vPosField.setText(fallbackValidator.position || '');
-        } catch (e) {
-          console.log('Error filling validator fields for skill 1.6 (fallback):', e);
-        }
-      }
-    }
-
-    if (skill1_7_validators.length > 0) {
-      const mostRecentValidator = skill1_7_validators[0];
-      console.log('PDFGEN: Most recent validator for skill 1.7:', mostRecentValidator);
-      try {
-        const vfNameField = form.getTextField('fn17');
-        const vlNameField = form.getTextField('ln17');
-        const vPosField = form.getTextField('vpos17');
-        vfNameField.setText(mostRecentValidator.first_name || '');
-        vlNameField.setText(mostRecentValidator.last_name || '');
-        vPosField.setText(mostRecentValidator.position || '');
-      } catch (e) {
-        console.log('Error filling validator fields for skill 1.7:', e);
-      }
-    } else {
-      // Try fallback: match only on skill_id for skill 1.7
-      let skill1_7_candidates = (data.allValidators || []).filter(
-        v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_1_7_ID
-      );
-      // Sort fallback candidates by updated_at descending as well
-      skill1_7_candidates.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-      if (skill1_7_candidates.length > 0) {
-        const fallbackValidator = skill1_7_candidates[0];
-        console.log('PDFGEN: Fallback validator for skill 1.7:', fallbackValidator);
-        try {
-          const vfNameField = form.getTextField('fn17');
-          const vlNameField = form.getTextField('ln17');
-          const vPosField = form.getTextField('vpos17');
-          vfNameField.setText(fallbackValidator.first_name || '');
-          vlNameField.setText(fallbackValidator.last_name || '');
-          vPosField.setText(fallbackValidator.position || '');
-        } catch (e) {
-          console.log('Error filling validator fields for skill 1.7 (fallback):', e);
-        }
-      }
-    }
-
-    if (skill1_8_validators.length > 0) {
-      const mostRecentValidator = skill1_8_validators[0];
-      console.log('PDFGEN: Most recent validator for skill 1.8:', mostRecentValidator);
-      try {
-        const vfNameField = form.getTextField('fn18');
-        const vlNameField = form.getTextField('ln18');
-        const vPosField = form.getTextField('vpos18');
-        vfNameField.setText(mostRecentValidator.first_name || '');
-        vlNameField.setText(mostRecentValidator.last_name || '');
-        vPosField.setText(mostRecentValidator.position || '');
-      } catch (e) {
-        console.log('Error filling validator fields for skill 1.8:', e);
-      }
-    } else {
-      // Try fallback: match only on skill_id for skill 1.8
-      let skill1_8_candidates = (data.allValidators || []).filter(
-        v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_1_8_ID
-      );
-      // Sort fallback candidates by updated_at descending as well
-      skill1_8_candidates.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-      if (skill1_8_candidates.length > 0) {
-        const fallbackValidator = skill1_8_candidates[0];
-        console.log('PDFGEN: Fallback validator for skill 1.8:', fallbackValidator);
-        try {
-          const vfNameField = form.getTextField('fn18');
-          const vlNameField = form.getTextField('ln18');
-          const vPosField = form.getTextField('vpos18');
-          vfNameField.setText(fallbackValidator.first_name || '');
-          vlNameField.setText(fallbackValidator.last_name || '');
-          vPosField.setText(fallbackValidator.position || '');
-        } catch (e) {
-          console.log('Error filling validator fields for skill 1.8 (fallback):', e);
-        }
-      }
-    }
-
-    if (skill1_9_validators.length > 0) {
-      const mostRecentValidator = skill1_9_validators[0];
-      console.log('PDFGEN: Most recent validator for skill 1.9:', mostRecentValidator);
-      try {
-        const vfNameField = form.getTextField('fn19');
-        const vlNameField = form.getTextField('ln19');
-        const vPosField = form.getTextField('vpos19');
-        vfNameField.setText(mostRecentValidator.first_name || '');
-        vlNameField.setText(mostRecentValidator.last_name || '');
-        vPosField.setText(mostRecentValidator.position || '');
-      } catch (e) {
-        console.log('Error filling validator fields for skill 1.9:', e);
-      }
-    } else {
-      // Try fallback: match only on skill_id for skill 1.9
-      let skill1_9_candidates = (data.allValidators || []).filter(
-        v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_1_9_ID
-      );
-      // Sort fallback candidates by updated_at descending as well
-      skill1_9_candidates.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-      if (skill1_9_candidates.length > 0) {
-        const fallbackValidator = skill1_9_candidates[0];
-        console.log('PDFGEN: Fallback validator for skill 1.9:', fallbackValidator);
-        try {
-          const vfNameField = form.getTextField('fn19');
-          const vlNameField = form.getTextField('ln19');
-          const vPosField = form.getTextField('vpos19');
-          vfNameField.setText(fallbackValidator.first_name || '');
-          vlNameField.setText(fallbackValidator.last_name || '');
-          vPosField.setText(fallbackValidator.position || '');
-        } catch (e) {
-          console.log('Error filling validator fields for skill 1.9 (fallback):', e);
-        }
-      }
-    }
-
-    if (skill1_10_validators.length > 0) {
-      const mostRecentValidator = skill1_10_validators[0];
-      console.log('PDFGEN: Most recent validator for skill 1.10:', mostRecentValidator);
-      try {
-        const vfNameField = form.getTextField('fn110');
-        const vlNameField = form.getTextField('ln110');
-        const vPosField = form.getTextField('vpos110');
-        vfNameField.setText(mostRecentValidator.first_name || '');
-        vlNameField.setText(mostRecentValidator.last_name || '');
-        vPosField.setText(mostRecentValidator.position || '');
-      } catch (e) {
-        console.log('Error filling validator fields for skill 1.10:', e);
-      }
-    } else {
-      // Try fallback: match only on skill_id for skill 1.10
-      let skill1_10_candidates = (data.allValidators || []).filter(
-        v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_1_10_ID
-      );
-      // Sort fallback candidates by updated_at descending as well
-      skill1_10_candidates.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-      if (skill1_10_candidates.length > 0) {
-        const fallbackValidator = skill1_10_candidates[0];
-        console.log('PDFGEN: Fallback validator for skill 1.10:', fallbackValidator);
-        try {
-          const vfNameField = form.getTextField('fn110');
-          const vlNameField = form.getTextField('ln110');
-          const vPosField = form.getTextField('vpos110');
-          vfNameField.setText(fallbackValidator.first_name || '');
-          vlNameField.setText(fallbackValidator.last_name || '');
-          vPosField.setText(fallbackValidator.position || '');
-        } catch (e) {
-          console.log('Error filling validator fields for skill 1.10 (fallback):', e);
-        }
-      }
-    }
-
-    if (skill2_1_validators.length > 0) {
-      const mostRecentValidator = skill2_1_validators[0];
-      console.log('PDFGEN: Most recent validator for skill 2.1:', mostRecentValidator);
-      try {
-        const vfNameField = form.getTextField('fn21');
-        const vlNameField = form.getTextField('ln21');
-        const vPosField = form.getTextField('vpos21');
-        vfNameField.setText(mostRecentValidator.first_name || '');
-        vlNameField.setText(mostRecentValidator.last_name || '');
-        vPosField.setText(mostRecentValidator.position || '');
-      } catch (e) {
-        console.log('Error filling validator fields for skill 2.1:', e);
-      }
-    } else {
-      // Try fallback: match only on skill_id for skill 2.1
-      let skill2_1_candidates = (data.allValidators || []).filter(
-        v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_2_1_ID
-      );
-      // Sort fallback candidates by updated_at descending as well
-      skill2_1_candidates.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-      if (skill2_1_candidates.length > 0) {
-        const fallbackValidator = skill2_1_candidates[0];
-        console.log('PDFGEN: Fallback validator for skill 2.1:', fallbackValidator);
-        try {
-          const vfNameField = form.getTextField('fn21');
-          const vlNameField = form.getTextField('ln21');
-          const vPosField = form.getTextField('vpos21');
-          vfNameField.setText(fallbackValidator.first_name || '');
-          vlNameField.setText(fallbackValidator.last_name || '');
-          vPosField.setText(fallbackValidator.position || '');
-        } catch (e) {
-          console.log('Error filling validator fields for skill 2.1 (fallback):', e);
-        }
-      }
-    }
-
-    if (skill2_2_validators.length > 0) {
-      const mostRecentValidator = skill2_2_validators[0];
-      console.log('PDFGEN: Most recent validator for skill 2.2:', mostRecentValidator);
-      try {
-        const vfNameField = form.getTextField('fn22');
-        const vlNameField = form.getTextField('ln22');
-        const vPosField = form.getTextField('vpos22');
-        vfNameField.setText(mostRecentValidator.first_name || '');
-        vlNameField.setText(mostRecentValidator.last_name || '');
-        vPosField.setText(mostRecentValidator.position || '');
-      } catch (e) {
-        console.log('Error filling validator fields for skill 2.2:', e);
-      }
-    } else {
-      // Try fallback: match only on skill_id for skill 2.2
-      let skill2_2_candidates = (data.allValidators || []).filter(
-        v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_2_2_ID
-      );
-      // Sort fallback candidates by updated_at descending as well
-      skill2_2_candidates.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-      if (skill2_2_candidates.length > 0) {
-        const fallbackValidator = skill2_2_candidates[0];
-        console.log('PDFGEN: Fallback validator for skill 2.2:', fallbackValidator);
-        try {
-          const vfNameField = form.getTextField('fn22');
-          const vlNameField = form.getTextField('ln22');
-          const vPosField = form.getTextField('vpos22');
-          vfNameField.setText(fallbackValidator.first_name || '');
-          vlNameField.setText(fallbackValidator.last_name || '');
-          vPosField.setText(fallbackValidator.position || '');
-        } catch (e) {
-          console.log('Error filling validator fields for skill 2.2 (fallback):', e);
-        }
-      }
-    }
-
-    if (skill2_3_validators.length > 0) {
-      const mostRecentValidator = skill2_3_validators[0];
-      console.log('PDFGEN: Most recent validator for skill 2.3:', mostRecentValidator);
-      try {
-        const vfNameField = form.getTextField('fn23');
-        const vlNameField = form.getTextField('ln23');
-        const vPosField = form.getTextField('vpos23');
-        vfNameField.setText(mostRecentValidator.first_name || '');
-        vlNameField.setText(mostRecentValidator.last_name || '');
-        vPosField.setText(mostRecentValidator.position || '');
-      } catch (e) {
-        console.log('Error filling validator fields for skill 2.3:', e);
-      }
-    } else {
-      // Try fallback: match only on skill_id for skill 2.3
-      let skill2_3_candidates = (data.allValidators || []).filter(
-        v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_2_3_ID
-      );
-      // Sort fallback candidates by updated_at descending as well
-      skill2_3_candidates.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-      if (skill2_3_candidates.length > 0) {
-        const fallbackValidator = skill2_3_candidates[0];
-        console.log('PDFGEN: Fallback validator for skill 2.3:', fallbackValidator);
-        try {
-          const vfNameField = form.getTextField('fn23');
-          const vlNameField = form.getTextField('ln23');
-          const vPosField = form.getTextField('vpos23');
-          vfNameField.setText(fallbackValidator.first_name || '');
-          vlNameField.setText(fallbackValidator.last_name || '');
-          vPosField.setText(fallbackValidator.position || '');
-        } catch (e) {
-          console.log('Error filling validator fields for skill 2.3 (fallback):', e);
-        }
-      }
-    }
-
-    if (skill3_1_validators.length > 0) {
-      const mostRecentValidator = skill3_1_validators[0];
-      console.log('PDFGEN: Most recent validator for skill 3.1:', mostRecentValidator);
-      try {
-        const vfNameField = form.getTextField('fn31');
-        const vlNameField = form.getTextField('ln31');
-        const vPosField = form.getTextField('vpos31');
-        vfNameField.setText(mostRecentValidator.first_name || '');
-        vlNameField.setText(mostRecentValidator.last_name || '');
-        vPosField.setText(mostRecentValidator.position || '');
-      } catch (e) {
-        console.log('Error filling validator fields for skill 3.1:', e);
-      }
-    } else {
-      // Try fallback: match only on skill_id for skill 3.1
-      let skill3_1_candidates = (data.allValidators || []).filter(
-        v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_3_1_ID
-      );
-      // Sort fallback candidates by updated_at descending as well
-      skill3_1_candidates.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-      if (skill3_1_candidates.length > 0) {
-        const fallbackValidator = skill3_1_candidates[0];
-        console.log('PDFGEN: Fallback validator for skill 3.1:', fallbackValidator);
-        try {
-          const vfNameField = form.getTextField('fn31');
-          const vlNameField = form.getTextField('ln31');
-          const vPosField = form.getTextField('vpos31');
-          vfNameField.setText(fallbackValidator.first_name || '');
-          vlNameField.setText(fallbackValidator.last_name || '');
-          vPosField.setText(fallbackValidator.position || '');
-        } catch (e) {
-          console.log('Error filling validator fields for skill 3.1 (fallback):', e);
-        }
-      }
-    }
-
-    if (skill3_2_validators.length > 0) {
-      const mostRecentValidator = skill3_2_validators[0];
-      console.log('PDFGEN: Most recent validator for skill 3.2:', mostRecentValidator);
-      try {
-        const vfNameField = form.getTextField('fn32');
-        const vlNameField = form.getTextField('ln32');
-        const vPosField = form.getTextField('vpos32');
-        vfNameField.setText(mostRecentValidator.first_name || '');
-        vlNameField.setText(mostRecentValidator.last_name || '');
-        vPosField.setText(mostRecentValidator.position || '');
-      } catch (e) {
-        console.log('Error filling validator fields for skill 3.2:', e);
-      }
-    } else {
-      // Try fallback: match only on skill_id for skill 3.2
-      let skill3_2_candidates = (data.allValidators || []).filter(
-        v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_3_2_ID
-      );
-      // Sort fallback candidates by updated_at descending as well
-      skill3_2_candidates.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-      if (skill3_2_candidates.length > 0) {
-        const fallbackValidator = skill3_2_candidates[0];
-        console.log('PDFGEN: Fallback validator for skill 3.2:', fallbackValidator);
-        try {
-          const vfNameField = form.getTextField('fn32');
-          const vlNameField = form.getTextField('ln32');
-          const vPosField = form.getTextField('vpos32');
-          vfNameField.setText(fallbackValidator.first_name || '');
-          vlNameField.setText(fallbackValidator.last_name || '');
-          vPosField.setText(fallbackValidator.position || '');
-        } catch (e) {
-          console.log('Error filling validator fields for skill 3.2 (fallback):', e);
-        }
-      }
-    }
-
-    if (skill4_1_validators.length > 0) {
-      const mostRecentValidator = skill4_1_validators[0];
-      console.log('PDFGEN: Most recent validator for skill 4.1:', mostRecentValidator);
-      try {
-        const vfNameField = form.getTextField('fn41');
-        const vlNameField = form.getTextField('ln41');
-        const vPosField = form.getTextField('vpos41');
-        vfNameField.setText(mostRecentValidator.first_name || '');
-        vlNameField.setText(mostRecentValidator.last_name || '');
-        vPosField.setText(mostRecentValidator.position || '');
-      } catch (e) {
-        console.log('Error filling validator fields for skill 4.1:', e);
-      }
-    } else {
-      // Try fallback: match only on skill_id for skill 4.1
-      let skill4_1_candidates = (data.allValidators || []).filter(
-        v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_4_1_ID
-      );
-      // Sort fallback candidates by updated_at descending as well
-      skill4_1_candidates.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-      if (skill4_1_candidates.length > 0) {
-        const fallbackValidator = skill4_1_candidates[0];
-        console.log('PDFGEN: Fallback validator for skill 4.1:', fallbackValidator);
-        try {
-          const vfNameField = form.getTextField('fn41');
-          const vlNameField = form.getTextField('ln41');
-          const vPosField = form.getTextField('vpos41');
-          vfNameField.setText(fallbackValidator.first_name || '');
-          vlNameField.setText(fallbackValidator.last_name || '');
-          vPosField.setText(fallbackValidator.position || '');
-        } catch (e) {
-          console.log('Error filling validator fields for skill 4.1 (fallback):', e);
-        }
-      }
-    }
-
-    if (skill5_1_validators.length > 0) {
-      const mostRecentValidator = skill5_1_validators[0];
-      console.log('PDFGEN: Most recent validator for skill 5.1:', mostRecentValidator);
-      try {
-        const vfNameField = form.getTextField('fn51');
-        const vlNameField = form.getTextField('ln51');
-        const vPosField = form.getTextField('vpos51');
-        vfNameField.setText(mostRecentValidator.first_name || '');
-        vlNameField.setText(mostRecentValidator.last_name || '');
-        vPosField.setText(mostRecentValidator.position || '');
-      } catch (e) {
-        console.log('Error filling validator fields for skill 5.1:', e);
-      }
-    } else {
-      // Try fallback: match only on skill_id for skill 5.1
-      let skill5_1_candidates = (data.allValidators || []).filter(
-        v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_5_1_ID
-      );
-      // Sort fallback candidates by updated_at descending as well
-      skill5_1_candidates.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-      if (skill5_1_candidates.length > 0) {
-        const fallbackValidator = skill5_1_candidates[0];
-        console.log('PDFGEN: Fallback validator for skill 5.1:', fallbackValidator);
-        try {
-          const vfNameField = form.getTextField('fn51');
-          const vlNameField = form.getTextField('ln51');
-          const vPosField = form.getTextField('vpos51');
-          vfNameField.setText(fallbackValidator.first_name || '');
-          vlNameField.setText(fallbackValidator.last_name || '');
-          vPosField.setText(fallbackValidator.position || '');
-        } catch (e) {
-          console.log('Error filling validator fields for skill 5.1 (fallback):', e);
-        }
-      }
-    }
-
-    if (skill6_1_validators.length > 0) {
-      const mostRecentValidator = skill6_1_validators[0];
-      console.log('PDFGEN: Most recent validator for skill 6.1:', mostRecentValidator);
-      try {
-        const vfNameField = form.getTextField('fn61');
-        const vlNameField = form.getTextField('ln61');
-        const vPosField = form.getTextField('vpos61');
-        vfNameField.setText(mostRecentValidator.first_name || '');
-        vlNameField.setText(mostRecentValidator.last_name || '');
-        vPosField.setText(mostRecentValidator.position || '');
-      } catch (e) {
-        console.log('Error filling validator fields for skill 6.1:', e);
-      }
-    } else {
-      // Try fallback: match only on skill_id for skill 6.1
-      let skill6_1_candidates = (data.allValidators || []).filter(
-        v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_6_1_ID
-      );
-      // Sort fallback candidates by updated_at descending as well
-      skill6_1_candidates.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-      if (skill6_1_candidates.length > 0) {
-        const fallbackValidator = skill6_1_candidates[0];
-        console.log('PDFGEN: Fallback validator for skill 6.1:', fallbackValidator);
-        try {
-          const vfNameField = form.getTextField('fn61');
-          const vlNameField = form.getTextField('ln61');
-          const vPosField = form.getTextField('vpos61');
-          vfNameField.setText(fallbackValidator.first_name || '');
-          vlNameField.setText(fallbackValidator.last_name || '');
-          vPosField.setText(fallbackValidator.position || '');
-        } catch (e) {
-          console.log('Error filling validator fields for skill 6.1 (fallback):', e);
-        }
-      }
-    }
-
-    if (skill6_2_validators.length > 0) {
-      const mostRecentValidator = skill6_2_validators[0];
-      console.log('PDFGEN: Most recent validator for skill 6.2:', mostRecentValidator);
-      try {
-        const vfNameField = form.getTextField('fn62');
-        const vlNameField = form.getTextField('ln62');
-        const vPosField = form.getTextField('vpos62');
-        vfNameField.setText(mostRecentValidator.first_name || '');
-        vlNameField.setText(mostRecentValidator.last_name || '');
-        vPosField.setText(mostRecentValidator.position || '');
-      } catch (e) {
-        console.log('Error filling validator fields for skill 6.2:', e);
-      }
-    } else {
-      // Try fallback: match only on skill_id for skill 6.2
-      let skill6_2_candidates = (data.allValidators || []).filter(
-        v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_6_2_ID
-      );
-      // Sort fallback candidates by updated_at descending as well
-      skill6_2_candidates.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-      if (skill6_2_candidates.length > 0) {
-        const fallbackValidator = skill6_2_candidates[0];
-        console.log('PDFGEN: Fallback validator for skill 6.2:', fallbackValidator);
-        try {
-          const vfNameField = form.getTextField('fn62');
-          const vlNameField = form.getTextField('ln62');
-          const vPosField = form.getTextField('vpos62');
-          vfNameField.setText(fallbackValidator.first_name || '');
-          vlNameField.setText(fallbackValidator.last_name || '');
-          vPosField.setText(fallbackValidator.position || '');
-        } catch (e) {
-          console.log('Error filling validator fields for skill 6.2 (fallback):', e);
-        }
-      }
-    }
-
-    if (skill6_3_validators.length > 0) {
-      const mostRecentValidator = skill6_3_validators[0];
-      console.log('PDFGEN: Most recent validator for skill 6.3:', mostRecentValidator);
-      try {
-        const vfNameField = form.getTextField('fn63');
-        const vlNameField = form.getTextField('ln63');
-        const vPosField = form.getTextField('vpos63');
-        vfNameField.setText(mostRecentValidator.first_name || '');
-        vlNameField.setText(mostRecentValidator.last_name || '');
-        vPosField.setText(mostRecentValidator.position || '');
-      } catch (e) {
-        console.log('Error filling validator fields for skill 6.3:', e);
-      }
-    } else {
-      // Try fallback: match only on skill_id for skill 6.3
-      let skill6_3_candidates = (data.allValidators || []).filter(
-        v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_6_3_ID
-      );
-      // Sort fallback candidates by updated_at descending as well
-      skill6_3_candidates.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-      if (skill6_3_candidates.length > 0) {
-        const fallbackValidator = skill6_3_candidates[0];
-        console.log('PDFGEN: Fallback validator for skill 6.3:', fallbackValidator);
-        try {
-          const vfNameField = form.getTextField('fn63');
-          const vlNameField = form.getTextField('ln63');
-          const vPosField = form.getTextField('vpos63');
-          vfNameField.setText(fallbackValidator.first_name || '');
-          vlNameField.setText(fallbackValidator.last_name || '');
-          vPosField.setText(fallbackValidator.position || '');
-        } catch (e) {
-          console.log('Error filling validator fields for skill 6.3 (fallback):', e);
-        }
-      }
-    }
-
-    if (skill6_4_validators.length > 0) {
-      const mostRecentValidator = skill6_4_validators[0];
-      console.log('PDFGEN: Most recent validator for skill 6.4:', mostRecentValidator);
-      try {
-        const vfNameField = form.getTextField('fn64');
-        const vlNameField = form.getTextField('ln64');
-        const vPosField = form.getTextField('vpos64');
-        vfNameField.setText(mostRecentValidator.first_name || '');
-        vlNameField.setText(mostRecentValidator.last_name || '');
-        vPosField.setText(mostRecentValidator.position || '');
-      } catch (e) {
-        console.log('Error filling validator fields for skill 6.4:', e);
-      }
-    } else {
-      // Try fallback: match only on skill_id for skill 6.4
-      let skill6_4_candidates = (data.allValidators || []).filter(
-        v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_6_4_ID
-      );
-      // Sort fallback candidates by updated_at descending as well
-      skill6_4_candidates.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-      if (skill6_4_candidates.length > 0) {
-        const fallbackValidator = skill6_4_candidates[0];
-        console.log('PDFGEN: Fallback validator for skill 6.4:', fallbackValidator);
-        try {
-          const vfNameField = form.getTextField('fn64');
-          const vlNameField = form.getTextField('ln64');
-          const vPosField = form.getTextField('vpos64');
-          vfNameField.setText(fallbackValidator.first_name || '');
-          vlNameField.setText(fallbackValidator.last_name || '');
-          vPosField.setText(fallbackValidator.position || '');
-        } catch (e) {
-          console.log('Error filling validator fields for skill 6.4 (fallback):', e);
-        }
-      }
-    }
-
-    if (skill6_5_validators.length > 0) {
-      const mostRecentValidator = skill6_5_validators[0];
-      console.log('PDFGEN: Most recent validator for skill 6.5:', mostRecentValidator);
-      try {
-        const vfNameField = form.getTextField('fn65');
-        const vlNameField = form.getTextField('ln65');
-        const vPosField = form.getTextField('vpos65');
-        vfNameField.setText(mostRecentValidator.first_name || '');
-        vlNameField.setText(mostRecentValidator.last_name || '');
-        vPosField.setText(mostRecentValidator.position || '');
-      } catch (e) {
-        console.log('Error filling validator fields for skill 6.5:', e);
-      }
-    } else {
-      // Try fallback: match only on skill_id for skill 6.5
-      let skill6_5_candidates = (data.allValidators || []).filter(
+      let skill6_5_candidates = (filteredData.allValidators || []).filter(
         v => (v.skill_id ? String(v.skill_id).trim().toLowerCase() : '') === SKILL_6_5_ID
       );
       // Sort fallback candidates by updated_at descending as well

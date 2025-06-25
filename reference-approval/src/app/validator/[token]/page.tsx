@@ -18,6 +18,7 @@ export default function ValidatorApprovalPage() {
     lastName: "",
     email: "",
     position: "",
+    comment: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -90,6 +91,7 @@ export default function ValidatorApprovalPage() {
     setError(null);
     try {
       if (!score) throw new Error("Please select a score before submitting.");
+      if (!formData.comment.trim()) throw new Error("Please provide a comment before submitting.");
       if (formData.email.trim().toLowerCase() !== tokenEmail.trim().toLowerCase()) {
         setError("The email you entered does not match the original supervisor email for this validation request.");
         setSubmitting(false);
@@ -104,6 +106,7 @@ export default function ValidatorApprovalPage() {
           position: formData.position,
           status: "scored",
           score: score,
+          comment: formData.comment,
           updated_at: new Date().toISOString(),
         })
         .eq("id", validatorData.validatorId);
@@ -233,6 +236,18 @@ export default function ValidatorApprovalPage() {
                       <option value="Peer Collaborator">Peer Collaborator</option>
                       <option value="Client">Client</option>
                     </select>
+                  </div>
+                  <div>
+                    <label htmlFor="comment" className="block text-sm font-medium text-[#1a365d] mb-1">Comment <span className="text-red-500">*</span></label>
+                    <textarea
+                      id="comment"
+                      required
+                      value={formData.comment}
+                      onChange={e => setFormData(prev => ({ ...prev, comment: e.target.value }))}
+                      className="mt-1 block w-full border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#1cc8ae] focus:border-[#1cc8ae] transition bg-[#f8fafc] text-slate-900 placeholder:text-slate-400"
+                      placeholder="Please provide your comments on this validation"
+                      rows={4}
+                    />
                   </div>
                 </div>
                 <div className="pt-4">

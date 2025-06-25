@@ -13,7 +13,10 @@ import {
   ChevronRight,
   Menu,
   ChevronDown,
-  Star
+  Star,
+  Zap,
+  TrendingUp,
+  Shield
 } from 'lucide-react';
 import { AnimatedList } from "../components/magicui/animated-list";
 import { cn } from "../lib/utils";
@@ -33,6 +36,7 @@ import {
 import { BentoCard, BentoGrid } from "../components/magicui/bento-grid";
 import accredaLogo from '../assets/accreda-logo.png';
 import dashboardImage from '../assets/eit-dashboard.png';
+import MobileLandingMenu from '../components/MobileLandingMenu';
 
 const provinces = [
   'Alberta (APEGA)',
@@ -417,7 +421,7 @@ const reviews = [
     role: "Electrical Engineer",
     company: "",
     rating: 5,
-    review: "The writing assistant for SAOs is incredible. It helped me articulate my experiences much better than I could on my own. This platform is exactly what every EIT needs.",
+    review: "The layout for skills is incredible. It helped me perfectly visualize my skills and experiences, and made sure I met any average requirements along the way. This platform is exactly what every EIT needs.",
     avatar: "ET"
   },
   {
@@ -426,7 +430,7 @@ const reviews = [
     role: "Chemical Engineer",
     company: "",
     rating: 5,
-    review: "I was spending 10+ hours a week on documentation before finding Accreda. Now it takes me maybe 2 hours. The time savings alone make this worth every penny.",
+    review: "I was spending so much time on organizing my SAOs and staying up to date with my certification before finding Accreda. Now I can quickly update my progress every week to ensure I never fall behind. The time savings and mental clarity alone makes this worth every penny.",
     avatar: "DK"
   },
   {
@@ -435,7 +439,7 @@ const reviews = [
     role: "Structural Engineer",
     company: "",
     rating: 5,
-    review: "The automatic PDF generation is amazing! It fills in all the forms by itself and creates professional-looking documents. What used to take hours of manual work now happens with one click.",
+    review: "The automatic PDF generation is amazing! It fills in the CSAW form by itself with the most recent information, easily allowing for it to be sent to supervisors or even submitted to APEGA. What used to take hours of manual work now happens with one click.",
     avatar: "LW"
   },
   {
@@ -640,6 +644,9 @@ const Landing: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Add mobile menu state
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   useEffect(() => {
     const scrollToPricing = () => {
       if (
@@ -776,12 +783,22 @@ const Landing: React.FC = () => {
                 Book a Demo
               </a>
             </div>
-            <button className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100">
+            <button 
+              className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100"
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Open menu"
+            >
               <Menu size={24} />
             </button>
           </div>
         </div>
       </motion.nav>
+
+      {/* Mobile Menu */}
+      <MobileLandingMenu 
+        isOpen={mobileMenuOpen} 
+        onClose={() => setMobileMenuOpen(false)} 
+      />
 
       {/* Hero Section + Gradient */}
       <div className="relative pt-36 pb-4 overflow-hidden bg-white" style={{ zIndex: 0 }}>

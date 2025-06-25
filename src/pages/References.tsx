@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bookmark, Users, CheckCircle2, Award, X, Edit2, Briefcase, Calendar, MapPin, Plus, ChevronDown, ChevronUp, Search, AlertCircle, CheckCircle, XCircle, Info } from 'lucide-react';
+import { Bookmark, Users, CheckCircle2, Award, X, Edit2, Briefcase, Calendar, MapPin, Plus, ChevronDown, ChevronUp, Search, AlertCircle, CheckCircle, XCircle, Info, MessageCircle, Trash2 } from 'lucide-react';
 import Timeline from '../components/references/Timeline';
 import { useSkillsStore } from '../store/skills';
 import { supabase } from '../lib/supabase';
@@ -644,7 +644,10 @@ const References: React.FC = () => {
   const [validatorToDelete, setValidatorToDelete] = useState<Validator | null>(null);
   // At the top, add state for the comment popup
   const [showCommentModal, setShowCommentModal] = useState(false);
-  const [commentModalContent, setCommentModalContent] = useState<string>('');
+  const [commentModalContent, setCommentModalContent] = useState({
+    comment: '',
+    feedback: ''
+  });
   const [commentModalLoading, setCommentModalLoading] = useState(false);
 
   const selectedSkills = skillCategories
@@ -1403,20 +1406,20 @@ const References: React.FC = () => {
                                     {validator.first_name} {validator.last_name}
                                   </button>
                                   {/* Status tag with tooltip */}
-                                  <span className={`ml-2 px-2 py-0.5 rounded text-xs font-semibold relative group/status ${
-                                    validator.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
-                                    validator.status === 'pending' ? 'bg-blue-100 text-blue-800' :
-                                    validator.status === 'scored' ? 'bg-green-100 text-green-800' :
-                                    'bg-slate-100 text-slate-500'
-                                  }`}>
-                                    {validator.status.charAt(0).toUpperCase() + validator.status.slice(1)}
-                                    <span className="absolute left-1/2 -translate-x-1/2 top-7 z-10 w-40 p-2 bg-white border border-slate-200 rounded shadow text-xs text-slate-700 opacity-0 group-hover/status:opacity-100 transition-opacity pointer-events-none">
-                                      {validator.status === 'draft' && 'Draft: Not yet sent to supervisor.'}
-                                      {validator.status === 'pending' && 'Pending: Awaiting supervisor action.'}
-                                      {validator.status === 'scored' && 'Scored: Supervisor has submitted a score.'}
-                                      {validator.status !== 'draft' && validator.status !== 'pending' && validator.status !== 'scored' && 'Unknown status.'}
+                                  {validator.status !== 'scored' && (
+                                    <span className={`ml-2 px-2 py-0.5 rounded text-xs font-semibold relative group/status ${
+                                      validator.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+                                      validator.status === 'pending' ? 'bg-blue-100 text-blue-800' :
+                                      'bg-slate-100 text-slate-500'
+                                    }`}>
+                                      {validator.status.charAt(0).toUpperCase() + validator.status.slice(1)}
+                                      <span className="absolute left-1/2 -translate-x-1/2 top-7 z-10 w-40 p-2 bg-white border border-slate-200 rounded shadow text-xs text-slate-700 opacity-0 group-hover/status:opacity-100 transition-opacity pointer-events-none">
+                                        {validator.status === 'draft' && 'Draft: Not yet sent to supervisor.'}
+                                        {validator.status === 'pending' && 'Pending: Awaiting supervisor action.'}
+                                        {validator.status !== 'draft' && validator.status !== 'pending' && 'Unknown status.'}
+                                      </span>
                                     </span>
-                                  </span>
+                                  )}
                                   {/* Supervisor Score UI */}
                                   {validator.status === 'scored' && (
                                     <>
@@ -1429,29 +1432,47 @@ const References: React.FC = () => {
                                         </span>
                                       </span>
                                       <button
-                                        className="ml-2 px-2 py-0.5 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed"
+                                        className="ml-2 p-2 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 hover:text-blue-800 transition-colors"
                                         onClick={async () => {
                                           setCommentModalLoading(true);
                                           setShowCommentModal(true);
-                                          // Fetch the latest comment for this skill/validator
+                                          // Fetch the latest non-empty comment for this skill/validator
                                           const { data, error } = await supabase
                                             .from('skill_validations')
-                                            .select('comment')
+                                            .select('comment, feedback')
                                             .eq('eit_id', validator.eit_id)
                                             .eq('skill_id', validator.skill_id)
                                             .not('comment', 'is', null)
+                                            .not('comment', 'eq', '')
                                             .order('validated_at', { ascending: false })
                                             .limit(1);
+                                          console.log({validator, data, error});
                                           if (!error && data && data.length > 0 && data[0].comment) {
-                                            setCommentModalContent(data[0].comment);
+                                            setCommentModalContent({
+                                              comment: data[0].comment,
+                                              feedback: data[0].feedback
+                                            });
                                           } else {
-                                            setCommentModalContent('No comment found.');
+                                            setCommentModalContent({
+                                              comment: 'No comment found.',
+                                              feedback: ''
+                                            });
                                           }
                                           setCommentModalLoading(false);
                                         }}
-                                        title="View Supervisor's Comment"
+                                        title="View Comment"
                                       >
-                                        View Comment
+                                        <MessageCircle size={18} />
+                                      </button>
+                                      <button
+                                        className="ml-2 p-2 rounded-full bg-red-100 hover:bg-red-200 text-red-600 hover:text-red-800 transition-colors"
+                                        onClick={() => {
+                                          setValidatorToDelete(validator);
+                                          setShowDeleteValidatorConfirm(true);
+                                        }}
+                                        title="Delete"
+                                      >
+                                        <Trash2 size={18} />
                                       </button>
                                     </>
                                   )}
@@ -1491,17 +1512,6 @@ const References: React.FC = () => {
                                       {nudgeCooldowns[validator.id] && Date.now() - nudgeCooldowns[validator.id] < 5 * 60 * 1000
                                         ? `Nudged (wait ${Math.ceil((5 * 60 * 1000 - (Date.now() - nudgeCooldowns[validator.id])) / 1000)}s)`
                                         : 'Nudge Supervisor'}
-                                    </button>
-                                  )}
-                                  {validator.status === 'scored' && (
-                                    <button
-                                      className="ml-2 px-2 py-0.5 text-xs font-medium bg-red-700 text-white rounded hover:bg-red-800 disabled:bg-red-300 disabled:cursor-not-allowed"
-                                      onClick={() => {
-                                        setValidatorToDelete(validator);
-                                        setShowDeleteValidatorConfirm(true);
-                                      }}
-                                    >
-                                      Delete
                                     </button>
                                   )}
                                   {(validator.status === 'draft' || validator.status === 'pending') && (
@@ -1908,7 +1918,16 @@ const References: React.FC = () => {
             {commentModalLoading ? (
               <div>Loading...</div>
             ) : (
-              <div className="text-slate-700 whitespace-pre-line">{commentModalContent}</div>
+              <div className="text-slate-700 whitespace-pre-line">
+                <div className="mb-4">
+                  <span className="font-semibold">EIT's Description:</span><br />
+                  {commentModalContent.feedback || <span className="italic text-slate-500">No description found.</span>}
+                </div>
+                <div>
+                  <span className="font-semibold">Supervisor's Comment:</span><br />
+                  {commentModalContent.comment}
+                </div>
+              </div>
             )}
             <div className="flex justify-end mt-6">
               <button
