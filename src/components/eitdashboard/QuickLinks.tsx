@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, Plus, X, ExternalLink, FileText, Calendar, MessageSquare, Mail, Video, File, Users, BookOpen, FileSpreadsheet, Presentation, Image, FileCode, FileArchive, FileAudio, FileVideo } from 'lucide-react';
+import { Plus, X, Search } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { getIconForUrl, getUrlSuggestions, getBestUrlMatch } from '../../utils/linkIcons';
 
 interface QuickLink {
   id: string;
@@ -8,47 +9,6 @@ interface QuickLink {
   url: string;
   icon?: string;
 }
-
-// Map of domain patterns to their corresponding icons
-const domainIcons: { [key: string]: React.ReactNode } = {
-  'docs.google.com': <FileText className="text-blue-500" size={24} />,
-  'calendar.google.com': <Calendar className="text-blue-500" size={24} />,
-  'mail.google.com': <Mail className="text-blue-500" size={24} />,
-  'meet.google.com': <Video className="text-blue-500" size={24} />,
-  'drive.google.com': <File className="text-blue-500" size={24} />,
-  'sheets.google.com': <FileSpreadsheet className="text-blue-500" size={24} />,
-  'slides.google.com': <Presentation className="text-blue-500" size={24} />,
-  'teams.microsoft.com': <Users className="text-blue-500" size={24} />,
-  'outlook.office.com': <Mail className="text-blue-500" size={24} />,
-  'slack.com': <MessageSquare className="text-blue-500" size={24} />,
-  'notion.so': <BookOpen className="text-blue-500" size={24} />,
-  'figma.com': <Image className="text-blue-500" size={24} />,
-  'github.com': <FileCode className="text-blue-500" size={24} />,
-  'dropbox.com': <FileArchive className="text-blue-500" size={24} />,
-  'spotify.com': <FileAudio className="text-blue-500" size={24} />,
-  'youtube.com': <FileVideo className="text-blue-500" size={24} />,
-};
-
-// Function to get the appropriate icon for a URL
-const getIconForUrl = (url: string): React.ReactNode => {
-  try {
-    const urlObj = new URL(url);
-    const hostname = urlObj.hostname;
-    
-    // Check for exact domain matches
-    for (const [domain, icon] of Object.entries(domainIcons)) {
-      if (hostname.includes(domain)) {
-        return icon;
-      }
-    }
-    
-    // Default icon if no match found
-    return <Link size={24} className="text-slate-400" />;
-  } catch {
-    // If URL is invalid, return default icon
-    return <Link size={24} className="text-slate-400" />;
-  }
-};
 
 interface AddLinkModalProps {
   isOpen: boolean;
@@ -61,18 +21,59 @@ const AddLinkModal: React.FC<AddLinkModalProps> = ({ isOpen, onClose, onAdd, ini
   const [name, setName] = useState('');
   const [url, setUrl] = useState(initialUrl || '');
   const [error, setError] = useState('');
+  const [suggestions, setSuggestions] = useState<Array<{ name: string; url: string }>>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
       setName('');
       setUrl(initialUrl || '');
       setError('');
+      setSuggestions([]);
+      setShowSuggestions(false);
       setTimeout(() => {
         nameInputRef.current?.focus();
       }, 100);
     }
   }, [isOpen, initialUrl]);
+
+  // Handle clicks outside suggestions to close them
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newName = e.target.value;
+    setName(newName);
+    
+    // Get suggestions based on name input
+    const newSuggestions = getUrlSuggestions(newName);
+    setSuggestions(newSuggestions);
+    setShowSuggestions(newSuggestions.length > 0 && newName.trim().length > 0);
+    
+    // Auto-fill URL if there's a perfect match and URL field is empty
+    if (!url && newSuggestions.length > 0 && newSuggestions[0].name.toLowerCase() === newName.toLowerCase()) {
+      setUrl(newSuggestions[0].url);
+    }
+  };
+
+  const handleSuggestionClick = (suggestion: { name: string; url: string }) => {
+    setName(suggestion.name);
+    setUrl(suggestion.url);
+    setShowSuggestions(false);
+    setSuggestions([]);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,6 +88,8 @@ const AddLinkModal: React.FC<AddLinkModalProps> = ({ isOpen, onClose, onAdd, ini
       setName('');
       setUrl('');
       setError('');
+      setSuggestions([]);
+      setShowSuggestions(false);
     } catch {
       setError('Please enter a valid URL');
     }
@@ -109,7 +112,7 @@ const AddLinkModal: React.FC<AddLinkModalProps> = ({ isOpen, onClose, onAdd, ini
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
+            <div className="relative">
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
                 Link Name
               </label>
@@ -118,10 +121,44 @@ const AddLinkModal: React.FC<AddLinkModalProps> = ({ isOpen, onClose, onAdd, ini
                 ref={nameInputRef}
                 type="text"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={handleNameChange}
+                onFocus={() => {
+                  if (suggestions.length > 0 && name.trim().length > 0) {
+                    setShowSuggestions(true);
+                  }
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                placeholder="e.g., My Google Doc"
+                placeholder="e.g., My Google Doc, GitHub, Notion"
               />
+              
+              {/* Suggestions dropdown */}
+              {showSuggestions && suggestions.length > 0 && (
+                <div
+                  ref={suggestionsRef}
+                  className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                >
+                  {suggestions.map((suggestion, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => handleSuggestionClick(suggestion)}
+                      className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center space-x-3 border-b border-gray-100 last:border-b-0"
+                    >
+                      <div className="flex-shrink-0">
+                        {getIconForUrl(suggestion.url, 20)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-900 truncate">
+                          {suggestion.name}
+                        </div>
+                        <div className="text-xs text-gray-500 truncate">
+                          {suggestion.url}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div>

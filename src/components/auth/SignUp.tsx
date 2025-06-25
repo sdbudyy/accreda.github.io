@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { useNavigate, Link } from 'react-router-dom'
 import AccredaLogo from '../../assets/accreda-logo.png'
 import { motion, AnimatePresence } from 'framer-motion'
+import { recordTermsAcceptance, getUserAgent } from '../../utils/termsAcceptance'
 
 export default function SignUp() {
   const [formData, setFormData] = useState({
@@ -50,6 +51,11 @@ export default function SignUp() {
         throw new Error('Organization is required for supervisors')
       }
 
+      // Validate terms acceptance
+      if (!agreedToTerms) {
+        throw new Error('You must agree to the Terms and Conditions')
+      }
+
       // Remove required validation for EIT start and target date
       // if (formData.accountType === 'eit') {
       //   if (!formData.startDate || !formData.targetDate) {
@@ -70,6 +76,20 @@ export default function SignUp() {
       
       if (!authData.user) {
         throw new Error('Failed to create user account')
+      }
+
+      // Record terms acceptance
+      const userAgent = getUserAgent();
+      const { error: termsError } = await recordTermsAcceptance(
+        authData.user.id,
+        '1.0', // Current terms version
+        undefined, // IP address will be handled by the server
+        userAgent
+      );
+
+      if (termsError) {
+        console.warn('Failed to record terms acceptance:', termsError);
+        // Don't throw error here as the account was created successfully
       }
 
       // Create profile in appropriate table

@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
-import { Check, Lock, Bell, Sun, Trash2, User as UserIcon, Mail } from 'lucide-react';
+import { Check, Lock, Bell, Sun, Trash2, User as UserIcon, Mail, Shield } from 'lucide-react';
 import FileUpload from '../components/FileUpload';
 import ConnectionStatus from '../components/common/ConnectionStatus';
 import { useSupervisorNotificationPreferences } from '../store/supervisorNotificationPreferences';
 import { Switch } from '@headlessui/react';
 import { useSubscriptionStore } from '../store/subscriptionStore';
 import ScrollToTop from '../components/ScrollToTop';
+import { getLatestTermsAcceptance, TermsAcceptance } from '../utils/termsAcceptance';
 
 const SupervisorSettings: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -52,6 +53,8 @@ const SupervisorSettings: React.FC = () => {
   const [contactLoading, setContactLoading] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
   const [contactSuccess, setContactSuccess] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsAcceptanceData, setTermsAcceptanceData] = useState<TermsAcceptance | null>(null);
 
   const { 
     tier,
@@ -106,6 +109,23 @@ const SupervisorSettings: React.FC = () => {
     getUserProfile();
     fetchSubscription();
   }, []);
+
+  // Fetch terms acceptance data
+  useEffect(() => {
+    const fetchTermsAcceptance = async () => {
+      if (user) {
+        const { data, error } = await getLatestTermsAcceptance(user.id);
+        if (data && !error) {
+          setTermsAcceptanceData(data);
+          setTermsAccepted(true);
+        } else {
+          setTermsAccepted(false);
+        }
+      }
+    };
+
+    fetchTermsAcceptance();
+  }, [user]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -865,6 +885,79 @@ const SupervisorSettings: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Terms Acceptance Card */}
+        <section className="card p-6">
+          <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
+            <Shield /> Terms & Conditions
+          </h2>
+          {termsAccepted && termsAcceptanceData ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-green-600">
+                <Check className="h-5 w-5" />
+                <span className="font-medium">Terms and Conditions Accepted</span>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Version:</span>
+                  <span className="font-medium">{termsAcceptanceData.terms_version}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Accepted on:</span>
+                  <span className="font-medium">
+                    {new Date(termsAcceptanceData.accepted_at).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                </div>
+                {termsAcceptanceData.ip_address && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">IP Address:</span>
+                    <span className="font-mono text-xs">{termsAcceptanceData.ip_address}</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-500">
+                  You accepted our Terms and Conditions when you created your account. 
+                  If we update our terms, you'll be notified and asked to accept the new version.
+                </p>
+                <a
+                  href="/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-teal-600 hover:text-teal-700 font-medium underline"
+                >
+                  View Terms
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-amber-600">
+                <Shield className="h-5 w-5" />
+                <span className="font-medium">Terms Acceptance Status Unknown</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-500">
+                  We couldn't find a record of your terms acceptance. This might be because you signed up before we started tracking this information.
+                </p>
+                <a
+                  href="/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-teal-600 hover:text-teal-700 font-medium underline"
+                >
+                  View Terms
+                </a>
+              </div>
+            </div>
+          )}
+        </section>
 
         {/* Danger Zone */}
         <section className="card p-6 border-red-200">

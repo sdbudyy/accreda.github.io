@@ -104,7 +104,7 @@ BEGIN
     SELECT 
         r.id::UUID,
         'reference'::TEXT as type,
-        r.full_name as title,
+        (r.first_name || ' ' || r.last_name) as title,
         r.description,
         NULL::TEXT as category,
         NULL::TEXT as company,
@@ -115,7 +115,7 @@ BEGIN
     FROM job_references r
     WHERE r.user_id = search_all.user_id
     AND (
-        r.full_name ILIKE '%' || search_query || '%'
+        (r.first_name || ' ' || r.last_name) ILIKE '%' || search_query || '%'
         OR r.email ILIKE '%' || search_query || '%'
         OR r.description ILIKE '%' || search_query || '%'
     )

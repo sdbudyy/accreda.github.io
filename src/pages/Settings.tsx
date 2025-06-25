@@ -1,7 +1,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
-import { Check, Lock, Bell, Sun, Trash2, User as UserIcon, Calendar, FileText } from 'lucide-react';
+import { Check, Lock, Bell, Sun, Trash2, User as UserIcon, Calendar, FileText, Shield } from 'lucide-react';
 import { useNotificationPreferences } from '../store/notificationPreferences';
 import { Switch } from '@headlessui/react';
 import { useSubscriptionStore } from '../store/subscriptionStore';
@@ -11,6 +11,7 @@ import { useSAOsStore } from '../store/saos';
 import { useSkillsStore } from '../store/skills';
 import { useUserProfile } from '../context/UserProfileContext';
 import { useProgressStore } from '../store/progress';
+import { getLatestTermsAcceptance, TermsAcceptance } from '../utils/termsAcceptance';
 
 const defaultAvatar =
   'https://ui-avatars.com/api/?name=User&background=E0F2FE&color=0891B2&size=128';
@@ -81,6 +82,8 @@ const Settings: React.FC = () => {
   const [allowAnyway, setAllowAnyway] = useState(false);
   const [apegaIdSaving, setApegaIdSaving] = useState(false);
   const [apegaIdSaved, setApegaIdSaved] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsAcceptanceData, setTermsAcceptanceData] = useState<TermsAcceptance | null>(null);
 
   const { profile, loading: profileLoading, error: profileError, refresh: refreshProfile } = useUserProfile();
   const userRole = profile?.account_type || null;
@@ -168,6 +171,23 @@ const Settings: React.FC = () => {
       setTargetDate(profile.target_date || '');
     }
   }, [profile]);
+
+  // Fetch terms acceptance data
+  useEffect(() => {
+    const fetchTermsAcceptance = async () => {
+      if (user) {
+        const { data, error } = await getLatestTermsAcceptance(user.id);
+        if (data && !error) {
+          setTermsAcceptanceData(data);
+          setTermsAccepted(true);
+        } else {
+          setTermsAccepted(false);
+        }
+      }
+    };
+
+    fetchTermsAcceptance();
+  }, [user]);
 
   const handleAvatarSelect = (files: File[]) => {
     if (files.length > 0) {
@@ -1465,6 +1485,79 @@ const Settings: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Terms Acceptance Card */}
+          <section className="card p-6">
+            <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
+              <Shield /> Terms & Conditions
+            </h2>
+            {termsAccepted && termsAcceptanceData ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-green-600">
+                  <Check className="h-5 w-5" />
+                  <span className="font-medium">Terms and Conditions Accepted</span>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Version:</span>
+                    <span className="font-medium">{termsAcceptanceData.terms_version}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Accepted on:</span>
+                    <span className="font-medium">
+                      {new Date(termsAcceptanceData.accepted_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
+                  </div>
+                  {termsAcceptanceData.ip_address && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">IP Address:</span>
+                      <span className="font-mono text-xs">{termsAcceptanceData.ip_address}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-gray-500">
+                    You accepted our Terms and Conditions when you created your account. 
+                    If we update our terms, you'll be notified and asked to accept the new version.
+                  </p>
+                  <a
+                    href="/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-teal-600 hover:text-teal-700 font-medium underline"
+                  >
+                    View Terms
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-amber-600">
+                  <Shield className="h-5 w-5" />
+                  <span className="font-medium">Terms Acceptance Status Unknown</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-gray-500">
+                    We couldn't find a record of your terms acceptance. This might be because you signed up before we started tracking this information.
+                  </p>
+                  <a
+                    href="/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-teal-600 hover:text-teal-700 font-medium underline"
+                  >
+                    View Terms
+                  </a>
+                </div>
+              </div>
+            )}
+          </section>
 
           {/* Theme Card (placeholder) */}
           <section className="card p-6">
