@@ -8,6 +8,7 @@ import { sendValidationRequestNotification } from '../utils/notifications';
 import { toast } from 'react-hot-toast';
 import ReferenceAutocomplete from '../components/references/ReferenceAutocomplete';
 import SkillSelectModal from '../components/common/SkillSelectModal';
+import { deleteValidatorAndValidations } from '../utils/validatorUtils';
 
 interface Validator {
   id: string;
@@ -19,6 +20,8 @@ interface Validator {
   score: number | null;
   created_at: string;
   updated_at: string;
+  eit_id: string;
+  skill_id: string;
 }
 
 interface Job {
@@ -639,6 +642,10 @@ const References: React.FC = () => {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [showDeleteValidatorConfirm, setShowDeleteValidatorConfirm] = useState(false);
   const [validatorToDelete, setValidatorToDelete] = useState<Validator | null>(null);
+  // At the top, add state for the comment popup
+  const [showCommentModal, setShowCommentModal] = useState(false);
+  const [commentModalContent, setCommentModalContent] = useState<string>('');
+  const [commentModalLoading, setCommentModalLoading] = useState(false);
 
   const selectedSkills = skillCategories
     .flatMap(cat => cat.skills)
@@ -959,11 +966,26 @@ const References: React.FC = () => {
 
   const handleDeleteValidator = async () => {
     if (!validatorToDelete) return;
-    await supabase.from('validators').delete().eq('id', validatorToDelete.id);
-    setShowDeleteValidatorConfirm(false);
-    setValidatorToDelete(null);
-    setTimeout(() => loadValidators(), 300);
-    toast.success('Validator deleted');
+    
+    try {
+      const result = await deleteValidatorAndValidations(
+        validatorToDelete.id,
+        validatorToDelete.eit_id,
+        validatorToDelete.skill_id
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to delete validator');
+      }
+
+      setShowDeleteValidatorConfirm(false);
+      setValidatorToDelete(null);
+      setTimeout(() => loadValidators(), 300);
+      toast.success('Validator deleted successfully');
+    } catch (error) {
+      console.error('Error deleting validator:', error);
+      toast.error('Failed to delete validator');
+    }
   };
 
   return (
@@ -1397,15 +1419,41 @@ const References: React.FC = () => {
                                   </span>
                                   {/* Supervisor Score UI */}
                                   {validator.status === 'scored' && (
-                                    <span className="ml-2 flex flex-col items-center">
-                                      <span className="inline-block px-3 py-1 rounded-full text-base font-bold bg-green-100 text-green-800 border border-green-300 shadow-sm relative group/score" title="Supervisor's score for this skill">
-                                        Supervisor Score: {validator.score}
-                                        <span className="absolute left-1/2 -translate-x-1/2 top-8 z-10 w-40 p-2 bg-white border border-slate-200 rounded shadow text-xs text-slate-700 opacity-0 group-hover/score:opacity-100 transition-opacity pointer-events-none">
-                                          This is the score (1-5) given by your supervisor for this skill.
+                                    <>
+                                      <span className="ml-2 flex flex-col items-center">
+                                        <span className="inline-block px-3 py-1 rounded-full text-base font-bold bg-green-100 text-green-800 border border-green-300 shadow-sm relative group/score" title="Supervisor's score for this skill">
+                                          Supervisor Score: {validator.score}
+                                          <span className="absolute left-1/2 -translate-x-1/2 top-8 z-10 w-40 p-2 bg-white border border-slate-200 rounded shadow text-xs text-slate-700 opacity-0 group-hover/score:opacity-100 transition-opacity pointer-events-none">
+                                            This is the score (1-5) given by your supervisor for this skill.
+                                          </span>
                                         </span>
                                       </span>
-                                      {/* Progress bar removed as requested */}
-                                    </span>
+                                      <button
+                                        className="ml-2 px-2 py-0.5 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed"
+                                        onClick={async () => {
+                                          setCommentModalLoading(true);
+                                          setShowCommentModal(true);
+                                          // Fetch the latest comment for this skill/validator
+                                          const { data, error } = await supabase
+                                            .from('skill_validations')
+                                            .select('comment')
+                                            .eq('eit_id', validator.eit_id)
+                                            .eq('skill_id', validator.skill_id)
+                                            .not('comment', 'is', null)
+                                            .order('validated_at', { ascending: false })
+                                            .limit(1);
+                                          if (!error && data && data.length > 0 && data[0].comment) {
+                                            setCommentModalContent(data[0].comment);
+                                          } else {
+                                            setCommentModalContent('No comment found.');
+                                          }
+                                          setCommentModalLoading(false);
+                                        }}
+                                        title="View Supervisor's Comment"
+                                      >
+                                        View Comment
+                                      </button>
+                                    </>
                                   )}
                                   {/* Nudge Supervisor button for pending or scored status */}
                                   {(validator.status === 'pending') && (
@@ -1460,8 +1508,23 @@ const References: React.FC = () => {
                                     <button
                                       className="btn btn-danger btn-xs"
                                       onClick={async () => {
-                                        await supabase.from('validators').delete().eq('id', validator.id);
-                                        setTimeout(() => loadValidators(), 300);
+                                        try {
+                                          const result = await deleteValidatorAndValidations(
+                                            validator.id,
+                                            validator.eit_id,
+                                            validator.skill_id
+                                          );
+
+                                          if (!result.success) {
+                                            throw new Error(result.error || 'Failed to cancel validator');
+                                          }
+
+                                          setTimeout(() => loadValidators(), 300);
+                                          toast.success('Validator cancelled successfully');
+                                        } catch (error) {
+                                          console.error('Error cancelling validator:', error);
+                                          toast.error('Failed to cancel validator');
+                                        }
                                       }}
                                     >
                                       Cancel
@@ -1831,6 +1894,28 @@ const References: React.FC = () => {
                 className="px-4 py-2 text-sm font-medium text-white bg-red-700 hover:bg-red-800 rounded-lg transition-colors"
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Comment Modal */}
+      {showCommentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Supervisor's Comment</h3>
+            {commentModalLoading ? (
+              <div>Loading...</div>
+            ) : (
+              <div className="text-slate-700 whitespace-pre-line">{commentModalContent}</div>
+            )}
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={() => setShowCommentModal(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
+              >
+                Close
               </button>
             </div>
           </div>

@@ -45,6 +45,15 @@ function htmlToPlainText(html: string): string {
   return tmp.textContent || tmp.innerText || '';
 }
 
+// Utility to calculate total character count for SAO sections
+function calculateTotalSAOCharacters(situation: string, action: string, outcome: string): number {
+  const situationText = htmlToPlainText(situation);
+  const actionText = htmlToPlainText(action);
+  const outcomeText = htmlToPlainText(outcome);
+  
+  return situationText.length + actionText.length + outcomeText.length;
+}
+
 const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated, initialContent, onInitialContentUsed }) => {
   const [title, setTitle] = useState('');
   const [situation, setSituation] = useState('');
@@ -56,6 +65,7 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
   const [isSkillsModalOpen, setIsSkillsModalOpen] = useState(false);
   const [selectedSupervisor, setSelectedSupervisor] = useState<string>('');
   const [supervisors, setSupervisors] = useState<Array<{ id: string; name: string }>>([]);
+  const [editMode, setEditMode] = useState<'edit' | 'comment'>('edit');
   const { skillCategories } = useSkillsStore();
   const { createSAO, updateSAO, loading, error, requestFeedback, loadUserSAOs, fetchSAOVersions } = useSAOsStore();
   const [ruleModalOpen, setRuleModalOpen] = useState(false);
@@ -82,6 +92,12 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
   const autoSaveTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const mostRecentFeedback = editSAO && editSAO.feedback ? getMostRecentFeedback(editSAO.feedback) : null;
+
+  // Calculate total character count
+  const totalCharacters = calculateTotalSAOCharacters(situation, action, outcome);
+  const maxCharacters = 1800;
+  const isOverLimit = totalCharacters > maxCharacters;
+  const isNearLimit = totalCharacters > maxCharacters * 0.9; // Warning at 90%
 
   // Load supervisors when modal opens
   useEffect(() => {
@@ -126,6 +142,7 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
       setEmployer(editSAO.employer || '');
       setSelectedSkill(editSAO.skills[0] || null);
       setStatus(editSAO.status || 'draft');
+      setEditMode('edit'); // Default to edit mode for existing SAOs
     } else if (isOpen) {
       setTitle('');
       setSituation('');
@@ -134,6 +151,7 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
       setEmployer('');
       setSelectedSkill(null);
       setStatus('draft');
+      setEditMode('edit'); // Default to edit mode for new SAOs
     }
   }, [isOpen, editSAO]);
 
@@ -386,6 +404,36 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
           </button>
         </div>
 
+        {/* Mode Toggle - Only show for existing SAOs */}
+        {editSAO && (
+          <div className="mb-6">
+            <div className="flex items-center bg-slate-100 rounded-lg p-1 w-fit">
+              <button
+                type="button"
+                onClick={() => setEditMode('edit')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  editMode === 'edit'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Edit SAO
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditMode('comment')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  editMode === 'comment'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Comments & Feedback
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Show limit error if present */}
         {limitError && (
           <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-md text-sm font-semibold text-center">
@@ -399,34 +447,32 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
           </div>
         )}
 
-        {/* Show annotation UI for EITs if editing an existing SAO */}
-        {editSAO && (
-          <div className="mb-6">
+        {/* Comment Mode Content */}
+        {editSAO && editMode === 'comment' && (
+          <div className="space-y-6">
             <div className="flex items-center gap-2 mb-2">
               <span className="font-semibold text-slate-700">Comments & Feedback</span>
               {/* Version history clock */}
-              {editSAO && (
-                <button
-                  type="button"
-                  className="p-1 rounded hover:bg-slate-200"
-                  title="Show Version History"
-                  onClick={async () => {
-                    setShowVersionModal(true);
-                    setLoadingVersions(true);
-                    setVersionError(null);
-                    try {
-                      const data = await fetchSAOVersions(editSAO.id);
-                      setVersions(data);
-                    } catch (e: any) {
-                      setVersionError(e.message || 'Failed to load version history');
-                    } finally {
-                      setLoadingVersions(false);
-                    }
-                  }}
-                >
-                  <Clock size={18} className="text-slate-400" />
-                </button>
-              )}
+              <button
+                type="button"
+                className="p-1 rounded hover:bg-slate-200"
+                title="Show Version History"
+                onClick={async () => {
+                  setShowVersionModal(true);
+                  setLoadingVersions(true);
+                  setVersionError(null);
+                  try {
+                    const data = await fetchSAOVersions(editSAO.id);
+                    setVersions(data);
+                  } catch (e: any) {
+                    setVersionError(e.message || 'Failed to load version history');
+                  } finally {
+                    setLoadingVersions(false);
+                  }
+                }}
+              >
+                <Clock size={18} className="text-slate-400" />
+              </button>
             </div>
             <div className="text-xs text-slate-500 mb-1">
               The preview below shows your formatting. Comments and highlights are made on the plain text version.
@@ -479,204 +525,218 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
                 ))}
               </div>
             )}
-          </div>
-        )}
-
-        {/* Show supervisor feedback if present */}
-        {editSAO && editSAO.feedback && editSAO.feedback.length > 0 && (
-          <div className="mb-6">
-            <SAOFeedbackComponent
-              feedback={feedbackToShow}
-              onResolve={async () => Promise.resolve()}
-              onSubmitFeedback={async () => Promise.resolve()}
-              isSupervisor={false}
-            />
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="title" className="block text-sm font-medium text-slate-700 mb-2">
-              Title
-            </label>
-            <input
-              type="text"
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 text-lg"
-              placeholder="Enter SAO title"
-              required
-              disabled={loading}
-            />
-          </div>
-          <div>
-            <label htmlFor="employer" className="block text-sm font-medium text-slate-700 mb-2">
-              Employer
-            </label>
-            <input
-              type="text"
-              id="employer"
-              value={employer}
-              onChange={(e) => setEmployer(e.target.value)}
-              className="w-full px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 text-lg"
-              placeholder="Enter employer name"
-              required
-              disabled={loading}
-            />
-          </div>
-          <div className="space-y-6">
-            <div className="bg-slate-100 border border-slate-200 rounded-lg p-4 mb-2">
-              <div className="font-semibold mb-1 text-lg text-slate-800">Situation</div>
-              <div className="relative">
-                <RichTextEditor
-                  content={situation}
-                  onChange={val => setSituation(val)}
+            
+            {/* Show supervisor feedback if present */}
+            {editSAO.feedback && editSAO.feedback.length > 0 && (
+              <div className="mt-6">
+                <SAOFeedbackComponent
+                  feedback={feedbackToShow}
+                  onResolve={async () => Promise.resolve()}
+                  onSubmitFeedback={async () => Promise.resolve()}
+                  isSupervisor={false}
                 />
-                <div className="absolute bottom-2 right-2 text-xs text-slate-500">
-                  {situation.split(/\s+/).filter(Boolean).length} words
-                </div>
               </div>
-            </div>
-            <div className="bg-slate-100 border border-slate-200 rounded-lg p-4 mb-2">
-              <div className="font-semibold mb-1 text-lg text-slate-800">Action</div>
-              <div className="relative">
-                <RichTextEditor
-                  content={action}
-                  onChange={val => setAction(val)}
-                />
-                <div className="absolute bottom-2 right-2 text-xs text-slate-500">
-                  {action.split(/\s+/).filter(Boolean).length} words
-                </div>
-              </div>
-            </div>
-            <div className="bg-slate-100 border border-slate-200 rounded-lg p-4">
-              <div className="font-semibold mb-1 text-lg text-slate-800">Outcome</div>
-              <div className="relative">
-                <RichTextEditor
-                  content={outcome}
-                  onChange={val => setOutcome(val)}
-                />
-                <div className="absolute bottom-2 right-2 text-xs text-slate-500">
-                  {outcome.split(/\s+/).filter(Boolean).length} words
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
-            <div className="flex items-center gap-4">
-              <button
-                type="button"
-                className={`px-4 py-2 rounded-full border text-sm font-semibold transition-colors duration-200 ${status === 'draft' ? 'bg-slate-200 text-slate-800 border-slate-400' : 'bg-white text-slate-500 border-slate-200'}`}
-                onClick={() => setStatus('draft')}
-                aria-pressed={status === 'draft'}
-              >
-                Draft
-              </button>
-              <button
-                type="button"
-                className={`px-4 py-2 rounded-full border text-sm font-semibold transition-colors duration-200 ${status === 'complete' ? 'bg-green-200 text-green-800 border-green-400' : 'bg-white text-slate-500 border-slate-200'}`}
-                onClick={() => setStatus('complete')}
-                aria-pressed={status === 'complete'}
-              >
-                Completed
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Relevant Skill
-            </label>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {selectedSkill && (
-                <span
-                  key={selectedSkill.id}
-                  className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-teal-100 text-teal-800"
-                >
-                  {selectedSkill.name}
-                  {selectedSkillInfo && selectedSkillInfo.rank && (
-                    <span className="ml-2 text-xs text-blue-600 font-semibold">
-                      (Rank: {selectedSkillInfo.rank})
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setSelectedSkill(null)}
-                    className="ml-2 text-teal-600 hover:text-teal-800"
-                    disabled={loading}
-                  >
-                    <X size={16} />
-                  </button>
-                </span>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsSkillsModalOpen(true)}
-              className="btn btn-secondary w-full flex items-center justify-center gap-2 py-3 text-lg"
-              disabled={loading}
-            >
-              <Plus size={20} />
-              Select Skill
-            </button>
-          </div>
-
-          {/* Supervisor Feedback Section */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Supervisor Selection
-            </label>
-            <div className="flex gap-3">
-              <select
-                value={selectedSupervisor}
-                onChange={(e) => setSelectedSupervisor(e.target.value)}
-                className="flex-1 px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 text-lg"
-                disabled={loading || supervisors.length === 0}
-              >
-                <option value="">Select a supervisor</option>
-                {supervisors.map((supervisor) => (
-                  <option key={supervisor.id} value={supervisor.id}>
-                    {supervisor.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={handleRequestFeedback}
-                disabled={!selectedSupervisor || loading || !editSAO}
-                className="px-4 py-3 bg-teal-600 text-white rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Send for Validation
-              </button>
-            </div>
-            {supervisors.length === 0 && (
-              <p className="mt-2 text-sm text-slate-500">
-                No active supervisors found. Connect with a supervisor first.
-              </p>
             )}
           </div>
+        )}
 
-          <div className="flex justify-end gap-3 mt-8">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn btn-secondary px-6 py-3 text-lg"
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary px-6 py-3 text-lg"
-              disabled={loading}
-            >
-              {loading ? 'Saving...' : editSAO ? 'Update SAO' : 'Create SAO'}
-            </button>
-          </div>
-        </form>
+        {/* Edit Mode Content */}
+        {(!editSAO || editMode === 'edit') && (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="title" className="block text-sm font-medium text-slate-700 mb-2">
+                Title
+              </label>
+              <input
+                type="text"
+                id="title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 text-lg"
+                placeholder="Enter SAO title"
+                required
+                disabled={loading}
+              />
+            </div>
+            <div>
+              <label htmlFor="employer" className="block text-sm font-medium text-slate-700 mb-2">
+                Employer
+              </label>
+              <input
+                type="text"
+                id="employer"
+                value={employer}
+                onChange={(e) => setEmployer(e.target.value)}
+                className="w-full px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 text-lg"
+                placeholder="Enter employer name"
+                required
+                disabled={loading}
+              />
+            </div>
+            <div className="space-y-6">
+              <div className="bg-slate-100 border border-slate-200 rounded-lg p-4 mb-2">
+                <div className="font-semibold mb-1 text-lg text-slate-800">Situation</div>
+                <div className="relative">
+                  <RichTextEditor
+                    content={situation}
+                    onChange={val => setSituation(val)}
+                  />
+                  <div className="absolute bottom-2 right-2 text-xs text-slate-500">
+                    {situation.split(/\s+/).filter(Boolean).length} words
+                  </div>
+                </div>
+              </div>
+              <div className="bg-slate-100 border border-slate-200 rounded-lg p-4 mb-2">
+                <div className="font-semibold mb-1 text-lg text-slate-800">Action</div>
+                <div className="relative">
+                  <RichTextEditor
+                    content={action}
+                    onChange={val => setAction(val)}
+                  />
+                  <div className="absolute bottom-2 right-2 text-xs text-slate-500">
+                    {action.split(/\s+/).filter(Boolean).length} words
+                  </div>
+                </div>
+              </div>
+              <div className="bg-slate-100 border border-slate-200 rounded-lg p-4">
+                <div className="font-semibold mb-1 text-lg text-slate-800">Outcome</div>
+                <div className="relative">
+                  <RichTextEditor
+                    content={outcome}
+                    onChange={val => setOutcome(val)}
+                  />
+                  <div className="absolute bottom-2 right-2 text-xs text-slate-500">
+                    {outcome.split(/\s+/).filter(Boolean).length} words
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Character counter and warning/error */}
+            <div className="mt-2 mb-4 text-right">
+              <span className={`text-xs font-semibold ${isOverLimit ? 'text-red-600' : isNearLimit ? 'text-yellow-600' : 'text-slate-500'}`}>SAO Total: {totalCharacters} / 1800 characters</span>
+              {isOverLimit && (
+                <div className="text-xs text-red-600 font-semibold mt-1">You have exceeded the 1800 character limit for Situation, Action, and Outcome combined.</div>
+              )}
+              {!isOverLimit && isNearLimit && (
+                <div className="text-xs text-yellow-600 font-semibold mt-1">Warning: You are approaching the 1800 character limit.</div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
+              <div className="flex items-center gap-4">
+                <button
+                  type="button"
+                  className={`px-4 py-2 rounded-full border text-sm font-semibold transition-colors duration-200 ${status === 'draft' ? 'bg-slate-200 text-slate-800 border-slate-400' : 'bg-white text-slate-500 border-slate-200'}`}
+                  onClick={() => setStatus('draft')}
+                  aria-pressed={status === 'draft'}
+                >
+                  Draft
+                </button>
+                <button
+                  type="button"
+                  className={`px-4 py-2 rounded-full border text-sm font-semibold transition-colors duration-200 ${status === 'complete' ? 'bg-green-200 text-green-800 border-green-400' : 'bg-white text-slate-500 border-slate-200'}`}
+                  onClick={() => setStatus('complete')}
+                  aria-pressed={status === 'complete'}
+                >
+                  Completed
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Relevant Skill
+              </label>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {selectedSkill && (
+                  <span
+                    key={selectedSkill.id}
+                    className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-teal-100 text-teal-800"
+                  >
+                    {selectedSkill.name}
+                    {selectedSkillInfo && selectedSkillInfo.rank && (
+                      <span className="ml-2 text-xs text-blue-600 font-semibold">
+                        (Rank: {selectedSkillInfo.rank})
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSkill(null)}
+                      className="ml-2 text-teal-600 hover:text-teal-800"
+                      disabled={loading}
+                    >
+                      <X size={16} />
+                    </button>
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSkillsModalOpen(true)}
+                className="btn btn-secondary w-full flex items-center justify-center gap-2 py-3 text-lg"
+                disabled={loading}
+              >
+                <Plus size={20} />
+                Select Skill
+              </button>
+            </div>
+
+            {/* Supervisor Feedback Section */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Supervisor Selection
+              </label>
+              <div className="flex gap-3">
+                <select
+                  value={selectedSupervisor}
+                  onChange={(e) => setSelectedSupervisor(e.target.value)}
+                  className="flex-1 px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 text-lg"
+                  disabled={loading || supervisors.length === 0}
+                >
+                  <option value="">Select a supervisor</option>
+                  {supervisors.map((supervisor) => (
+                    <option key={supervisor.id} value={supervisor.id}>
+                      {supervisor.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={handleRequestFeedback}
+                  disabled={!selectedSupervisor || loading || !editSAO}
+                  className="px-4 py-3 bg-teal-600 text-white rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Send for Validation
+                </button>
+              </div>
+              {supervisors.length === 0 && (
+                <p className="mt-2 text-sm text-slate-500">
+                  No active supervisors found. Connect with a supervisor first.
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 mt-8">
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn btn-secondary px-6 py-3 text-lg"
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary px-6 py-3 text-lg"
+                disabled={loading || isOverLimit}
+              >
+                {loading ? 'Saving...' : editSAO ? 'Update SAO' : 'Create SAO'}
+              </button>
+            </div>
+          </form>
+        )}
 
         {/* Skills Selection Modal */}
         {isSkillsModalOpen && (
@@ -1307,34 +1367,12 @@ const SAOs: React.FC = () => {
         <div className="flex flex-wrap gap-2 items-center justify-end">
           <button
             className="btn flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
-            onClick={() => setImportMenuOpen((v) => !v)}
+            onClick={() => uploadInputRef.current?.click()}
             type="button"
           >
             <Upload size={18} />
             Import / Upload
           </button>
-          {importMenuOpen && (
-            <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-lg shadow-lg z-10">
-              <button
-                className="w-full text-left px-4 py-2 hover:bg-slate-100"
-                onClick={() => {
-                  setImportMenuOpen(false);
-                  uploadInputRef.current?.click();
-                }}
-              >
-                Upload from Device
-              </button>
-              <button
-                className="w-full text-left px-4 py-2 hover:bg-slate-100"
-                onClick={() => {
-                  setImportMenuOpen(false);
-                  handleGoogleDriveImport();
-                }}
-              >
-                Import from Google Drive
-              </button>
-            </div>
-          )}
           <input
             type="file"
             className="hidden"

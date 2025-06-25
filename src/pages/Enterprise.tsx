@@ -263,6 +263,7 @@ const Enterprise: React.FC = () => {
                   'Unlimited EIT accounts',
                   'Bulk discounts on EIT accounts',
                   'Advanced analytics & reporting',
+                  'Validate and score EITs within the native app',
                   'Dedicated account manager',
                   'Priority support',
                   'Custom onboarding',

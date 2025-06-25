@@ -255,6 +255,9 @@ const SupervisorReviews: React.FC = () => {
   const [submitLoading, setSubmitLoading] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Add to state
+  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
+
   const { notifications, markAsRead } = useNotificationsStore();
   const { submitFeedback } = useSAOsStore();
 
@@ -406,12 +409,21 @@ const SupervisorReviews: React.FC = () => {
   const handleScoreChange = (id: string, value: number) => {
     setScoreInputs((prev) => ({ ...prev, [id]: value }));
   };
+  const handleCommentChange = (id: string, value: string) => {
+    setCommentInputs((prev) => ({ ...prev, [id]: value }));
+  };
   const handleSubmit = async (validator: Validator) => {
     try {
       setSubmitLoading(validator.id);
       setSuccessMessage(null);
       const score = scoreInputs[validator.id];
+      const comment = commentInputs[validator.id];
       if (!score || score < 1 || score > 5) return;
+      if (!comment || comment.trim() === '') {
+        toast.error('Comment is required.');
+        setSubmitLoading(null);
+        return;
+      }
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       // Update the validator row with the score and feedback
@@ -434,12 +446,18 @@ const SupervisorReviews: React.FC = () => {
           skill_id: validator.skill_id,
           score: score,
           feedback: validator.description,
+          comment: comment,
           validated_at: new Date().toISOString()
         });
       if (insertError) throw insertError;
       // Remove from pendingValidators
       setPendingValidators(prev => prev.filter(v => v.id !== validator.id));
       setScoreInputs(prev => {
+        const next = { ...prev };
+        delete next[validator.id];
+        return next;
+      });
+      setCommentInputs(prev => {
         const next = { ...prev };
         delete next[validator.id];
         return next;
@@ -645,6 +663,17 @@ const SupervisorReviews: React.FC = () => {
                         </div>
                         <div className="text-slate-600">EIT: {eit ? `${eit.full_name} (${eit.email})` : validator.eit_id}</div>
                         <div className="text-slate-600">Description: {validator.description}</div>
+                        <div className="mt-2">
+                          <label htmlFor={`comment-${validator.id}`} className="block text-sm font-medium text-slate-700 mb-1">Comment <span className="text-red-500">*</span></label>
+                          <textarea
+                            id={`comment-${validator.id}`}
+                            value={commentInputs[validator.id] || ''}
+                            onChange={e => handleCommentChange(validator.id, e.target.value)}
+                            className="input w-full min-h-[60px]"
+                            required
+                            placeholder="Enter your comment (required)"
+                          />
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <input
@@ -659,7 +688,7 @@ const SupervisorReviews: React.FC = () => {
                         <button
                           className="btn btn-primary flex items-center gap-2"
                           onClick={() => handleSubmit(validator)}
-                          disabled={submitLoading === validator.id || !scoreInputs[validator.id] || scoreInputs[validator.id] < 1 || scoreInputs[validator.id] > 5}
+                          disabled={submitLoading === validator.id || !scoreInputs[validator.id] || scoreInputs[validator.id] < 1 || scoreInputs[validator.id] > 5 || !commentInputs[validator.id] || commentInputs[validator.id].trim() === ''}
                         >
                           {submitLoading === validator.id ? (
                             <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></span>
@@ -874,21 +903,21 @@ const SupervisorReviews: React.FC = () => {
                     <div className="font-semibold mb-1">Situation</div>
                     <SAOAnnotation
                       saoId={selectedSAO.sao_id}
-                      content={htmlToPlainText((selectedSAO.sao as any).situation || '')}
+                      content={htmlToPlainText(selectedSAO.sao && ('situation' in selectedSAO.sao ? (selectedSAO.sao as any).situation : (selectedSAO.sao.content ? selectedSAO.sao.content.split('---')[0] : '')) || '')}
                     />
                   </div>
                   <div className="mb-4">
                     <div className="font-semibold mb-1">Action</div>
                     <SAOAnnotation
                       saoId={selectedSAO.sao_id}
-                      content={htmlToPlainText((selectedSAO.sao as any).action || '')}
+                      content={htmlToPlainText(selectedSAO.sao && ('action' in selectedSAO.sao ? (selectedSAO.sao as any).action : (selectedSAO.sao.content ? selectedSAO.sao.content.split('---')[1] : '')) || '')}
                     />
                   </div>
                   <div>
                     <div className="font-semibold mb-1">Outcome</div>
                     <SAOAnnotation
                       saoId={selectedSAO.sao_id}
-                      content={htmlToPlainText((selectedSAO.sao as any).outcome || '')}
+                      content={htmlToPlainText(selectedSAO.sao && ('outcome' in selectedSAO.sao ? (selectedSAO.sao as any).outcome : (selectedSAO.sao.content ? selectedSAO.sao.content.split('---')[2] : '')) || '')}
                     />
                   </div>
                 </div>

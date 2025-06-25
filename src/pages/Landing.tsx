@@ -977,7 +977,7 @@ const Landing: React.FC = () => {
               What engineers are saying
             </h2>
             <p className="text-xl text-slate-600 max-w-3xl mx-auto mt-4">
-              Join thousands of engineers who have transformed their P.Eng journey with Accreda
+              Join engineers who have transformed their P.Eng journey with Accreda
             </p>
           </motion.div>
           <div className="max-w-4xl mx-auto">

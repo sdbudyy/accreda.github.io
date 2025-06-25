@@ -506,34 +506,12 @@ const Documents: React.FC = () => {
           {/* Combined Upload/Import Button */}
           <button
             className="btn flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
-            onClick={() => setImportMenuOpen((v) => !v)}
+            onClick={() => uploadInputRef.current?.click()}
             type="button"
           >
             <Upload size={18} />
             Upload / Import
           </button>
-          {importMenuOpen && (
-            <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-lg shadow-lg z-10">
-              <button
-                className="w-full text-left px-4 py-2 hover:bg-slate-100"
-                onClick={() => {
-                  setImportMenuOpen(false);
-                  uploadInputRef.current?.click();
-                }}
-              >
-                Upload from Device
-              </button>
-              <button
-                className="w-full text-left px-4 py-2 hover:bg-slate-100"
-                onClick={() => {
-                  setImportMenuOpen(false);
-                  handleGoogleDriveImport();
-                }}
-              >
-                Import from Google Drive
-              </button>
-            </div>
-          )}
           {/* Hidden file input for upload */}
           <input
             type="file"
