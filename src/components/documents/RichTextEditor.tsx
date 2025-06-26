@@ -1,6 +1,6 @@
 import React from 'react';
 import { CKEditor } from '@ckeditor/ckeditor5-react';
-import ClassicEditor from 'ckeditor5-build-classic-dna';
+import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 // @ts-ignore
 import type { CKEditorEvent, CKEditor5Editor } from '@ckeditor/ckeditor5-react';
 
