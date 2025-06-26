@@ -126,6 +126,67 @@ export default async function handler(req, res) {
     return;
   }
 
+  // Handle payment failures
+  if (event.type === 'invoice.payment_failed') {
+    const invoice = event.data.object;
+    const subscriptionId = invoice.subscription;
+    
+    if (subscriptionId) {
+      // Get the user ID from the subscription metadata
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      const userId = subscription.metadata?.userId;
+      
+      if (userId) {
+        console.log(`Payment failed for user ${userId}, subscription ${subscriptionId}`);
+        // You might want to send an email notification to the user
+        // or implement a grace period before downgrading
+      }
+    }
+  }
+
+  // Handle payment action required (3D Secure, etc.)
+  if (event.type === 'invoice.payment_action_required') {
+    const invoice = event.data.object;
+    const subscriptionId = invoice.subscription;
+    
+    if (subscriptionId) {
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      const userId = subscription.metadata?.userId;
+      
+      if (userId) {
+        console.log(`Payment action required for user ${userId}, subscription ${subscriptionId}`);
+        // You might want to send an email with payment link
+      }
+    }
+  }
+
+  // Handle successful payments
+  if (event.type === 'invoice.payment_succeeded') {
+    const invoice = event.data.object;
+    const subscriptionId = invoice.subscription;
+    
+    if (subscriptionId) {
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      const userId = subscription.metadata?.userId;
+      
+      if (userId) {
+        console.log(`Payment succeeded for user ${userId}, subscription ${subscriptionId}`);
+        // You might want to send a confirmation email
+      }
+    }
+  }
+
+  // Handle subscription creation
+  if (event.type === 'customer.subscription.created') {
+    const subscription = event.data.object;
+    const userId = subscription.metadata?.userId;
+    
+    if (userId) {
+      console.log(`Subscription created for user ${userId}, subscription ${subscription.id}`);
+      // You might want to send a welcome email
+    }
+  }
+
   // Optionally handle other event types here
 
   res.status(200).end();

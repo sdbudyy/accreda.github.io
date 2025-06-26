@@ -8,6 +8,7 @@ import { useSkillsStore } from '../store/skills';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useSAOsStore } from '../store/saos';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import { useAuthStore } from '../store/auth';
 
 // Lazy load heavy dashboard components
 const ProgressCard = React.lazy(() => import('../components/eitdashboard/ProgressCard'));
@@ -26,6 +27,7 @@ type ProgressStat = {
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { appLoaded } = useOutletContext<{ appLoaded: boolean }>();
+  const { user, loading: authLoading } = useAuthStore();
   const [userName, setUserName] = useState<string>('');
   const [userRole, setUserRole] = useState<'eit' | 'supervisor' | null>(null);
   const [localLoading, setLocalLoading] = useState(true);
@@ -54,13 +56,12 @@ const Dashboard: React.FC = () => {
   const [userProfileCache, setUserProfileCache] = useState<any>(null);
 
   useEffect(() => {
+    if (authLoading || !user) return;
     const initializeData = async () => {
       try {
         setRoleLoading(true);
         setLocalLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
+        // Use user from auth store
         // Fetch profile name from eit_profiles or supervisor_profiles
         let profileName = '';
         const [eitProfile, supervisorProfile] = await Promise.all([
@@ -76,22 +77,15 @@ const Dashboard: React.FC = () => {
         } else {
           setUserName(user.email?.split('@')[0] || 'User');
         }
-
-        // Cache user profile data
         setUserProfileCache({
           eitProfile: eitProfile.data,
           supervisorProfile: supervisorProfile.data
         });
-
-        // First load skills, then initialize progress
         await loadUserSkills();
         await initialize(true);
-        
-        // Load SAOs if needed
         if (saos.length === 0 && !saosLoading) {
           await loadUserSAOs();
         }
-
       } catch (error) {
         console.error('Error initializing dashboard data:', error);
       } finally {
@@ -99,9 +93,8 @@ const Dashboard: React.FC = () => {
         setLocalLoading(false);
       }
     };
-
     initializeData();
-  }, [loadUserSkills, initialize, saos.length, saosLoading, loadUserSAOs]);
+  }, [authLoading, user, loadUserSkills, initialize, saos.length, saosLoading, loadUserSAOs]);
 
   const completedSAOs = saos.filter(sao => sao.status === 'complete');
   const progressStats: ProgressStat[] = [
@@ -154,7 +147,7 @@ const Dashboard: React.FC = () => {
   };
 
   // Show loading state if any loading is true
-  if (localLoading || roleLoading || !initialized || progressLoading || !appLoaded) {
+  if (authLoading || localLoading || roleLoading || !initialized || progressLoading || !appLoaded) {
     return <LoadingSpinner />;
   }
 

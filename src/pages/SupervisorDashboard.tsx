@@ -9,6 +9,7 @@ import SupervisorRecentActivities from '../components/supervisor/SupervisorRecen
 import WeeklyDigest from '../components/dashboard/WeeklyDigest';
 import ScrollToTop from '../components/ScrollToTop';
 import QuickLinks from '../components/eitdashboard/QuickLinks';
+import { useAuthStore } from '../store/auth';
 
 interface EIT {
   id: string;
@@ -18,6 +19,7 @@ interface EIT {
 
 const SupervisorDashboard: React.FC = () => {
   const { appLoaded } = useOutletContext<{ appLoaded: boolean }>();
+  const { user, loading: authLoading } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [eits, setEITs] = useState<EIT[]>([]);
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
@@ -37,11 +39,10 @@ const SupervisorDashboard: React.FC = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  // Fetch user role on mount
   useEffect(() => {
+    if (authLoading || !user) return;
     const fetchUserRole = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return setUserRole(null);
+      // Use user from auth store
       // Check supervisor_profiles table
       const { data: supervisorProfile } = await supabase
         .from('supervisor_profiles')
@@ -55,15 +56,17 @@ const SupervisorDashboard: React.FC = () => {
       }
     };
     fetchUserRole();
-  }, []);
+  }, [authLoading, user]);
 
   useEffect(() => {
+    if (authLoading || !user) return;
     if (userRole && userRole !== 'supervisor') {
-      navigate('/dashboard'); // or show a 403 page
+      navigate('/dashboard');
     }
-  }, [userRole, navigate]);
+  }, [userRole, navigate, authLoading, user]);
 
   const fetchDashboardData = async () => {
+    if (authLoading || !user) return;
     try {
       setRefreshing(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -239,7 +242,7 @@ const SupervisorDashboard: React.FC = () => {
     return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  if (loading && appLoaded) {
+  if (authLoading || loading || !appLoaded) {
     return <LoadingSpinner />;
   }
 
