@@ -130,9 +130,8 @@ function App() {
         />
         <Route path="/thank-you" element={<ThankYou />} />
 
-        {/* Role-based dashboard entry point for root dashboard paths */}
+        {/* Role-based dashboard entry point - only for initial routing */}
         <Route path="/dashboard" element={<RoleBasedDashboard />} />
-        <Route path="/dashboard/supervisor" element={<RoleBasedDashboard />} />
 
         {/* Protected EIT routes */}
         <Route

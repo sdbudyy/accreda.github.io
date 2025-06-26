@@ -7,6 +7,8 @@ interface PDFPreviewModalProps {
 }
 
 const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({ pdfUrl, onClose }) => {
+  console.log('PDFPreviewModal: Received pdfUrl:', pdfUrl);
+  
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
       <div className="bg-white rounded-lg shadow-lg p-8 max-w-4xl w-full h-[90vh] flex flex-col">
@@ -26,6 +28,8 @@ const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({ pdfUrl, onClose }) =>
               src={pdfUrl}
               className="w-full h-full"
               title="CSAW Application Preview"
+              onLoad={() => console.log('PDFPreviewModal: PDF iframe loaded successfully')}
+              onError={(e) => console.error('PDFPreviewModal: PDF iframe error:', e)}
             />
           ) : (
             <div className="flex items-center justify-center h-full">

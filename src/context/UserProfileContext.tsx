@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
 interface UserProfile {
@@ -18,12 +18,16 @@ interface UserProfileContextType {
 
 const UserProfileContext = createContext<UserProfileContextType | undefined>(undefined);
 
+// Inactivity threshold in milliseconds (default: 5 minutes)
+const INACTIVITY_THRESHOLD = 5 * 60 * 1000;
+
 export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const lastHiddenTime = useRef<number | null>(null);
 
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -79,13 +83,44 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchProfile();
-    // Optionally, subscribe to auth changes and refresh profile
-    // (not implemented here for brevity)
-  }, []);
+    
+    // Subscribe to auth changes and refresh profile
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        fetchProfile();
+      } else if (event === 'SIGNED_OUT') {
+        setProfile(null);
+        setError(null);
+        setLoading(false);
+      }
+    });
+
+    // Tab visibility/inactivity logic
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        lastHiddenTime.current = Date.now();
+      } else if (document.visibilityState === 'visible') {
+        if (
+          lastHiddenTime.current &&
+          Date.now() - lastHiddenTime.current > INACTIVITY_THRESHOLD
+        ) {
+          // Only refresh if inactive for longer than threshold
+          fetchProfile();
+        }
+        lastHiddenTime.current = null;
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [fetchProfile]);
 
   return (
     <UserProfileContext.Provider value={{ profile, loading, error, refresh: fetchProfile }}>

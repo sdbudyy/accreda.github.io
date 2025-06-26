@@ -177,8 +177,16 @@ const SupervisorSettings: React.FC = () => {
       setLoading(false);
       return;
     }
-    if (newPassword.length < 6) {
-      setPasswordError('Password must be at least 6 characters long');
+    if (newPassword.length < 8) {
+      setPasswordError('Password must be at least 8 characters long');
+      setLoading(false);
+      return;
+    }
+    
+    // Validate password complexity (uppercase, lowercase, digits)
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/
+    if (!passwordRegex.test(newPassword)) {
+      setPasswordError('Password must contain at least one uppercase letter, one lowercase letter, and one digit');
       setLoading(false);
       return;
     }

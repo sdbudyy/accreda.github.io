@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import LoadingSpinner from '../common/LoadingSpinner';
 import { clearAllStates } from '../../utils/stateCleanup';
+import { useUserProfile } from '../../context/UserProfileContext';
 
 type AccountType = 'eit' | 'supervisor' | null;
 
@@ -11,72 +12,65 @@ const RoleBasedDashboard = () => {
   const [error, setError] = useState<string | null>(null);
   const [accountType, setAccountType] = useState<AccountType>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { profile, loading: profileLoading, error: profileError } = useUserProfile();
+  const hasNavigated = useRef(false);
 
-  const checkUserRole = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError) {
-        throw new Error(`Authentication error: ${authError.message}`);
-      }
-      
-      if (!user) {
-        throw new Error('No authenticated user found');
-      }
+  // Wait for UserProfileContext to finish loading before making navigation decisions
+  useEffect(() => {
+    if (profileLoading) {
+      // Still loading, don't do anything yet
+      return;
+    }
 
-      // Check both profile tables in parallel
-      const [eitProfile, supervisorProfile] = await Promise.all([
-        supabase.from('eit_profiles').select('id').eq('id', user.id).single(),
-        supabase.from('supervisor_profiles').select('id').eq('id', user.id).single()
-      ]);
+    if (profileError) {
+      setError(profileError);
+      setLoading(false);
+      return;
+    }
 
-      if (eitProfile.error && supervisorProfile.error) {
-        throw new Error('Failed to fetch user profiles');
-      }
+    if (!profile) {
+      // No profile found, redirect to login
+      hasNavigated.current = true;
+      navigate('/login');
+      return;
+    }
 
-      // Set account type and navigate
-      if (supervisorProfile.data) {
+    // Only navigate if we haven't navigated yet
+    if (!hasNavigated.current) {
+      if (profile.account_type === 'supervisor') {
         setAccountType('supervisor');
+        hasNavigated.current = true;
         navigate('/dashboard/supervisor', { replace: true });
-      } else if (eitProfile.data) {
+      } else if (profile.account_type === 'eit') {
         setAccountType('eit');
+        hasNavigated.current = true;
         navigate('/dashboard', { replace: true });
       } else {
-        throw new Error('No profile found for user');
+        setError('Invalid account type');
       }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
-      setError(errorMessage);
-      console.error('Error checking user role:', error);
-      navigate('/login');
-    } finally {
-      setLoading(false);
     }
-  }, [navigate]);
+    
+    setLoading(false);
+  }, [profile, profileLoading, profileError, navigate]);
 
   useEffect(() => {
-    // Check role immediately
-    checkUserRole();
-
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') {
         clearAllStates();
+        hasNavigated.current = false; // Reset flag on sign out
         navigate('/login');
-      } else if (event === 'SIGNED_IN') {
-        checkUserRole();
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [checkUserRole, navigate]);
+  }, [navigate]);
 
-  if (loading) {
+  // Show loading spinner while either the profile is loading or we're processing the role
+  if (profileLoading || loading) {
     return <LoadingSpinner />;
   }
 

@@ -142,6 +142,15 @@ function drawWrappedText(
 
 export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
   try {
+    console.log('PDFGEN: Starting PDF generation...');
+    console.log('PDFGEN: Input data:', {
+      profile: data.profile,
+      skillsCount: data.skills?.length || 0,
+      experiencesCount: data.experiences?.length || 0,
+      saosCount: data.saos?.length || 0,
+      validatorsCount: data.allValidators?.length || 0
+    });
+
     // Filter out any invalid or incomplete validators to ensure only valid validators are used
     const activeValidators = (data.allValidators || []).filter(validator => {
       // Only include validators that have all required fields
@@ -172,9 +181,15 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     };
 
     // Load the template PDF
+    console.log('PDFGEN: Loading template PDF...');
     const templateBytes = await fetch(templatePDF).then(res => res.arrayBuffer());
+    console.log('PDFGEN: Template PDF loaded, size:', templateBytes.byteLength);
+    
     const pdfDoc = await PDFDocument.load(templateBytes);
+    console.log('PDFGEN: PDF document loaded successfully');
+    
     const form = pdfDoc.getForm();
+    console.log('PDFGEN: PDF form accessed successfully');
 
     // --- FILLING FORM FIELDS (AcroForm) ---
     // Log all PDF field names for debugging
@@ -2843,9 +2858,13 @@ export async function generateCSAWPDF(data: CSAWData): Promise<Uint8Array> {
     });
 
     // Save the modified PDF
+    console.log('PDFGEN: Saving PDF document...');
     const pdfBytes = await pdfDoc.save();
+    console.log('PDFGEN: PDF saved successfully, size:', pdfBytes.length);
+    console.log('PDFGEN: PDF generation completed successfully');
     return pdfBytes;
   } catch (error) {
+    console.error('PDFGEN: Error during PDF generation:', error);
     throw error;
   }
 }

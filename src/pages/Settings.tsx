@@ -12,6 +12,7 @@ import { useSkillsStore } from '../store/skills';
 import { useUserProfile } from '../context/UserProfileContext';
 import { useProgressStore } from '../store/progress';
 import { getLatestTermsAcceptance, TermsAcceptance } from '../utils/termsAcceptance';
+import { useNavigate } from 'react-router-dom';
 
 const defaultAvatar =
   'https://ui-avatars.com/api/?name=User&background=E0F2FE&color=0891B2&size=128';
@@ -85,6 +86,17 @@ const Settings: React.FC = () => {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [termsAcceptanceData, setTermsAcceptanceData] = useState<TermsAcceptance | null>(null);
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  // Add state for portfolio reminder and frequency
+  const [portfolioReminderEnabled, setPortfolioReminderEnabled] = useState(true);
+  const [portfolioReminderFrequency, setPortfolioReminderFrequency] = useState('weekly');
+  const [portfolioPrefsLoading, setPortfolioPrefsLoading] = useState(true);
+  const [portfolioPrefsDirty, setPortfolioPrefsDirty] = useState(false);
+  const [portfolioPrefsSaving, setPortfolioPrefsSaving] = useState(false);
+  const [portfolioPrefsSaved, setPortfolioPrefsSaved] = useState(false);
 
   const { profile, loading: profileLoading, error: profileError, refresh: refreshProfile } = useUserProfile();
   const userRole = profile?.account_type || null;
@@ -123,6 +135,8 @@ const Settings: React.FC = () => {
     initialize,
     initialized
   } = useProgressStore();
+
+  const navigate = useNavigate();
 
   // Fetch the user on mount
   useEffect(() => {
@@ -195,6 +209,41 @@ const Settings: React.FC = () => {
       fetchConnections(user.id);
     }
   }, [user]);
+
+  // Fetch notification preferences from the new table on mount
+  useEffect(() => {
+    const fetchPortfolioPrefs = async () => {
+      setPortfolioPrefsLoading(true);
+      const { data, error } = await supabase
+        .from('notification_preferences')
+        .select('portfolio_reminder_enabled, portfolio_reminder_frequency')
+        .eq('user_id', profile?.id)
+        .single();
+      if (!error && data) {
+        setPortfolioReminderEnabled(data.portfolio_reminder_enabled ?? true);
+        setPortfolioReminderFrequency(data.portfolio_reminder_frequency ?? 'weekly');
+      }
+      setPortfolioPrefsLoading(false);
+    };
+    if (profile?.id) fetchPortfolioPrefs();
+  }, [profile?.id]);
+
+  // Handler to update the table when toggled/changed
+  const updatePortfolioPrefs = async (updates: Partial<{ portfolio_reminder_enabled: boolean; portfolio_reminder_frequency: string }>) => {
+    setPortfolioPrefsLoading(true);
+    const { error } = await supabase
+      .from('notification_preferences')
+      .upsert({
+        user_id: profile?.id,
+        portfolio_reminder_enabled: updates.portfolio_reminder_enabled ?? portfolioReminderEnabled,
+        portfolio_reminder_frequency: updates.portfolio_reminder_frequency ?? portfolioReminderFrequency,
+      }, { onConflict: 'user_id' });
+    if (!error) {
+      if (updates.portfolio_reminder_enabled !== undefined) setPortfolioReminderEnabled(updates.portfolio_reminder_enabled);
+      if (updates.portfolio_reminder_frequency !== undefined) setPortfolioReminderFrequency(updates.portfolio_reminder_frequency);
+    }
+    setPortfolioPrefsLoading(false);
+  };
 
   const handleAvatarSelect = (files: File[]) => {
     if (files.length > 0) {
@@ -630,7 +679,7 @@ const Settings: React.FC = () => {
       });
 
       // Fetch validator for skill 1.1
-      const SKILL_1_1_ID = 'b5fb4469-5f9a-47da-86c6-9f17864b8070';
+      const SKILL_1_1_ID = 'bf5b4469-51e9-47da-86e6-9f71864b4870';
       console.log('Fetching validators...');
       // Fetch all validators for the current user - deleted validators are permanently removed from the database
       // This ensures that only current, active validators are used in the PDF generation
@@ -735,8 +784,20 @@ const Settings: React.FC = () => {
 
       // Generate PDF
       console.log('Generating PDF...');
+      console.log('Export data being passed to PDF generator:', {
+        profile: exportData.profile,
+        skillsCount: exportData.skills?.length || 0,
+        experiencesCount: exportData.experiences?.length || 0,
+        saosCount: exportData.saos?.length || 0,
+        validatorsCount: exportData.allValidators?.length || 0
+      });
+      
       const pdfBytes = await generateCSAWPDF(exportData);
+      console.log('PDF bytes received, size:', pdfBytes.length);
+      
       const url = createPDFBlobUrl(pdfBytes);
+      console.log('PDF blob URL created:', url);
+      
       setPdfUrl(url);
       setPreviewData(exportData);
       setShowPreviewModal(true);
@@ -798,6 +859,74 @@ const Settings: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmation !== 'DELETE') {
+      setDeleteError('Please type DELETE in uppercase to confirm');
+      return;
+    }
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      if (!user) throw new Error('User not found');
+      const userId = user.id;
+      // Delete all user data in the correct order to respect foreign key constraints
+      await Promise.all([
+        // Delete SAO skills first (references SAOs)
+        supabase.from('sao_skills').delete().in('sao_id', 
+          (await supabase.from('saos').select('id').eq('eit_id', userId)).data?.map(s => s.id) || []
+        ),
+        // Delete SAOs
+        supabase.from('saos').delete().eq('eit_id', userId),
+        // Delete experiences
+        supabase.from('experiences').delete().eq('eit_id', userId),
+        // Delete EIT skills
+        supabase.from('eit_skills').delete().eq('eit_id', userId),
+        // Delete validators
+        supabase.from('validators').delete().eq('eit_id', userId),
+        // Delete supervisor relationships
+        supabase.from('supervisor_eit_relationships').delete().or(`eit_id.eq.${userId},supervisor_id.eq.${userId}`),
+        // Delete subscription
+        supabase.from('subscriptions').delete().eq('user_id', userId),
+        // Delete terms acceptance
+        supabase.from('terms_acceptance').delete().eq('user_id', userId),
+        // Delete EIT profile
+        supabase.from('eit_profiles').delete().eq('id', userId),
+        // Delete supervisor profile
+        supabase.from('supervisor_profiles').delete().eq('id', userId),
+      ]);
+      // Finally delete the auth user
+      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+      if (authError) throw authError;
+      // Sign out and redirect
+      await supabase.auth.signOut();
+      navigate('/');
+    } catch (error) {
+      console.error('Delete account error:', error);
+      setDeleteError('Failed to delete account. Please contact support.');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handlePortfolioReminderToggle = (enabled: boolean) => {
+    setPortfolioPrefsDirty(true);
+    setPortfolioReminderEnabled(enabled);
+  };
+
+  const handlePortfolioReminderFrequency = (frequency: string) => {
+    setPortfolioPrefsDirty(true);
+    setPortfolioReminderFrequency(frequency);
+  };
+
+  const handleSavePortfolioPrefs = async () => {
+    setPortfolioPrefsSaving(true);
+    setPortfolioPrefsSaved(false);
+    await updatePortfolioPrefs({ portfolio_reminder_enabled: portfolioReminderEnabled, portfolio_reminder_frequency: portfolioReminderFrequency });
+    setPortfolioPrefsSaving(false);
+    setPortfolioPrefsSaved(true);
+    setTimeout(() => setPortfolioPrefsSaved(false), 2000);
   };
 
   return (
@@ -1604,19 +1733,20 @@ const Settings: React.FC = () => {
               </div>
 
               {/* Portfolio Update Email Frequency */}
-              <div className="border-t border-gray-200 pt-4 mt-4">
+              <div className="border-t border-gray-200 pt-4 mt-4 relative">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-sm font-medium text-gray-900">Portfolio Update Reminders</h3>
                     <p className="text-sm text-gray-500">Receive automated reminders to update your portfolio</p>
                   </div>
                   <Switch
-                    checked={true}
-                    onChange={() => {}}
-                    className={`${true ? 'bg-teal-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2`}
+                    checked={portfolioReminderEnabled}
+                    onChange={handlePortfolioReminderToggle}
+                    className={`${portfolioReminderEnabled ? 'bg-teal-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2`}
+                    disabled={portfolioPrefsLoading}
                   >
                     <span
-                      className={`${true ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                      className={`${portfolioReminderEnabled ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
                     />
                   </Switch>
                 </div>
@@ -1625,13 +1755,35 @@ const Settings: React.FC = () => {
                   <select
                     id="emailFrequency"
                     className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm rounded-md"
-                    defaultValue="weekly"
+                    value={portfolioReminderFrequency}
+                    onChange={e => handlePortfolioReminderFrequency(e.target.value)}
+                    disabled={portfolioPrefsLoading || !portfolioReminderEnabled}
                   >
                     <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
                     <option value="biweekly">Bi-weekly</option>
                     <option value="monthly">Monthly</option>
                   </select>
+                </div>
+                {/* Save Button - bottom right */}
+                <div className="absolute right-0 bottom-0 mt-4 flex items-center justify-end p-2">
+                  <button
+                    className={`btn btn-primary flex items-center gap-2 ${!portfolioPrefsDirty ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    onClick={handleSavePortfolioPrefs}
+                    disabled={!portfolioPrefsDirty || portfolioPrefsSaving}
+                    type="button"
+                  >
+                    {portfolioPrefsSaving ? (
+                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                      </svg>
+                    ) : portfolioPrefsSaved ? (
+                      <Check className="h-5 w-5 text-white" />
+                    ) : (
+                      'Save'
+                    )}
+                  </button>
                 </div>
               </div>
             </div>
@@ -1723,9 +1875,236 @@ const Settings: React.FC = () => {
             <h2 className="text-lg font-semibold text-red-600 flex items-center gap-2 mb-2">
               <Trash2 /> Danger Zone
             </h2>
-            <button className="btn btn-danger">Delete Account</button>
-            <p className="text-slate-500 text-sm mt-2">This action is irreversible. Your data will be permanently deleted.</p>
+            <div className="space-y-4">
+              <div>
+                <p className="text-slate-600 text-sm mb-4">
+                  Once you delete your account, there is no going back. All your data will be permanently removed.
+                </p>
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => setShowDeleteModal(true)}
+                    className="btn btn-danger"
+                  >
+                    Delete Account
+                  </button>
+                  <button
+                    onClick={() => setShowContactModal(true)}
+                    className="btn btn-secondary"
+                  >
+                    Contact Support
+                  </button>
+                </div>
+              </div>
+            </div>
           </section>
+
+          {/* Delete Account Modal */}
+          {showDeleteModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+              <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                    <Trash2 className="w-5 h-5 text-red-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-red-600">Delete Account</h3>
+                    <p className="text-sm text-slate-500">This action cannot be undone</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4 mb-6">
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-red-800 mb-2">What will be deleted:</h4>
+                    <ul className="text-sm text-red-700 space-y-1">
+                      <li>• Your profile and personal information</li>
+                      <li>• All your SAOs and experiences</li>
+                      <li>• Your skills and validations</li>
+                      <li>• All supervisor connections</li>
+                      <li>• Your subscription and billing data</li>
+                      <li>• All uploaded documents and files</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Type <span className="font-mono bg-slate-100 px-1 rounded">DELETE</span> to confirm:
+                    </label>
+                    <input
+                      type="text"
+                      value={deleteConfirmation}
+                      onChange={(e) => setDeleteConfirmation(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                      placeholder="DELETE"
+                      disabled={deleteLoading}
+                    />
+                  </div>
+
+                  {deleteError && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                      <p className="text-sm text-red-700">{deleteError}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowDeleteModal(false);
+                      setDeleteConfirmation('');
+                      setDeleteError(null);
+                    }}
+                    className="flex-1 btn btn-secondary"
+                    disabled={deleteLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteAccount}
+                    disabled={deleteConfirmation !== 'DELETE' || deleteLoading}
+                    className="flex-1 btn btn-danger"
+                  >
+                    {deleteLoading ? (
+                      <div className="flex items-center gap-2">
+                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                        </svg>
+                        Deleting...
+                      </div>
+                    ) : (
+                      'Permanently Delete'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Contact Support Modal for Danger Zone */}
+          {showContactModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+              <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full relative">
+                <button
+                  className="absolute top-2 right-2 text-slate-400 hover:text-slate-600"
+                  onClick={() => {
+                    setShowContactModal(false);
+                    setContactSuccess(false);
+                    setContactError(null);
+                  }}
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+                <h2 className="text-xl font-bold mb-4 text-red-800">Contact Support</h2>
+                {contactSuccess ? (
+                  <div className="p-3 bg-green-50 text-green-700 rounded-md text-sm mb-4">
+                    Your message has been sent successfully. We'll get back to you soon!
+                  </div>
+                ) : (
+                  <form
+                    onSubmit={async e => {
+                      e.preventDefault();
+                      setContactLoading(true);
+                      setContactError(null);
+                      setContactSuccess(false);
+                      try {
+                        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-support-email`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                          },
+                          body: JSON.stringify({
+                            email: contactEmail,
+                            subject: 'Account Deletion Support Request',
+                            message: `Name: ${contactName}\nEmail: ${contactEmail}\n\n${contactMessage}`,
+                            issueType: 'delete_account',
+                            mode: 'help',
+                          }),
+                        });
+                        const data = await response.json();
+                        if (!response.ok) {
+                          throw new Error(data.error || 'Failed to send message');
+                        }
+                        setContactSuccess(true);
+                        setContactName('');
+                        setContactEmail('');
+                        setContactMessage('');
+                      } catch (err) {
+                        setContactError(err instanceof Error ? err.message : 'Failed to send message. Please try again later.');
+                      } finally {
+                        setContactLoading(false);
+                      }
+                    }}
+                    className="space-y-4"
+                  >
+                    <div>
+                      <label htmlFor="contactName" className="label">Full Name</label>
+                      <input
+                        type="text"
+                        id="contactName"
+                        value={contactName}
+                        onChange={e => setContactName(e.target.value)}
+                        className="input"
+                        required
+                        disabled={contactLoading}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="contactEmail" className="label">Email Address</label>
+                      <input
+                        type="email"
+                        id="contactEmail"
+                        value={contactEmail}
+                        onChange={e => setContactEmail(e.target.value)}
+                        className="input"
+                        required
+                        disabled={contactLoading}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="contactMessage" className="label">Message</label>
+                      <textarea
+                        id="contactMessage"
+                        value={contactMessage}
+                        onChange={e => setContactMessage(e.target.value)}
+                        className="input h-32"
+                        required
+                        placeholder="Please describe your issue or request..."
+                        disabled={contactLoading}
+                      />
+                    </div>
+                    {contactError && (
+                      <div className="p-3 bg-red-50 text-red-700 rounded-md text-sm">
+                        {contactError}
+                      </div>
+                    )}
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => {
+                          setShowContactModal(false);
+                          setContactSuccess(false);
+                          setContactError(null);
+                        }}
+                        disabled={contactLoading}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={contactLoading}
+                      >
+                        {contactLoading ? 'Sending...' : 'Send Message'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Feedback/Toast */}
           {message.text && (
@@ -1739,125 +2118,6 @@ const Settings: React.FC = () => {
           )}
         </div>
       </div>
-      {/* Contact Us Modal */}
-      {showContactModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full relative">
-            <button
-              className="absolute top-2 right-2 text-slate-400 hover:text-slate-600"
-              onClick={() => {
-                setShowContactModal(false);
-                setContactSuccess(false);
-                setContactError(null);
-              }}
-              aria-label="Close"
-            >
-              ×
-            </button>
-            <h2 className="text-xl font-bold mb-4 text-blue-800">Request Plan Downgrade</h2>
-            {contactSuccess ? (
-              <div className="p-3 bg-green-50 text-green-700 rounded-md text-sm mb-4">
-                Your downgrade request has been sent successfully. We'll get back to you soon!
-              </div>
-            ) : (
-              <form
-                onSubmit={async e => {
-                  e.preventDefault();
-                  setContactLoading(true);
-                  setContactError(null);
-                  setContactSuccess(false);
-                  try {
-                    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-support-email`, {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-                      },
-                      body: JSON.stringify({
-                        email: contactEmail,
-                        subject: 'Plan Downgrade Request',
-                        message: `Name: ${contactName}\nEmail: ${contactEmail}\nCurrent Plan: ${tier}\n\nReason for Downgrade:\n${contactMessage}`,
-                        issueType: 'downgrade',
-                        mode: 'help',
-                      }),
-                    });
-                    const data = await response.json();
-                    if (!response.ok) {
-                      throw new Error(data.error || 'Failed to send message');
-                    }
-                    setContactSuccess(true);
-                    setContactName('');
-                    setContactEmail('');
-                    setContactMessage('');
-                  } catch (err) {
-                    setContactError(err instanceof Error ? err.message : 'Failed to send message. Please try again later.');
-                  } finally {
-                    setContactLoading(false);
-                  }
-                }}
-                className="space-y-4"
-              >
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
-                  <input
-                    type="text"
-                    className="input"
-                    value={contactName}
-                    onChange={e => setContactName(e.target.value)}
-                    required
-                    disabled={contactLoading}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                  <input
-                    type="email"
-                    className="input"
-                    value={contactEmail}
-                    onChange={e => setContactEmail(e.target.value)}
-                    required
-                    disabled={contactLoading}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Reason for Downgrade (Optional)</label>
-                  <textarea
-                    className="input"
-                    rows={4}
-                    value={contactMessage}
-                    onChange={e => setContactMessage(e.target.value)}
-                    disabled={contactLoading}
-                    placeholder="Please let us know why you'd like to downgrade your plan..."
-                  />
-                </div>
-                {contactError && (
-                  <div className="p-3 bg-red-50 text-red-700 rounded-md text-sm">
-                    {contactError}
-                  </div>
-                )}
-                <button
-                  type="submit"
-                  className="btn btn-primary w-full"
-                  disabled={contactLoading}
-                >
-                  {contactLoading ? 'Sending...' : 'Submit Request'}
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Preview Modal */}
-      {showPreviewModal && (
-        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"><div className="bg-white rounded-lg shadow-lg p-8">Loading preview...</div></div>}>
-          <PDFPreviewModal
-            pdfUrl={pdfUrl}
-            onClose={() => setShowPreviewModal(false)}
-          />
-        </Suspense>
-      )}
-
       {/* APEGA ID Warning Modal */}
       {showApegaWarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
@@ -1870,6 +2130,16 @@ const Settings: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+      
+      {/* PDF Preview Modal */}
+      {showPreviewModal && (
+        <Suspense fallback={<div>Loading PDF preview...</div>}>
+          <PDFPreviewModal
+            pdfUrl={pdfUrl}
+            onClose={() => setShowPreviewModal(false)}
+          />
+        </Suspense>
       )}
     </div>
   );

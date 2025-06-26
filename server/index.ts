@@ -10,8 +10,6 @@ import googleDriveRoutes from './routes/googleDrive';
 // Load environment variables
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
-console.log('Loaded ENV:', process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-
 const app = express();
 const port = process.env.PORT || 3001;
 
