@@ -1176,7 +1176,7 @@ const Landing: React.FC = () => {
             <div>
               <h3 className="text-lg font-semibold mb-4 text-white">Company</h3>
               <ul className="space-y-2">
-                <li><a href="mailto:accreda.info@gmail.com" className="text-slate-400 hover:text-white transition-colors">accreda.info@gmail.com</a></li>
+                <li><a href="mailto:info@accreda.ca" className="text-slate-400 hover:text-white transition-colors">info@accreda.ca</a></li>
               </ul>
             </div>
           </div>
