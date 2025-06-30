@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -9,6 +9,8 @@ interface MobileLandingMenuProps {
 }
 
 const MobileLandingMenu: React.FC<MobileLandingMenuProps> = ({ isOpen, onClose }) => {
+  const navigate = useNavigate();
+
   const handlePricingClick = (e: React.MouseEvent) => {
     e.preventDefault();
     onClose();
@@ -77,12 +79,13 @@ const MobileLandingMenu: React.FC<MobileLandingMenuProps> = ({ isOpen, onClose }
                   </Link>
                 </li>
                 <li>
-                  <button
-                    onClick={handlePricingClick}
+                  <a
+                    href="/?scroll=pricing"
                     className="block w-full text-left py-3 text-lg font-medium text-slate-700 hover:text-slate-900 transition-colors"
+                    onClick={e => { e.preventDefault(); navigate('/?scroll=pricing'); onClose(); }}
                   >
                     Pricing
-                  </button>
+                  </a>
                 </li>
                 <li>
                   <Link

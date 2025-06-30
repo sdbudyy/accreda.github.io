@@ -172,7 +172,7 @@ const Privacy: React.FC = () => {
               <p>Accreda reserves the right to modify this Policy at its sole discretion, with or without notice, to reflect changes in law, best practices, or service offerings. Material changes will be reflected by an updated "Last Revision" date. Continued use of the Platform following such modifications shall constitute binding acceptance.</p>
               <h2>14. Contact and Data Protection Officer</h2>
               <p>For inquiries, concerns, or requests related to this Policy, please contact:</p>
-              <p><strong>Data Protection Office<br/>Accreda Inc.<br/>📧 Email: <a href="mailto:accreda.info@gmail.com">accreda.info@gmail.com</a><br/>📍 Calgary, Alberta, Canada</strong></p>
+              <p><strong>Data Protection Office<br/>Accreda Inc.<br/>📧 Email: <a href="mailto:info@accreda.ca">info@accreda.ca</a><br/>📍 Calgary, Alberta, Canada</strong></p>
             </div>
           </motion.div>
         </div>

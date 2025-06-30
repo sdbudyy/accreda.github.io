@@ -639,27 +639,54 @@ const Landing: React.FC = () => {
   // Add mobile menu state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const hasScrolledToPricing = useRef(false);
+
   useEffect(() => {
-    const scrollToPricing = () => {
+    let retryCount = 0;
+    const maxRetries = 40; // 40 * 50ms = 2s
+    function tryScrollToPricing() {
       if (
-        window.location.hash === '#pricing' ||
-        window.location.search.includes('scroll=pricing')
+        (window.location.hash === '#pricing' || window.location.search.includes('scroll=pricing')) &&
+        !hasScrolledToPricing.current
       ) {
         const pricingSection = document.getElementById('pricing');
         if (pricingSection) {
-          setTimeout(() => {
-            pricingSection.scrollIntoView({ behavior: 'smooth' });
-          }, 200);
+          const nav = document.querySelector('nav');
+          const navHeight = nav ? nav.offsetHeight : 0;
+          const rect = pricingSection.getBoundingClientRect();
+          const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+          const top = rect.top + scrollTop - navHeight - 16;
+          // Only scroll if not already at the right place
+          if (Math.abs(window.scrollY - top) > 5) {
+            window.scrollTo({ top, behavior: 'smooth' });
+            setTimeout(() => {
+              hasScrolledToPricing.current = true;
+              // Remove scroll=pricing from the URL after scrolling
+              if (window.location.search.includes('scroll=pricing')) {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('scroll');
+                window.history.replaceState({}, '', url.pathname + url.search + url.hash);
+              }
+            }, 400); // allow smooth scroll to finish
+          } else {
+            hasScrolledToPricing.current = true;
+            if (window.location.search.includes('scroll=pricing')) {
+              const url = new URL(window.location.href);
+              url.searchParams.delete('scroll');
+              window.history.replaceState({}, '', url.pathname + url.search + url.hash);
+            }
+          }
+        } else if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(tryScrollToPricing, 50);
         }
       }
-    };
-
-    // Scroll on mount and on hash change
-    scrollToPricing();
-    window.addEventListener('hashchange', scrollToPricing);
-
+    }
+    tryScrollToPricing();
+    window.addEventListener('hashchange', tryScrollToPricing);
     return () => {
-      window.removeEventListener('hashchange', scrollToPricing);
+      window.removeEventListener('hashchange', tryScrollToPricing);
+      hasScrolledToPricing.current = false;
     };
   }, [location]);
 
@@ -727,6 +754,16 @@ const Landing: React.FC = () => {
   const [contactLoading, setContactLoading] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
   const [contactSuccess, setContactSuccess] = useState(false);
+
+  useEffect(() => {
+    if (
+      window.location.pathname === '/' &&
+      !window.location.search.includes('scroll=pricing') &&
+      !window.location.hash
+    ) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [location]);
 
   return (
     <div className="min-h-screen bg-white">

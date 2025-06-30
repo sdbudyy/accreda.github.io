@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import accredaLogo from '../assets/accreda-logo.png';
 import accredaSmall from '../assets/accreda-small.webp';
@@ -27,6 +27,8 @@ const Enterprise: React.FC = () => {
   // Add mobile menu state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}
@@ -47,8 +49,20 @@ const Enterprise: React.FC = () => {
             </div>
             <div className="hidden md:flex items-center space-x-8">
               <Link to="/login" className="text-slate-600 hover:text-slate-900 transition-colors">Sign In</Link>
-              <Link to="/" className="text-slate-600 hover:text-slate-900 transition-colors">Features</Link>
-              <Link to="/?scroll=pricing" className="text-slate-600 hover:text-slate-900 transition-colors">Pricing</Link>
+              <a
+                href="/"
+                className="text-slate-600 hover:text-slate-900 transition-colors"
+                onClick={e => { e.preventDefault(); navigate('/'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              >
+                Features
+              </a>
+              <a
+                href="/?scroll=pricing"
+                className="text-slate-600 hover:text-slate-900 transition-colors"
+                onClick={e => { e.preventDefault(); navigate('/?scroll=pricing'); }}
+              >
+                Pricing
+              </a>
               <Link to="/enterprise" className="text-slate-600 hover:text-slate-900 transition-colors">Enterprise</Link>
               <a 
                 href="https://cal.com/accreda" 
@@ -100,12 +114,7 @@ const Enterprise: React.FC = () => {
               >
                 Book a Demo
               </a>
-              <Link 
-                to="/?scroll=pricing" 
-                className="border-2 border-slate-300 text-slate-700 text-lg px-8 py-4 rounded-lg inline-flex items-center justify-center hover:bg-slate-50 transition-colors"
-              >
-                View Pricing
-              </Link>
+              <Link to="/?scroll=pricing" className="border-2 border-slate-300 text-slate-700 text-lg px-8 py-4 rounded-lg inline-flex items-center justify-center hover:bg-slate-50 transition-colors">View Pricing</Link>
             </div>
           </motion.div>
         </div>
@@ -282,12 +291,7 @@ const Enterprise: React.FC = () => {
               >
                 Book a Demo
               </a>
-              <Link 
-                to="/?scroll=pricing" 
-                className="border-2 border-slate-300 text-slate-700 text-lg px-8 py-4 rounded-lg inline-flex items-center justify-center hover:bg-slate-50 transition-colors"
-              >
-                View Pricing
-              </Link>
+              <Link to="/?scroll=pricing" className="border-2 border-slate-300 text-slate-700 text-lg px-8 py-4 rounded-lg inline-flex items-center justify-center hover:bg-slate-50 transition-colors">View Pricing</Link>
             </div>
           </motion.div>
         </div>
@@ -469,8 +473,20 @@ const Enterprise: React.FC = () => {
             <div>
               <h3 className="text-lg font-semibold mb-4 text-white">Product</h3>
               <ul className="space-y-2">
-                <li><Link to="/" className="text-slate-400 hover:text-white transition-colors">Features</Link></li>
-                <li><Link to="/?scroll=pricing" className="text-slate-400 hover:text-white transition-colors">Pricing</Link></li>
+                <li><a
+                  href="/"
+                  className="text-slate-400 hover:text-white transition-colors"
+                  onClick={e => { e.preventDefault(); navigate('/'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                >
+                  Features
+                </a></li>
+                <li><a
+                  href="/?scroll=pricing"
+                  className="text-slate-400 hover:text-white transition-colors"
+                  onClick={e => { e.preventDefault(); navigate('/?scroll=pricing'); }}
+                >
+                  Pricing
+                </a></li>
                 <li><button
                   onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                   className="text-slate-400 hover:text-white transition-colors"
