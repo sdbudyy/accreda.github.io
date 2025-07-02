@@ -80,7 +80,18 @@ export default function SignUp() {
         }
       })
 
-      if (authError) throw new Error(`Authentication error: ${authError.message}`)
+      if (authError) {
+        // Custom error for duplicate email
+        if (
+          authError.message.toLowerCase().includes('user already registered') ||
+          authError.message.toLowerCase().includes('email') && authError.message.toLowerCase().includes('exists')
+        ) {
+          setError('An account with this email already exists. Please log in or use a different email address.');
+        } else {
+          setError(`Authentication error: ${authError.message}`);
+        }
+        return;
+      }
       
       if (!authData.user) {
         throw new Error('Failed to create user account')
@@ -211,7 +222,38 @@ export default function SignUp() {
               exit={{ opacity: 0, x: -40 }}
               transition={{ duration: 0.3 }}
               className="space-y-6"
-              onSubmit={e => { e.preventDefault(); setStep(2); }}
+              onSubmit={e => {
+                e.preventDefault();
+                setError(null);
+                // Validate email
+                if (!formData.email.trim()) {
+                  setError('Email is required');
+                  return;
+                }
+                // Validate password length
+                if (formData.password.length < 8) {
+                  setError('Password must be at least 8 characters long');
+                  return;
+                }
+                // Validate password complexity (uppercase, lowercase, digits)
+                const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
+                if (!passwordRegex.test(formData.password)) {
+                  setError('Password must contain at least one uppercase letter, one lowercase letter, and one digit');
+                  return;
+                }
+                // Validate password match
+                if (formData.password !== formData.confirmPassword) {
+                  setError('Passwords do not match');
+                  return;
+                }
+                // Validate terms acceptance
+                if (!agreedToTerms) {
+                  setError('You must agree to the Terms and Conditions');
+                  return;
+                }
+                setError(null);
+                setStep(2);
+              }}
             >
               {error && (
                 <div className="rounded-lg bg-red-50 p-4 border border-red-100">
