@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import AccredaLogo from '../../assets/accreda-logo.png'
 import { motion, AnimatePresence } from 'framer-motion'
 import { recordTermsAcceptance, getUserAgent } from '../../utils/termsAcceptance'
+import { Dialog } from '@headlessui/react'
 
 export default function SignUp() {
   const [formData, setFormData] = useState({
@@ -23,6 +24,7 @@ export default function SignUp() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [step, setStep] = useState(1)
   const [agreedToTerms, setAgreedToTerms] = useState(false)
+  const [showTermsModal, setShowTermsModal] = useState(false)
   const navigate = useNavigate()
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -281,13 +283,14 @@ export default function SignUp() {
                 />
                 <label htmlFor="terms-checkbox" className="ml-2 block text-sm text-[#1a365d] select-none">
                   I agree to the{' '}
-                  <Link
-                    to="/terms"
-                    className="underline font-semibold text-teal-700 hover:text-teal-900 transition-colors cursor-pointer"
+                  <button
+                    type="button"
+                    className="underline font-semibold text-teal-700 hover:text-teal-900 transition-colors cursor-pointer bg-transparent border-0 p-0"
                     style={{ textDecorationThickness: '2px', textUnderlineOffset: '3px', background: 'linear-gradient(90deg, #a7f3d0 0%, #5eead4 100%)', backgroundClip: 'text', WebkitBackgroundClip: 'text', color: '#0f766e' }}
+                    onClick={() => setShowTermsModal(true)}
                   >
                     Terms and Conditions
-                  </Link>
+                  </button>
                 </label>
               </div>
               <div className="flex justify-end mt-6">
@@ -374,6 +377,77 @@ export default function SignUp() {
           </p>
         </div>
       </motion.div>
+      {/* Terms Modal */}
+      <Dialog open={showTermsModal} onClose={() => setShowTermsModal(false)} className="fixed z-50 inset-0 overflow-y-auto">
+        <div className="flex items-center justify-center min-h-screen px-4">
+          <div className="fixed inset-0 bg-black bg-opacity-40" aria-hidden="true" />
+          <div className="relative bg-white rounded-2xl shadow-xl max-w-2xl w-full mx-auto p-8 z-50 overflow-y-auto max-h-[90vh]">
+            <Dialog.Title className="text-2xl font-bold mb-4 text-center">Terms and Conditions</Dialog.Title>
+            <div className="text-center text-slate-600 mb-4">
+              <div>Effective Date: <span className="font-semibold">May 24, 2025</span></div>
+              <div>Jurisdiction: <span className="font-semibold">Province of Alberta, Canada</span></div>
+            </div>
+            <div className="prose prose-slate max-w-none mx-auto text-left text-base mb-6" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+              <h2>1. Introduction</h2>
+              <p>These Terms and Conditions (“Terms”) govern access to and use of the Accreda platform (the “Platform”), a proprietary tool developed by Accreda Inc. (“Accreda,” “we,” “us,” or “our”). By accessing or using the Platform, you acknowledge that you have read, understood, and agree to be bound by these Terms, which form a legally binding agreement between you and Accreda.</p>
+              <p>Your use of the Platform constitutes an offer to engage with our services. Accessing or continuing to use our Platform represents your acceptance of these Terms. You acknowledge your awareness of this agreement and affirm that you possess the capacity to be legally bound. Access to certain functionalities may be contingent on consideration, which includes but is not limited to paid subscription fees.</p>
+              <h2>2. Eligibility</h2>
+              <p>You must be at least 13 years of age to access the Platform. If you are under the age of majority in your jurisdiction, you must have obtained the consent of your legal guardian. By using the Platform, you represent that you have the legal capacity to enter into this agreement and that all information provided is accurate and complete.</p>
+              <h2>3. User Guidelines</h2>
+              <p>Users are expected to conduct themselves in accordance with the following guidelines:</p>
+              <ul>
+                <li><strong>Accuracy:</strong> Information entered into the Platform must be truthful and not misleading.</li>
+                <li><strong>Respect:</strong> Users shall not harass, intimidate, or infringe upon the rights of others, including other users and administrators.</li>
+                <li><strong>Integrity:</strong> Manipulating the platform for unintended uses, circumventing intended processes, or engaging in unauthorized data scraping, reverse-engineering, or interference with system operations is strictly prohibited.</li>
+                <li><strong>Compliance:</strong> Users must comply with all applicable local, provincial, and federal laws when using the Platform.</li>
+                <li><strong>Security:</strong> Users are responsible for safeguarding login credentials and must not share accounts. Any unauthorized access must be reported immediately.</li>
+              </ul>
+              <p>Violation of any of the above may result in account suspension, termination, or legal proceedings, at our discretion.</p>
+              <h2>4. Subscription and Payment Terms</h2>
+              <p>Certain features of the Platform may be available only through paid subscription plans. By initiating a subscription, you agree to:</p>
+              <ul>
+                <li>Pay all applicable fees in full, including taxes and any processing charges.</li>
+                <li>Allow Accreda to charge your designated payment method on a recurring basis, unless you cancel prior to the renewal date.</li>
+                <li>Understand that early termination of a subscription does not entitle the user to a refund. Full payment of the billing cycle is required upon termination initiated by either party.</li>
+                <li>All subscription fees constitute consideration in exchange for access to defined services.</li>
+              </ul>
+              <h2>5. Refund Policy</h2>
+              <p>Refunds will only be issued under exceptional and demonstrable circumstances, including prolonged service unavailability caused solely by our fault. Refund requests must be submitted in writing and are granted entirely at our discretion.</p>
+              <h2>6. Termination</h2>
+              <p>We reserve the right to suspend, restrict, or terminate your access to the Platform at any time, with or without notice, for any breach of these Terms or conduct that we determine, in our sole discretion, to be unlawful, unethical, or inconsistent with the integrity of the Platform.</p>
+              <p>In all cases of early termination, whether voluntary or involuntary, the user remains financially responsible for the full amount of any active billing period.</p>
+              <h2>7. Third-Party Tools and Integrations</h2>
+              <p>Users shall not use third-party tools, extensions, or scripts that alter, bypass, or interfere with the Platform’s functionality. Any integration of third-party software must not contradict the values, security principles, or operational integrity of Accreda. Violations may result in legal action and permanent account suspension.</p>
+              <h2>8. Data Security and Cyber Risk</h2>
+              <p>While Accreda employs industry-standard cybersecurity measures, no system is entirely immune from vulnerabilities. By using the Platform, you agree that:</p>
+              <ul>
+                <li>You are solely responsible for maintaining local device security and protecting your own data.</li>
+                <li>Accreda shall not be held liable for any losses, damages, or breaches resulting from external attacks, third-party exploits, or events beyond our control.</li>
+                <li>Continued use of the Platform affirms your awareness and acceptance of these inherent risks.</li>
+              </ul>
+              <h2>9. Limitation of Liability</h2>
+              <p>To the maximum extent permitted by applicable law, Accreda shall not be liable for any direct, indirect, incidental, consequential, or punitive damages arising out of or related to your use of the Platform. Our liability in any matter shall be limited to the amount paid by the user in the twelve months preceding the claim.</p>
+              <h2>10. Intellectual Property</h2>
+              <p>All content, software, branding, and design on the Platform is the intellectual property of Accreda Inc. You may not reproduce, modify, or distribute any part of the Platform without prior written authorization.</p>
+              <h2>11. Amendments</h2>
+              <p>We may update these Terms at any time without prior notice. Continued use of the Platform after any change constitutes acceptance of the revised Terms. It is the responsibility of the user to review these Terms periodically.</p>
+              <h2>12. Governing Law</h2>
+              <p>These Terms shall be governed by the laws of the Province of Alberta and the applicable federal laws of Canada. Any disputes shall be resolved in the courts located in Calgary, Alberta, unless otherwise agreed in writing by both parties.</p>
+              <h2>13. Entire Agreement</h2>
+              <p>These Terms constitute the entire agreement between you and Accreda and supersede any prior or contemporaneous agreements, communications, or understandings, whether oral or written.</p>
+              <h2>14. Contact Information</h2>
+              <p>For questions regarding these Terms, you may contact us.</p>
+            </div>
+            <button
+              type="button"
+              className="mt-4 w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-6 rounded-xl shadow-md transition-all duration-150 text-lg"
+              onClick={() => setShowTermsModal(false)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </Dialog>
     </div>
   )
 } 

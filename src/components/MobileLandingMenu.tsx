@@ -97,15 +97,13 @@ const MobileLandingMenu: React.FC<MobileLandingMenuProps> = ({ isOpen, onClose }
                   </Link>
                 </li>
                 <li className="pt-4">
-                  <a
-                    href="https://cal.com/accreda"
-                    target="_blank"
-                    rel="noopener"
+                  <Link
+                    to="/signup"
                     className="block w-full bg-black text-white text-lg font-medium py-3 px-6 rounded-lg text-center hover:bg-slate-800 transition-colors"
                     onClick={onClose}
                   >
-                    Book a Demo
-                  </a>
+                    Join Today
+                  </Link>
                 </li>
               </ul>
             </nav>

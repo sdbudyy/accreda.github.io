@@ -803,14 +803,12 @@ const Landing: React.FC = () => {
                 Pricing
               </a>
               <Link to="/enterprise" className="text-slate-600 hover:text-slate-900 transition-colors">Enterprise</Link>
-              <a 
-                href="https://cal.com/accreda" 
-                target="_blank" 
-                rel="noopener" 
+              <Link 
+                to="/signup"
                 className="bg-black text-white px-6 py-2 rounded-lg hover:bg-slate-800 transition-colors"
               >
-                Book a Demo
-              </a>
+                Join Today
+              </Link>
             </div>
             <button 
               className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100"
