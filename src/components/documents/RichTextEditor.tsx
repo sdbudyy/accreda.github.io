@@ -1,8 +1,10 @@
-import React from 'react';
-import { CKEditor } from '@ckeditor/ckeditor5-react';
-import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
-// @ts-ignore
-import type { CKEditorEvent, CKEditor5Editor } from '@ckeditor/ckeditor5-react';
+import React, { useEffect } from 'react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Underline from '@tiptap/extension-underline';
+import Link from '@tiptap/extension-link';
+import Placeholder from '@tiptap/extension-placeholder';
+import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Quote, Heading2, Heading3, Undo2, Redo2 } from 'lucide-react';
 
 interface RichTextEditorProps {
   content: string;
@@ -11,51 +13,65 @@ interface RichTextEditorProps {
   onCancel?: () => void;
 }
 
-const editorStyle = {
-  border: '1px solid #e2e8f0', // slate-200
-  borderRadius: '0.5rem', // rounded-lg
-  background: '#f8fafc', // slate-50
-  minHeight: '400px',
-  padding: '1rem',
-};
+const toolbarBtn = (isActive: boolean) =>
+  `p-2 rounded transition-colors duration-100 flex items-center justify-center text-lg ${
+    isActive
+      ? 'bg-teal-100 text-teal-700 shadow-sm'
+      : 'text-slate-500 hover:bg-slate-100 hover:text-teal-700'
+  }`;
 
 const RichTextEditor: React.FC<RichTextEditorProps> = ({
   content,
   onChange,
   onSave,
-  onCancel
+  onCancel,
 }) => {
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Underline,
+      Link,
+      Placeholder.configure({
+        placeholder: 'Start typing...'
+      })
+    ],
+    content,
+    onUpdate: ({ editor }) => {
+      onChange(editor.getHTML());
+    },
+    editorProps: {
+      attributes: {
+        class:
+          'prose prose-sm min-h-[200px] max-h-[400px] overflow-y-auto focus:outline-none px-4 py-3 rounded-b-lg border-0 bg-white text-slate-800',
+      },
+    },
+  });
+
+  // Keep editor content in sync with prop
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      editor.commands.setContent(content || '<p></p>', false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content]);
+
   return (
     <div className="space-y-4">
-      <div className="border border-slate-200 rounded-lg bg-slate-50">
-        <CKEditor
-          editor={ClassicEditor}
-          data={content}
-          config={{
-            toolbar: [
-              'heading',
-              '|',
-              'bold',
-              'italic',
-              'underline',
-              'link',
-              '|',
-              'bulletedList',
-              'numberedList',
-              '|',
-              'insertTable',
-              'codeBlock',
-              'blockQuote',
-              'undo',
-              'redo',
-              'pasteFromOffice',
-            ],
-          }}
-          onChange={(_event: any, editor: any) => {
-            const data = editor.getData();
-            onChange(data);
-          }}
-        />
+      <div className="shadow border border-slate-200 rounded-lg bg-white">
+        <div className="flex flex-wrap gap-1 p-2 border-b border-slate-100 bg-slate-50 rounded-t-lg">
+          <button type="button" onClick={() => editor?.chain().focus().toggleBold().run()} className={toolbarBtn(editor?.isActive('bold') || false)} title="Bold (Ctrl+B)"><Bold size={18} /></button>
+          <button type="button" onClick={() => editor?.chain().focus().toggleItalic().run()} className={toolbarBtn(editor?.isActive('italic') || false)} title="Italic (Ctrl+I)"><Italic size={18} /></button>
+          <button type="button" onClick={() => editor?.chain().focus().toggleUnderline().run()} className={toolbarBtn(editor?.isActive('underline') || false)} title="Underline (Ctrl+U)"><UnderlineIcon size={18} /></button>
+          <button type="button" onClick={() => editor?.chain().focus().toggleBulletList().run()} className={toolbarBtn(editor?.isActive('bulletList') || false)} title="Bullet List"><List size={18} /></button>
+          <button type="button" onClick={() => editor?.chain().focus().toggleOrderedList().run()} className={toolbarBtn(editor?.isActive('orderedList') || false)} title="Numbered List"><ListOrdered size={18} /></button>
+          <button type="button" onClick={() => editor?.chain().focus().toggleBlockquote().run()} className={toolbarBtn(editor?.isActive('blockquote') || false)} title="Blockquote"><Quote size={18} /></button>
+          <button type="button" onClick={() => editor?.chain().focus().setParagraph().run()} className={toolbarBtn(editor?.isActive('paragraph') || false)} title="Paragraph"><span className="font-bold text-base">¶</span></button>
+          <button type="button" onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} className={toolbarBtn(editor?.isActive('heading', { level: 2 }) || false)} title="Heading 2"><Heading2 size={18} /></button>
+          <button type="button" onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()} className={toolbarBtn(editor?.isActive('heading', { level: 3 }) || false)} title="Heading 3"><Heading3 size={18} /></button>
+          <button type="button" onClick={() => editor?.chain().focus().undo().run()} className={toolbarBtn(false)} title="Undo"><Undo2 size={18} /></button>
+          <button type="button" onClick={() => editor?.chain().focus().redo().run()} className={toolbarBtn(false)} title="Redo"><Redo2 size={18} /></button>
+        </div>
+        <EditorContent editor={editor} />
       </div>
       {onSave && onCancel && (
         <div className="flex justify-end gap-2 mt-4">
@@ -73,20 +89,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           </button>
         </div>
       )}
-      <style>{`
-        .ck-editor__editable_inline {
-          border-radius: 0.5rem !important;
-          background: #f8fafc !important;
-          min-height: 400px !important;
-          padding: 1rem !important;
-          border: none !important;
-        }
-        .ck.ck-toolbar {
-          border-radius: 0.5rem 0.5rem 0 0 !important;
-          background: #f1f5f9 !important;
-          border: none !important;
-        }
-      `}</style>
     </div>
   );
 };
