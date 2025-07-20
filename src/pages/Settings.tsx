@@ -13,6 +13,8 @@ import { useUserProfile } from '../context/UserProfileContext';
 import { useProgressStore } from '../store/progress';
 import { getLatestTermsAcceptance, TermsAcceptance } from '../utils/termsAcceptance';
 import { useNavigate } from 'react-router-dom';
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 const defaultAvatar =
   'https://ui-avatars.com/api/?name=User&background=E0F2FE&color=0891B2&size=128';
@@ -1082,11 +1084,12 @@ const Settings: React.FC = () => {
                 <div className="flex flex-col md:flex-row gap-8 items-center w-full">
                   <div className="flex flex-col items-center">
                     <label className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
-                    <input
-                      type="date"
-                      value={start_date || ''}
-                      onChange={e => setStartDate(e.target.value)}
-                      className="input"
+                    <DatePicker
+                      selected={start_date ? new Date(start_date) : null}
+                      onChange={date => setStartDate(date ? date.toISOString().slice(0, 10) : "")}
+                      dateFormat="yyyy-MM-dd"
+                      className="input w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      placeholderText="Select start date"
                     />
                     {start_date && (
                       <span className="text-xs text-slate-500 mt-1">{new Date(start_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
@@ -1151,11 +1154,12 @@ const Settings: React.FC = () => {
                   </div>
                   <div className="flex flex-col items-center">
                     <label className="block text-sm font-medium text-slate-700 mb-1">Expected End Date</label>
-                    <input
-                      type="date"
-                      value={target_date || ''}
-                      onChange={e => setTargetDate(e.target.value)}
-                      className="input"
+                    <DatePicker
+                      selected={target_date ? new Date(target_date) : null}
+                      onChange={date => setTargetDate(date ? date.toISOString().slice(0, 10) : "")}
+                      dateFormat="yyyy-MM-dd"
+                      className="input w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      placeholderText="Select end date"
                     />
                     {target_date && (
                       <span className="text-xs text-slate-500 mt-1">{new Date(target_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>

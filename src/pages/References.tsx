@@ -643,6 +643,7 @@ const References: React.FC = () => {
     skills: [] as string[],
   });
   const [isSkillsModalOpen, setIsSkillsModalOpen] = useState(false);
+  const [isEditSkillsModalOpen, setIsEditSkillsModalOpen] = useState(false); // NEW: for edit modal
   const [isEditJobModalOpen, setIsEditJobModalOpen] = useState(false);
   const [editJob, setEditJob] = useState<Job | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -659,6 +660,11 @@ const References: React.FC = () => {
   const selectedSkills = skillCategories
     .flatMap(cat => cat.skills)
     .filter(skill => newJob.skills.includes(skill.id));
+
+  // NEW: selectedEditSkills for edit modal
+  const selectedEditSkills = skillCategories
+    .flatMap(cat => cat.skills)
+    .filter(skill => editJob && editJob.skills && editJob.skills.includes(skill.id));
 
   // Get completed skills grouped by category
   const completedSkillsByCategory = skillCategories.map(category => ({
@@ -1814,6 +1820,26 @@ const References: React.FC = () => {
                 <label className="block text-sm font-medium mb-1">Description</label>
                 <textarea className="w-full border rounded px-3 py-2" value={editJob.description || ''} onChange={e => setEditJob(j => j ? { ...j, description: e.target.value } : j)} rows={3} />
               </div>
+              {/* Skills section for edit modal */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Skills</label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {selectedEditSkills.map(skill => (
+                    <span key={skill.id} className="px-2 py-1 bg-slate-100 text-slate-700 rounded-full text-xs flex items-center gap-1">
+                      {skill.name}
+                      <button type="button" onClick={() => setEditJob(j => j && j.skills ? { ...j, skills: j.skills.filter(id => id !== skill.id) } : j)} className="text-slate-400 hover:text-red-600"><X size={12} /></button>
+                    </span>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary w-full flex items-center justify-center gap-2 py-3 text-lg"
+                  onClick={() => setIsEditSkillsModalOpen(true)}
+                >
+                  <Plus size={20} />
+                  {selectedEditSkills.length ? 'Edit Skills' : 'Select Skills'}
+                </button>
+              </div>
               <div className="flex justify-between gap-2 mt-4">
                 <button 
                   type="button" 
@@ -1843,6 +1869,14 @@ const References: React.FC = () => {
               </div>
               {addJobError && <div className="text-red-600 mt-2">{addJobError}</div>}
             </form>
+            {/* SkillSelectModal for edit modal */}
+            <SkillSelectModal
+              isOpen={isEditSkillsModalOpen}
+              onClose={() => setIsEditSkillsModalOpen(false)}
+              selectedSkills={selectedEditSkills}
+              onChange={skills => setEditJob(j => j ? { ...j, skills: skills.map(s => s.id) } : j)}
+              skillCategories={skillCategories}
+            />
           </div>
         </div>
       )}
