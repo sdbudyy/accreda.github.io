@@ -88,7 +88,7 @@ function App() {
       <Toaster position="top-right" />
       <Routes>
         {/* Public routes */}
-        <Route path="/" element={!session ? <Landing /> : <RoleBasedDashboard />} />
+        <Route path="/" element={<Landing />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/pricing" element={<Navigate to="/?scroll=pricing" replace />} />
         <Route path="/#pricing" element={<Navigate to="/?scroll=pricing" replace />} />

@@ -12,7 +12,7 @@ import { useSkillsStore } from '../store/skills';
 import { useUserProfile } from '../context/UserProfileContext';
 import { useProgressStore } from '../store/progress';
 import { getLatestTermsAcceptance, TermsAcceptance } from '../utils/termsAcceptance';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -1833,14 +1833,14 @@ const Settings: React.FC = () => {
                     You accepted our Terms and Conditions when you created your account. 
                     If we update our terms, you'll be notified and asked to accept the new version.
                   </p>
-                  <a
-                    href="/terms"
+                  <Link
+                    to="/terms"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm text-teal-600 hover:text-teal-700 font-medium underline"
                   >
                     View Terms
-                  </a>
+                  </Link>
                 </div>
               </div>
             ) : (
@@ -1853,14 +1853,14 @@ const Settings: React.FC = () => {
                   <p className="text-sm text-gray-500">
                     We couldn't find a record of your terms acceptance. This might be because you signed up before we started tracking this information.
                   </p>
-                  <a
-                    href="/terms"
+                  <Link
+                    to="/terms"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm text-teal-600 hover:text-teal-700 font-medium underline"
                   >
                     View Terms
-                  </a>
+                  </Link>
                 </div>
               </div>
             )}

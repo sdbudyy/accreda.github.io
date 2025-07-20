@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useUserProfile } from '../context/UserProfileContext';
 
 interface MobileLandingMenuProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface MobileLandingMenuProps {
 
 const MobileLandingMenu: React.FC<MobileLandingMenuProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
+  const { profile, loading: profileLoading } = useUserProfile();
 
   const handlePricingClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -61,13 +63,24 @@ const MobileLandingMenu: React.FC<MobileLandingMenuProps> = ({ isOpen, onClose }
             <nav className="p-6">
               <ul className="space-y-4">
                 <li>
-                  <Link
-                    to="/login"
-                    className="block py-3 text-lg font-medium text-slate-700 hover:text-slate-900 transition-colors"
-                    onClick={onClose}
+                  <button
+                    className="block py-3 text-lg font-medium text-slate-700 hover:text-slate-900 transition-colors w-full text-left"
+                    onClick={() => {
+                      onClose();
+                      if (profileLoading) return;
+                      if (profile) {
+                        if (profile.account_type === 'supervisor') {
+                          navigate('/dashboard/supervisor');
+                        } else {
+                          navigate('/dashboard');
+                        }
+                      } else {
+                        navigate('/login');
+                      }
+                    }}
                   >
                     Sign In
-                  </Link>
+                  </button>
                 </li>
                 <li>
                   <Link

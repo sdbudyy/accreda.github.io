@@ -42,6 +42,7 @@ import accredaLogo from '../assets/accreda-logo.png';
 import dashboardImage from '../assets/eit-dashboard.png';
 import MobileLandingMenu from '../components/MobileLandingMenu';
 import LandingFeatureSlider from '../components/LandingFeatureSlider';
+import { useUserProfile } from '../context/UserProfileContext';
 
 const provinces = [
   'Alberta (APEGA)',
@@ -765,6 +766,8 @@ const Landing: React.FC = () => {
     }
   }, [location]);
 
+  const { profile, loading: profileLoading } = useUserProfile();
+
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}
@@ -784,7 +787,23 @@ const Landing: React.FC = () => {
               </Link>
             )}
             <div className="hidden md:flex items-center space-x-8">
-              <Link to="/login" className="text-slate-600 hover:text-slate-900 transition-colors">Sign In</Link>
+              <button
+                className="text-slate-600 hover:text-slate-900 transition-colors"
+                onClick={() => {
+                  if (profileLoading) return;
+                  if (profile) {
+                    if (profile.account_type === 'supervisor') {
+                      navigate('/dashboard/supervisor');
+                    } else {
+                      navigate('/dashboard');
+                    }
+                  } else {
+                    navigate('/login');
+                  }
+                }}
+              >
+                Sign In
+              </button>
               <a 
                 href="#"
                 className="text-slate-600 hover:text-slate-900 transition-colors"

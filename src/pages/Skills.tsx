@@ -1,10 +1,9 @@
 import React, { useEffect, useCallback, useRef, memo, useMemo, useState, Suspense } from 'react';
-import { Star, Circle, CheckCircle2, ChevronDown, Award, AlertTriangle, Check, CircleDot, FileText, Briefcase, Info } from 'lucide-react';
+import { Star, Circle, CheckCircle2, ChevronDown, Award, AlertTriangle, Check, CircleDot, FileText, Briefcase } from 'lucide-react';
 import { useSkillsStore, Skill, Category } from '../store/skills';
 import { useSAOsStore, SAO } from '../store/saos';
 import { lazy } from 'react';
 import { supabase } from '../lib/supabase';
-import { useClickAway } from 'react-use';
 
 // Lazy load LinksPopup
 const LinksPopup = lazy(() => import('../components/skills/SAOPopup'));
@@ -25,7 +24,7 @@ const SkillItem = memo(({
 }: { 
   skill: Skill;
   categoryIndex: number;
-  onRankChange: (categoryIndex: number, skillId: string, rank: number | null) => void;
+  onRankChange: (categoryIndex: number, skillId: string, rank: number) => void;
   getStatusIcon: (skill: Skill) => React.ReactNode;
   getStatusLabel: (skill: Skill) => string;
   getStatusClass: (skill: Skill) => string;
@@ -40,9 +39,6 @@ const SkillItem = memo(({
   const [linkedJobs, setLinkedJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const hasLinkedItems = linkedSkillIds.has(skill.id);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  useClickAway(dropdownRef, () => setDropdownOpen(false));
 
   const handleLinksClick = async () => {
     setLoading(true);
@@ -57,17 +53,6 @@ const SkillItem = memo(({
       setLoading(false);
     }
   };
-
-  const rankOptions = [
-    { value: '', label: 'Not Ranked', color: 'bg-slate-100 text-slate-600', desc: 'No rank assigned yet.' },
-    { value: 1, label: '1 - Beginner', color: 'bg-red-100 text-red-600', desc: 'Beginner: You are just starting to learn this skill.' },
-    { value: 2, label: '2 - Basic', color: 'bg-orange-100 text-orange-600', desc: 'Basic: You can perform this skill with guidance.' },
-    { value: 3, label: '3 - Intermediate', color: 'bg-yellow-100 text-yellow-600', desc: 'Intermediate: You can perform this skill independently.' },
-    { value: 4, label: '4 - Advanced', color: 'bg-blue-100 text-blue-600', desc: 'Advanced: You can perform this skill independently and help others.' },
-    { value: 5, label: '5 - Expert', color: 'bg-green-100 text-green-600', desc: 'Expert: You can teach this skill to others and handle complex situations.' },
-  ];
-
-  const selectedOption = rankOptions.find(opt => String(opt.value) === String(skill.rank ?? '')) || rankOptions[0];
 
   return (
     <>
@@ -94,46 +79,22 @@ const SkillItem = memo(({
           >
             <FileText size={18} className={loading ? 'animate-pulse' : ''} />
           </button>
-          <div className="relative" ref={dropdownRef}>
-            <button
-              type="button"
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border-0 focus:ring-2 focus:ring-teal-500 focus:outline-none cursor-pointer shadow-sm transition ${selectedOption.color}`}
-              onClick={() => setDropdownOpen(v => !v)}
-              aria-haspopup="listbox"
-              aria-expanded={dropdownOpen}
+          <div className="relative">
+            <select
+              value={skill.rank || ''}
+              onChange={(e) => {
+                onRankChange(categoryIndex, skill.id, Number(e.target.value));
+              }}
+              className={`appearance-none px-3 py-1.5 rounded-full text-sm font-medium ${getRankColor(skill.rank)} border-0 focus:ring-2 focus:ring-teal-500 focus:outline-none cursor-pointer`}
             >
-              {selectedOption.label}
-              <ChevronDown size={16} className="text-current" />
-            </button>
-            {dropdownOpen && (
-              <div className="absolute right-0 z-20 mt-2 w-56 bg-white rounded-xl shadow-lg ring-1 ring-black/10 py-1 transition-all duration-200 ease-out animate-dropdown-fade-slide" role="listbox">
-                {rankOptions.map(opt => (
-                  <div key={opt.value} className="relative">
-                    <button
-                      type="button"
-                      className={`w-full text-left px-4 py-2 flex items-center rounded-lg transition font-medium text-sm ${opt.color} ${String(opt.value) === String(skill.rank ?? '') ? 'ring-2 ring-teal-400 bg-teal-50' : 'hover:bg-slate-100'}`}
-                      onClick={() => {
-                        setDropdownOpen(false);
-                        onRankChange(categoryIndex, skill.id, opt.value === '' ? null : Number(opt.value));
-                      }}
-                      role="option"
-                      aria-selected={String(opt.value) === String(skill.rank ?? '')}
-                    >
-                      <span className="flex-1 flex items-center gap-2">
-                        {opt.label}
-                      </span>
-                      <span className="relative flex items-center ml-2 group/info">
-                        <Info size={15} className="text-slate-400 group-hover/info:text-slate-600 cursor-pointer" />
-                        <span className="absolute left-6 top-1/2 -translate-y-1/2 z-30 whitespace-pre-line min-w-[180px] max-w-xs bg-slate-900 text-white text-xs rounded-md px-3 py-2 shadow-lg opacity-0 group-hover/info:opacity-100 pointer-events-none transition-opacity duration-200">
-                          {opt.desc}
-                        </span>
-                      </span>
-                      {String(opt.value) === String(skill.rank ?? '') && <Check size={16} className="ml-2 text-teal-500" />}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+              <option value="">Not Ranked</option>
+              {[1, 2, 3, 4, 5].map((rank) => (
+                <option key={rank} value={rank}>
+                  {rank} - {getRankLabel(rank)}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={16} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-current" />
           </div>
           <span className={`text-xs px-2.5 py-1 rounded-full ${getStatusClass(skill)}`}>{getStatusLabel(skill)}</span>
         </div>
@@ -173,7 +134,7 @@ const CategorySection = memo(({
 }: {
   category: Category;
   categoryIndex: number;
-  onRankChange: (categoryIndex: number, skillId: string, rank: number | null) => void;
+  onRankChange: (categoryIndex: number, skillId: string, rank: number) => void;
   getStatusIcon: (skill: Skill) => React.ReactNode;
   getStatusLabel: (skill: Skill) => string;
   getStatusClass: (skill: Skill) => string;
@@ -370,7 +331,7 @@ const Skills: React.FC = () => {
     return () => window.removeEventListener('scroll-to-skill', handleScrollToSkill as EventListener);
   }, []);
 
-  const handleRankChange = useCallback(async (categoryIndex: number, skillId: string, newRank: number | null) => {
+  const handleRankChange = useCallback(async (categoryIndex: number, skillId: string, newRank: number) => {
     try {
       console.log('Updating skill rank for skillId:', skillId, typeof skillId);
       await updateSkillRank(categoryIndex, skillId, newRank);

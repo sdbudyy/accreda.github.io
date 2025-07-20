@@ -6,10 +6,6 @@ import Dashboard from '../pages/Dashboard';
 
 const router = createBrowserRouter([
   {
-    path: '/',
-    element: <ProtectedRoute><Dashboard /></ProtectedRoute>,
-  },
-  {
     path: '/login',
     element: <Login />,
   },
