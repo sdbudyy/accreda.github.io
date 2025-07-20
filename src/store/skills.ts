@@ -17,7 +17,7 @@ export interface Category {
 interface SkillsState {
   skillCategories: Category[];
   setSkillCategories: (categories: Category[]) => void;
-  updateSkillRank: (categoryIndex: number, skillId: string, rank: number) => Promise<void>;
+  updateSkillRank: (categoryIndex: number, skillId: string, rank: number | null) => Promise<void>;
   loadUserSkills: (force?: boolean) => Promise<void>;
   loading: boolean;
   error: string | null;
@@ -236,7 +236,7 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
     }
   },
 
-  updateSkillRank: async (categoryIndex: number, skillId: string, rank: number) => {
+  updateSkillRank: async (categoryIndex: number, skillId: string, rank: number | null) => {
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError) {
