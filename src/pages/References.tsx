@@ -1448,26 +1448,24 @@ const References: React.FC = () => {
                                         onClick={async () => {
                                           setCommentModalLoading(true);
                                           setShowCommentModal(true);
-                                          // Fetch the latest non-empty comment for this skill/validator
+                                          // Fetch the comment from the validators table
                                           const { data, error } = await supabase
-                                            .from('skill_validations')
-                                            .select('comment, feedback')
-                                            .eq('eit_id', validator.eit_id)
-                                            .eq('skill_id', validator.skill_id)
+                                            .from('validators')
+                                            .select('comment, description')
+                                            .eq('id', validator.id)
                                             .not('comment', 'is', null)
                                             .not('comment', 'eq', '')
-                                            .order('validated_at', { ascending: false })
-                                            .limit(1);
+                                            .single();
                                           console.log({validator, data, error});
-                                          if (!error && data && data.length > 0 && data[0].comment) {
+                                          if (!error && data && data.comment) {
                                             setCommentModalContent({
-                                              comment: data[0].comment,
-                                              feedback: data[0].feedback
+                                              comment: data.comment,
+                                              feedback: data.description || ''
                                             });
                                           } else {
                                             setCommentModalContent({
                                               comment: 'No comment found.',
-                                              feedback: ''
+                                              feedback: data?.description || ''
                                             });
                                           }
                                           setCommentModalLoading(false);
