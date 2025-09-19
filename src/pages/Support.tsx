@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Mail, Send, AlertCircle, BookOpen, FileText, HelpCircle, ChevronDown, ChevronUp, ExternalLink, MessageSquare } from 'lucide-react';
 
 const Support: React.FC = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
@@ -86,19 +88,19 @@ const Support: React.FC = () => {
       title: 'EIT Program Guide',
       description: 'Comprehensive guide to the EIT program requirements and process',
       icon: <BookOpen size={20} />,
-      link: '/resources/eit-guide'
+      link: 'https://www.apega.ca/apply/membership/professional-member/work-experience/engineers/competency-based-assessment-tool/competencies-and-indicators'
     },
     {
       title: 'SAO Writing Tips',
       description: 'Best practices for writing effective Situation-Action-Outcome statements',
       icon: <FileText size={20} />,
-      link: '/resources/sao-tips'
+      link: 'https://www.apega.ca/apply/membership/professional-member/work-experience/engineers/competency-based-assessment-tool/competencies-and-indicators'
     },
     {
       title: 'Skills Framework',
       description: 'Detailed breakdown of all required skills and competencies',
       icon: <HelpCircle size={20} />,
-      link: '/resources/skills-framework'
+      link: 'https://www.apega.ca/apply/membership/professional-member/work-experience/engineers/competency-based-assessment-tool/competencies-and-indicators'
     }
   ];
 
@@ -143,18 +145,27 @@ const Support: React.FC = () => {
           <div className="bg-teal-50 rounded-lg p-6 mb-8">
             <h2 className="text-xl font-semibold text-teal-800 mb-4">Quick Help</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <a href="/dashboard" className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+              <button 
+                onClick={() => navigate('/dashboard')} 
+                className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow text-left w-full"
+              >
                 <h3 className="font-medium text-teal-700">View Progress</h3>
                 <p className="text-sm text-slate-600 mt-1">Check your current progress and achievements</p>
-              </a>
-              <a href="/skills" className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+              </button>
+              <button 
+                onClick={() => navigate('/dashboard/skills')} 
+                className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow text-left w-full"
+              >
                 <h3 className="font-medium text-teal-700">Manage Skills</h3>
                 <p className="text-sm text-slate-600 mt-1">Update and track your skill assessments</p>
-              </a>
-              <a href="/experiences" className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+              </button>
+              <button 
+                onClick={() => navigate('/dashboard/saos')} 
+                className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow text-left w-full"
+              >
                 <h3 className="font-medium text-teal-700">Document Experiences</h3>
                 <p className="text-sm text-slate-600 mt-1">Add new experiences and SAOs</p>
-              </a>
+              </button>
             </div>
           </div>
 
@@ -290,6 +301,8 @@ const Support: React.FC = () => {
                     <a
                       key={index}
                       href={resource.link}
+                      target={resource.link.startsWith('http') ? '_blank' : '_self'}
+                      rel={resource.link.startsWith('http') ? 'noopener noreferrer' : undefined}
                       className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors"
                     >
                       <div className="text-teal-600 mt-1">{resource.icon}</div>
