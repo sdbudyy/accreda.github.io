@@ -39,7 +39,40 @@ export default function Login() {
           loadUserSkills(),
           initializeNotifications()
         ])
-        navigate('/dashboard')
+        
+        // Check user profile to determine correct dashboard route
+        try {
+          // Check for supervisor profile first
+          const { data: supervisorProfile } = await supabase
+            .from('supervisor_profiles')
+            .select('*')
+            .eq('id', data.user.id)
+            .single();
+          
+          if (supervisorProfile) {
+            navigate('/dashboard/supervisor');
+            return;
+          }
+          
+          // Check for EIT profile
+          const { data: eitProfile } = await supabase
+            .from('eit_profiles')
+            .select('*')
+            .eq('id', data.user.id)
+            .single();
+          
+          if (eitProfile) {
+            navigate('/dashboard');
+            return;
+          }
+          
+          // If no profile exists, go to dashboard and let RoleBasedDashboard handle it
+          navigate('/dashboard');
+        } catch (profileError) {
+          console.error('Error checking user profile:', profileError);
+          // Fallback to dashboard
+          navigate('/dashboard');
+        }
       }
     } catch (err) {
       if (err instanceof Error) {

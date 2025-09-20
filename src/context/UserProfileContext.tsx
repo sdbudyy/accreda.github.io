@@ -38,43 +38,54 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
         setLoading(false);
         return;
       }
-      // Try EIT profile first
-      let { data: eitProfile } = await supabase
-        .from('eit_profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      if (!eitProfile) {
-        // If not found, create it (for EITs)
-        const { data: newProfile, error: upsertError } = await supabase
-          .from('eit_profiles')
-          .upsert({
-            id: user.id,
-            email: user.email,
-            full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
-            account_type: 'eit',
-          }, { onConflict: 'id' })
-          .select('*')
-          .single();
-        if (upsertError) throw upsertError;
-        eitProfile = newProfile;
-      }
-      if (eitProfile) {
-        setProfile({ ...eitProfile, account_type: 'eit' });
-        setLoading(false);
-        return;
-      }
-      // Try supervisor profile
+      
+      // Check for supervisor profile first
       const { data: supervisorProfile } = await supabase
         .from('supervisor_profiles')
         .select('*')
         .eq('id', user.id)
         .single();
+      
       if (supervisorProfile) {
         setProfile({ ...supervisorProfile, account_type: 'supervisor' });
         setLoading(false);
         return;
       }
+      
+      // Check for existing EIT profile
+      let { data: eitProfile } = await supabase
+        .from('eit_profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      if (eitProfile) {
+        setProfile({ ...eitProfile, account_type: 'eit' });
+        setLoading(false);
+        return;
+      }
+      
+      // If no profile exists, create EIT profile as default
+      // This should only happen for new users who haven't been assigned a role yet
+      const { data: newProfile, error: upsertError } = await supabase
+        .from('eit_profiles')
+        .upsert({
+          id: user.id,
+          email: user.email,
+          full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+          account_type: 'eit',
+        }, { onConflict: 'id' })
+        .select('*')
+        .single();
+      
+      if (upsertError) throw upsertError;
+      
+      if (newProfile) {
+        setProfile({ ...newProfile, account_type: 'eit' });
+        setLoading(false);
+        return;
+      }
+      
       setProfile(null);
       setError('No profile found');
     } catch (err: any) {
