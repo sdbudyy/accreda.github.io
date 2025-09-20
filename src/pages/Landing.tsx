@@ -879,7 +879,7 @@ const Landing: React.FC = () => {
               />
             </h1>
             <p className="text-2xl text-slate-600 mb-8 max-w-2xl mx-auto">
-              Track, document, and manage your professional development journey towards becoming Process Engineer (P.Eng).
+              Track, document, and manage your professional development journey towards becoming Professional Engineer (P.Eng).
             </p>
             <div className="flex justify-center">
               <a
