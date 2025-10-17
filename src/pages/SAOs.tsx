@@ -1444,7 +1444,7 @@ const SAOs: React.FC = () => {
           <button
             onClick={() => {
               if (subscriptionData && subscriptionData.tier === 'free' && saoCreatedCount >= saoLimit) {
-                setLimitError(`You have reached your SAO limit of ${saoLimit} for the Free plan. Please upgrade to create more SAOs.`);
+                toast.error(`You have reached your SAO limit of ${saoLimit} for the Free plan. Please upgrade to create more SAOs.`);
                 return;
               }
               setIsModalOpen(true);
