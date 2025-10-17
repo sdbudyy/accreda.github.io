@@ -326,7 +326,12 @@ const SAOModal: React.FC<SAOModalProps> = ({ isOpen, onClose, editSAO, onCreated
       onClose();
       if (onCreated) onCreated();
     } catch (error: any) {
-      toast.error(error.message || 'Failed to save SAO');
+      // Show specific error message for SAO limit
+      if (error.message && error.message.includes('SAO limit')) {
+        setLimitError(error.message);
+      } else {
+        toast.error(error.message || 'Failed to save SAO');
+      }
     }
   };
 
@@ -973,6 +978,7 @@ const SAOs: React.FC = () => {
   const [searchParams] = useSearchParams();
   const saoId = searchParams.get('saoId');
   const [saoCreatedCount, setSaoCreatedCount] = useState<number>(0);
+  const [subscriptionData, setSubscriptionData] = useState<any>(null);
   const [userRole, setUserRole] = useState<'eit' | 'supervisor' | null>(null);
   const [importMenuOpen, setImportMenuOpen] = useState(false);
   const [importedContent, setImportedContent] = useState<string | null>(null);
@@ -1010,9 +1016,48 @@ const SAOs: React.FC = () => {
     fetchRole();
   }, []);
 
+  // Fetch subscription data to get SAO count
+  useEffect(() => {
+    const fetchSubscriptionData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select('sao_created_count, tier, sao_limit')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (subscription) {
+        setSubscriptionData(subscription);
+        setSaoCreatedCount(subscription.sao_created_count || 0);
+      }
+    };
+    
+    fetchSubscriptionData();
+  }, []);
+
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this SAO?')) {
       await deleteSAO(id);
+      // Refresh subscription data to update SAO count
+      const fetchSubscriptionData = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        
+        const { data: subscription } = await supabase
+          .from('subscriptions')
+          .select('sao_created_count, tier, sao_limit')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (subscription) {
+          setSubscriptionData(subscription);
+          setSaoCreatedCount(subscription.sao_created_count || 0);
+        }
+      };
+      
+      fetchSubscriptionData();
     }
   };
 
@@ -1025,6 +1070,24 @@ const SAOs: React.FC = () => {
     setIsModalOpen(false);
     setEditingSAO(undefined);
     loadUserSAOs();
+    // Refresh subscription data to update SAO count
+    const fetchSubscriptionData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select('sao_created_count, tier, sao_limit')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (subscription) {
+        setSubscriptionData(subscription);
+        setSaoCreatedCount(subscription.sao_created_count || 0);
+      }
+    };
+    
+    fetchSubscriptionData();
   };
 
   // Add this new function to parse SAO content
@@ -1350,8 +1413,12 @@ const SAOs: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       {/* SAO Limit Banner */}
-      {tier === 'free' && (
-        <div className="p-4 mb-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-900 text-center font-semibold">
+      {subscriptionData && subscriptionData.tier === 'free' && (
+        <div className={`p-4 mb-4 border rounded-lg text-center font-semibold ${
+          saoCreatedCount >= saoLimit 
+            ? 'bg-red-50 border-red-200 text-red-900' 
+            : 'bg-yellow-50 border-yellow-200 text-yellow-900'
+        }`}>
           {(saoLimit === -1 || saoLimit === 2147483647)
             ? 'You have Unlimited SAOs on your plan.'
             : (saoCreatedCount < saoLimit
@@ -1365,21 +1432,6 @@ const SAOs: React.FC = () => {
           <p className="text-slate-500 mt-1">Write and manage your SAO essays.</p>
         </div>
         <div className="flex flex-wrap gap-2 items-center justify-end">
-          <button
-            className="btn flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
-            onClick={() => uploadInputRef.current?.click()}
-            type="button"
-          >
-            <Upload size={18} />
-            Import / Upload
-          </button>
-          <input
-            type="file"
-            className="hidden"
-            ref={uploadInputRef}
-            onChange={handleUploadFile}
-            accept=".txt,.docx,.pdf"
-          />
           {userRole === 'eit' && (
             <button
               className={`btn btn-primary ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
@@ -1391,12 +1443,16 @@ const SAOs: React.FC = () => {
           )}
           <button
             onClick={() => {
-              if (saoLimit === -1 || saoLimit === 2147483647 || saoCreatedCount < saoLimit) setIsModalOpen(true);
+              if (subscriptionData && subscriptionData.tier === 'free' && saoCreatedCount >= saoLimit) {
+                setLimitError(`You have reached your SAO limit of ${saoLimit} for the Free plan. Please upgrade to create more SAOs.`);
+                return;
+              }
+              setIsModalOpen(true);
             }}
-            className={`btn flex items-center gap-2 ${(saoLimit !== -1 && saoLimit !== 2147483647 && saoCreatedCount >= saoLimit) ? 'bg-gray-300 text-gray-500 border-gray-300 cursor-not-allowed' : 'btn-primary'}`}
-            disabled={saoLimit !== -1 && saoLimit !== 2147483647 && saoCreatedCount >= saoLimit}
-            aria-disabled={saoLimit !== -1 && saoLimit !== 2147483647 && saoCreatedCount >= saoLimit}
-            title={(saoLimit !== -1 && saoLimit !== 2147483647 && saoCreatedCount >= saoLimit) ? 'You have reached your SAO limit for the Free plan.' : 'Start a new SAO'}
+            className={`btn flex items-center gap-2 ${(subscriptionData && subscriptionData.tier === 'free' && saoCreatedCount >= saoLimit) ? 'bg-gray-300 text-gray-500 border-gray-300 cursor-not-allowed' : 'btn-primary'}`}
+            disabled={subscriptionData && subscriptionData.tier === 'free' && saoCreatedCount >= saoLimit}
+            aria-disabled={subscriptionData && subscriptionData.tier === 'free' && saoCreatedCount >= saoLimit}
+            title={(subscriptionData && subscriptionData.tier === 'free' && saoCreatedCount >= saoLimit) ? `You have reached your SAO limit of ${saoLimit} for the Free plan.` : 'Start a new SAO'}
           >
             <Plus size={18} />
             Start New SAO

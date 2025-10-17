@@ -327,22 +327,29 @@ const Settings: React.FC = () => {
       if (error) throw error;
 
       // --- Dynamically update the correct profile table ---
-      if (isEditingName && user) {
+      if ((isEditingName || (isEditingEmail && editEmail !== email)) && user) {
         const profileTable = await getUserProfileTable(user.id);
         if (!profileTable) {
           setMessage({ type: 'error', text: 'Profile not found.' });
           setLoading(false);
           return;
         }
+        const profileUpdates: { full_name?: string; email?: string } = {};
+        if (isEditingName) profileUpdates.full_name = editFullName;
+        if (isEditingEmail && editEmail !== email) profileUpdates.email = editEmail;
         const { error: profileError } = await supabase
           .from(profileTable)
-          .update({ full_name: editFullName })
+          .update(profileUpdates)
           .eq('id', user.id);
         if (profileError) throw profileError;
       }
       // ------------------------------------------------------------
 
-      setMessage({ type: 'success', text: 'Profile updated successfully!' });
+      // Refresh profile context and auth user so UI reflects changes immediately
+      try {
+        await refreshProfile();
+      } catch (_) { /* ignore refresh errors */ }
+      setMessage({ type: 'success', text: isEditingEmail && editEmail !== email ? 'Profile updated! Check your new email to confirm the change.' : 'Profile updated successfully!' });
       setIsEditingName(false);
       setIsEditingEmail(false);
       // Refresh user data

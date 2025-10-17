@@ -75,6 +75,22 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
       }
       if (!user) throw new Error('No authenticated user found');
 
+      // Check SAO limit for free tier users
+      const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select('tier, sao_limit, sao_created_count')
+        .eq('user_id', user.id)
+        .single();
+
+      if (subscription && subscription.tier === 'free') {
+        const currentCount = subscription.sao_created_count || 0;
+        const limit = subscription.sao_limit || 5;
+        
+        if (currentCount >= limit) {
+          throw new Error(`You have reached your SAO limit of ${limit} for the Free plan. Please upgrade to create more SAOs.`);
+        }
+      }
+
       // Ensure EIT profile exists for this user
       await supabase
         .from('eit_profiles')
@@ -149,6 +165,16 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
       }
 
       console.log('SAO skills created successfully');
+
+      // Increment SAO created count for free tier users
+      if (subscription && subscription.tier === 'free') {
+        await supabase
+          .from('subscriptions')
+          .update({ 
+            sao_created_count: (subscription.sao_created_count || 0) + 1 
+          })
+          .eq('user_id', user.id);
+      }
 
       // Reload SAOs to get the updated list
       await get().loadUserSAOs();
@@ -282,6 +308,22 @@ export const useSAOsStore = create<SAOsState>((set, get) => ({
       if (saoError) {
         console.error('Error deleting SAO:', saoError);
         throw saoError;
+      }
+
+      // Decrement SAO created count for free tier users
+      const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select('tier, sao_created_count')
+        .eq('user_id', user.id)
+        .single();
+
+      if (subscription && subscription.tier === 'free') {
+        await supabase
+          .from('subscriptions')
+          .update({ 
+            sao_created_count: Math.max(0, (subscription.sao_created_count || 0) - 1)
+          })
+          .eq('user_id', user.id);
       }
 
       // Update local state
