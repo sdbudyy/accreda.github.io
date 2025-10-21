@@ -13,7 +13,9 @@ export default function ResetPassword() {
   useEffect(() => {
     // Check if we have a valid session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('ResetPassword: Session check', { session: !!session })
       if (!session) {
+        console.log('ResetPassword: No session, redirecting to login')
         navigate('/login', {
           state: { message: 'Password reset link is invalid or has expired. Please try again.' }
         })
@@ -24,6 +26,7 @@ export default function ResetPassword() {
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    console.log('ResetPassword: Form submitted')
 
     if (password !== confirmPassword) {
       setError('Passwords do not match')
@@ -43,6 +46,7 @@ export default function ResetPassword() {
     }
 
     setLoading(true)
+    console.log('ResetPassword: Updating password')
 
     try {
       const { error } = await supabase.auth.updateUser({
@@ -50,6 +54,7 @@ export default function ResetPassword() {
       })
 
       if (error) throw error
+      console.log('ResetPassword: Password updated successfully')
 
       // Sign out the user after password reset
       await supabase.auth.signOut()
@@ -59,6 +64,7 @@ export default function ResetPassword() {
         state: { message: 'Your password has been reset successfully. Please sign in with your new password.' }
       })
     } catch (err) {
+      console.error('ResetPassword: Error updating password', err)
       setError(err instanceof Error ? err.message : 'An error occurred while resetting your password')
     } finally {
       setLoading(false)

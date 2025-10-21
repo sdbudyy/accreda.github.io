@@ -284,8 +284,8 @@ app.post('/api/create-checkout-session', async (req: Request, res: Response) => 
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
       customer_email: userEmail,
-      success_url: `${process.env.CLIENT_URL || 'http://localhost:5173'}/settings?success=true`,
-      cancel_url: `${process.env.CLIENT_URL || 'http://localhost:5173'}/settings?canceled=true`,
+      success_url: `${process.env.CLIENT_URL || 'https://www.accreda.ca'}/settings?success=true`,
+      cancel_url: `${process.env.CLIENT_URL || 'https://www.accreda.ca'}/settings?canceled=true`,
       metadata: { userId, plan: planMetadata },
     });
     res.json({ url: session.url });
