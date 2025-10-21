@@ -337,6 +337,8 @@ const SupervisorSettings: React.FC = () => {
                   />
                   {passwordError && <p className="text-sm text-red-600">{passwordError}</p>}
                   <div className="flex space-x-2">
+                    <button type="button" onClick={handlePasswordChange} disabled={loading} className="btn btn-primary">
+                      {loading ? 'Updating...' : 'Update Password'}</button>
                     <button type="button" onClick={() => setIsEditingPassword(false)} className="btn btn-secondary">Cancel</button>
                   </div>
                 </div>
