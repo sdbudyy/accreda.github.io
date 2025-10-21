@@ -14,6 +14,10 @@ export default function ResetPassword() {
     // Handle URL hash parameters from Supabase auth
     const handleAuthCallback = async () => {
       try {
+        console.log('ResetPassword: Current URL:', window.location.href)
+        console.log('ResetPassword: Hash:', window.location.hash)
+        console.log('ResetPassword: Search:', window.location.search)
+        
         // Check if there are error parameters in the URL hash first
         const hashParams = new URLSearchParams(window.location.hash.substring(1))
         const errorParam = hashParams.get('error')
@@ -30,6 +34,8 @@ export default function ResetPassword() {
         const accessToken = urlParams.get('access_token')
         const refreshToken = urlParams.get('refresh_token')
         const type = urlParams.get('type')
+
+        console.log('ResetPassword: URL params:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type })
 
         // If we have tokens in the URL, set the session
         if (accessToken && refreshToken && type === 'recovery') {
