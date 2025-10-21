@@ -11,16 +11,42 @@ export default function ResetPassword() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    // Check if we have a valid session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('ResetPassword: Session check', { session: !!session })
-      if (!session) {
-        console.log('ResetPassword: No session, redirecting to login')
-        navigate('/login', {
-          state: { message: 'Password reset link is invalid or has expired. Please try again.' }
-        })
+    // Handle URL hash parameters from Supabase auth
+    const handleAuthCallback = async () => {
+      try {
+        // Check if there are error parameters in the URL hash first
+        const hashParams = new URLSearchParams(window.location.hash.substring(1))
+        const errorParam = hashParams.get('error')
+        const errorDescription = hashParams.get('error_description')
+        
+        if (errorParam) {
+          console.log('ResetPassword: URL contains error parameters', { error: errorParam, description: errorDescription })
+          setError(errorDescription || 'Password reset link is invalid or has expired. Please try again.')
+          return
+        }
+
+        // Check for a valid session (user should be logged in via the reset link)
+        const { data, error } = await supabase.auth.getSession()
+        
+        if (error) {
+          console.error('ResetPassword: Auth error', error)
+          setError('Authentication error. Please try requesting a new password reset link.')
+          return
+        }
+
+        if (!data.session) {
+          console.log('ResetPassword: No session found - user needs to click the reset link')
+          setError('Please click the password reset link from your email to continue.')
+        } else {
+          console.log('ResetPassword: Valid session found', { user: data.session.user?.email })
+        }
+      } catch (err) {
+        console.error('ResetPassword: Error handling auth callback', err)
+        setError('An error occurred while processing the password reset link.')
       }
-    })
+    }
+
+    handleAuthCallback()
   }, [navigate])
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -84,13 +110,22 @@ export default function ResetPassword() {
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleResetPassword}>
-          {error && (
-            <div className="rounded-lg bg-red-50 p-4 border border-red-100">
-              <div className="text-sm text-red-700">{error}</div>
+        {error && (
+          <div className="rounded-lg bg-red-50 p-4 border border-red-100">
+            <div className="text-sm text-red-700 mb-3">{error}</div>
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => navigate('/forgot-password')}
+                className="text-sm text-teal-600 hover:text-teal-500 font-medium transition-colors"
+              >
+                Request a new password reset link
+              </button>
             </div>
-          )}
-          
+          </div>
+        )}
+
+        <form className="mt-8 space-y-6" onSubmit={handleResetPassword}>
           <div className="space-y-4">
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">

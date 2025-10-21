@@ -122,7 +122,7 @@ function App() {
         />
         <Route
           path="/forgot-password"
-          element={!session ? <ForgotPassword /> : <Navigate to="/dashboard" />}
+          element={<ForgotPassword />}
         />
         <Route
           path="/reset-password"
