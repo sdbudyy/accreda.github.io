@@ -25,6 +25,27 @@ export default function ResetPassword() {
           return
         }
 
+        // Check for URL parameters that might contain the reset token
+        const urlParams = new URLSearchParams(window.location.search)
+        const accessToken = urlParams.get('access_token')
+        const refreshToken = urlParams.get('refresh_token')
+        const type = urlParams.get('type')
+
+        // If we have tokens in the URL, set the session
+        if (accessToken && refreshToken && type === 'recovery') {
+          console.log('ResetPassword: Setting session from URL parameters')
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          })
+          
+          if (sessionError) {
+            console.error('ResetPassword: Error setting session', sessionError)
+            setError('Invalid or expired reset link. Please request a new password reset.')
+            return
+          }
+        }
+
         // Check for a valid session (user should be logged in via the reset link)
         const { data, error } = await supabase.auth.getSession()
         

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import AccredaLogo from '../../assets/accreda-logo.png'
 
 export default function ForgotPassword() {
@@ -9,11 +9,17 @@ export default function ForgotPassword() {
   const [message, setMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const navigate = useNavigate()
 
   useEffect(() => {
     // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsLoggedIn(!!session)
+      const loggedIn = !!session
+      setIsLoggedIn(loggedIn)
+      
+      // Don't auto-redirect logged-in users from forgot password page
+      // They might be here to reset their password even if they're logged in
+      // The UI will show them a logout option instead
     })
   }, [])
 
@@ -61,7 +67,7 @@ export default function ForgotPassword() {
         {isLoggedIn && (
           <div className="rounded-lg bg-blue-50 p-4 border border-blue-100">
             <div className="text-sm text-blue-700 mb-3">
-              You are currently logged in. If you want to reset your password, please log out first.
+              You are currently logged in. You can still request a password reset if needed, or log out first.
             </div>
             <div className="text-center">
               <button
@@ -69,7 +75,7 @@ export default function ForgotPassword() {
                 onClick={handleLogout}
                 className="text-sm text-teal-600 hover:text-teal-500 font-medium transition-colors"
               >
-                Log out and reset password
+                Log out first
               </button>
             </div>
           </div>
@@ -98,8 +104,7 @@ export default function ForgotPassword() {
               type="email"
               autoComplete="email"
               required
-              disabled={isLoggedIn}
-              className="appearance-none relative block w-full px-3 py-2 border border-slate-300 placeholder-slate-400 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent sm:text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="appearance-none relative block w-full px-3 py-2 border border-slate-300 placeholder-slate-400 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent sm:text-sm transition-colors"
               placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -109,7 +114,7 @@ export default function ForgotPassword() {
           <div>
             <button
               type="submit"
-              disabled={loading || isLoggedIn}
+              disabled={loading}
               className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-colors disabled:opacity-75 disabled:cursor-not-allowed"
             >
               {loading ? 'Sending instructions...' : 'Send reset instructions'}
