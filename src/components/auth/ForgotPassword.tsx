@@ -17,7 +17,7 @@ export default function ForgotPassword() {
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: `https://www.accreda.ca/reset-password`,
       })
 
       if (error) throw error
