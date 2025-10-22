@@ -41,12 +41,9 @@ export default function ForgotPassword() {
       console.log('EmailLogin: Sending magic link with redirect URL:', redirectUrl)
       console.log('EmailLogin: Current origin:', window.location.origin)
       
-      const { error } = await supabase.auth.signInWithOtp({
-        email: email,
-        options: {
-          shouldCreateUser: false, // Don't create user if they don't exist
-          emailRedirectTo: redirectUrl
-        }
+      // Try using resetPasswordForEmail instead of signInWithOtp
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectUrl
       })
 
       if (error) {
