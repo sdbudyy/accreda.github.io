@@ -26,36 +26,35 @@ export default function ForgotPassword() {
   const handleLogout = async () => {
     await supabase.auth.signOut()
     setIsLoggedIn(false)
-    setMessage('You have been logged out. You can now request a password reset.')
+    setMessage('You have been logged out. You can now request a login link.')
   }
 
-  const handleResetPassword = async (e: React.FormEvent) => {
+  const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
     setMessage(null)
     setLoading(true)
 
     try {
-      // Generate a 6-digit verification code
-      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
-      
-      // Store the code and email in sessionStorage with expiration
-      const codeData = {
-        code: verificationCode,
+      // Send magic link that redirects to dashboard
+      const { error } = await supabase.auth.signInWithOtp({
         email: email,
-        expires: Date.now() + (10 * 60 * 1000) // 10 minutes
+        options: {
+          shouldCreateUser: false, // Don't create user if they don't exist
+          emailRedirectTo: `${window.location.origin}/dashboard`
+        }
+      })
+
+      if (error) {
+        console.error('EmailLogin: Supabase error:', error)
+        throw error
       }
-      sessionStorage.setItem('password_reset_code', JSON.stringify(codeData))
       
-      // For now, we'll show the code in the UI (in production, you'd send this via email)
-      // TODO: Implement actual email sending via Supabase Edge Function
-      setMessage(`Verification code: ${verificationCode} (This is for testing - in production this would be sent via email)`)
-      
-      // Redirect to verification page
-      navigate(`/verify-code?email=${encodeURIComponent(email)}`)
+      setMessage('A login link has been sent to your email address. Click the link to sign in.')
+      setEmail('')
     } catch (err) {
-      console.error('ForgotPassword: Error:', err)
-      setError(err instanceof Error ? err.message : 'An error occurred while sending verification code')
+      console.error('EmailLogin: Error:', err)
+      setError(err instanceof Error ? err.message : 'An error occurred while sending login link')
     } finally {
       setLoading(false)
     }
@@ -67,17 +66,17 @@ export default function ForgotPassword() {
         <div className="flex flex-col items-center">
           <img src={AccredaLogo} alt="Accreda Logo" className="h-24 w-auto mb-6" />
           <h2 className="text-2xl font-bold text-slate-800">
-            Reset your password
+            Login with email
           </h2>
           <p className="mt-2 text-sm text-slate-600 text-center">
-            Enter your email address and we'll send you instructions to reset your password
+            Enter your email address and we'll send you a secure login link
           </p>
         </div>
 
         {isLoggedIn && (
           <div className="rounded-lg bg-blue-50 p-4 border border-blue-100">
             <div className="text-sm text-blue-700 mb-3">
-              You are currently logged in. You can still request a password reset if needed, or log out first.
+              You are currently logged in. You can still request a login link if needed, or log out first.
             </div>
             <div className="text-center">
               <button
@@ -97,7 +96,7 @@ export default function ForgotPassword() {
           </div>
         )}
 
-        <form className="mt-8 space-y-6" onSubmit={handleResetPassword}>
+        <form className="mt-8 space-y-6" onSubmit={handleEmailLogin}>
           {error && (
             <div className="rounded-lg bg-red-50 p-4 border border-red-100">
               <div className="text-sm text-red-700">{error}</div>
@@ -127,7 +126,7 @@ export default function ForgotPassword() {
               disabled={loading}
               className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-colors disabled:opacity-75 disabled:cursor-not-allowed"
             >
-              {loading ? 'Sending instructions...' : 'Send reset instructions'}
+              {loading ? 'Sending login link...' : 'Send login link'}
             </button>
           </div>
 
@@ -135,7 +134,7 @@ export default function ForgotPassword() {
             <p className="text-sm text-slate-600">
               Remember your password?{' '}
               <Link to="/login" className="font-medium text-teal-600 hover:text-teal-500 transition-colors">
-                Sign in
+                Sign in with password
               </Link>
             </p>
           </div>

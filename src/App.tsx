@@ -5,7 +5,6 @@ import { Session } from '@supabase/supabase-js'
 import Login from './components/auth/Login'
 import SignUp from './components/auth/SignUp'
 import ForgotPassword from './components/auth/ForgotPassword'
-import VerifyCode from './components/auth/VerifyCode'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import Skills from './pages/Skills'
@@ -52,16 +51,9 @@ function App() {
   const { loadEssays } = useEssayStore()
   const location = useLocation()
 
-  // Check if we're on the verify code page
-  const isVerifyCodePage = location.pathname === '/verify-code'
+  // No special handling needed for email login
 
   useEffect(() => {
-    // Don't initialize auth on verify code page
-    if (isVerifyCodePage) {
-      setLoading(false)
-      return
-    }
-
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setLoading(false)
@@ -74,14 +66,9 @@ function App() {
     })
 
     return () => subscription.unsubscribe()
-  }, [isVerifyCodePage])
+  }, [])
 
   useEffect(() => {
-    // Don't initialize session-dependent features on verify code page
-    if (isVerifyCodePage) {
-      return
-    }
-
     if (session) {
       const progressStore = useProgressStore.getState();
       progressStore.initialize(true).then(() => {
@@ -90,21 +77,16 @@ function App() {
       loadSkills();
       loadEssays();
     }
-  }, [session, loadSkills, loadEssays, isVerifyCodePage]);
+  }, [session, loadSkills, loadEssays]);
 
   useEffect(() => {
-    // Don't initialize notifications on verify code page
-    if (isVerifyCodePage) {
-      return
-    }
-    
     // Always initialize notifications on app load or after login
     useNotificationsStore.getState().initialize();
-  }, [isVerifyCodePage]);
+  }, []);
 
   return (
     <UserProfileProvider>
-      {session && !isVerifyCodePage && <RealtimeNotifications userId={session.user.id} />}
+      {session && <RealtimeNotifications userId={session.user.id} />}
       <Toaster position="top-right" />
       <Routes>
         {/* Public routes */}
@@ -143,10 +125,6 @@ function App() {
         <Route
           path="/forgot-password"
           element={<ForgotPassword />}
-        />
-        <Route
-          path="/verify-code"
-          element={<VerifyCode />}
         />
         <Route path="/thank-you" element={<ThankYou />} />
 
