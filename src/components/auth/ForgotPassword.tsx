@@ -37,11 +37,14 @@ export default function ForgotPassword() {
 
     try {
       // Send magic link that redirects to dashboard
+      const redirectUrl = `${window.location.origin}/dashboard`
+      console.log('EmailLogin: Sending magic link with redirect URL:', redirectUrl)
+      
       const { error } = await supabase.auth.signInWithOtp({
         email: email,
         options: {
           shouldCreateUser: false, // Don't create user if they don't exist
-          emailRedirectTo: `${window.location.origin}/dashboard`
+          emailRedirectTo: redirectUrl
         }
       })
 
