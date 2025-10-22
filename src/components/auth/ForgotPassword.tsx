@@ -36,8 +36,10 @@ export default function ForgotPassword() {
     setLoading(true)
 
     try {
-      // Use current origin for redirect URL to work in both development and production
-      const redirectUrl = `${window.location.origin}/reset-password`
+      // Use production URL for password reset redirect
+      // Use environment variable if available, fallback to www.accreda.ca
+      const baseUrl = import.meta.env.VITE_API_URL || 'https://www.accreda.ca'
+      const redirectUrl = `${baseUrl}/reset-password`
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
