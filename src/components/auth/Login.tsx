@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import AccredaLogo from '../../assets/accreda-logo.png'
@@ -13,12 +13,34 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [isAlreadyLoggedIn, setIsAlreadyLoggedIn] = useState(false)
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null)
   const navigate = useNavigate()
   const location = useLocation()
   const message = location.state?.message
   const initialize = useProgressStore(state => state.initialize)
   const loadUserSkills = useSkillsStore(state => state.loadUserSkills)
   const initializeNotifications = useNotificationsStore(state => state.initialize)
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        setIsAlreadyLoggedIn(true)
+        setCurrentUserEmail(session.user.email || null)
+      }
+    }
+    
+    checkSession()
+  }, [])
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    setIsAlreadyLoggedIn(false)
+    setCurrentUserEmail(null)
+    setError(null)
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -120,7 +142,67 @@ export default function Login() {
           </div>
         )}
 
-        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
+        {isAlreadyLoggedIn && (
+          <div className="rounded-lg bg-blue-50 p-4 border border-blue-100">
+            <div className="text-sm text-blue-700 mb-3">
+              You are currently logged in as: <strong>{currentUserEmail}</strong>
+            </div>
+            <div className="flex space-x-3">
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="text-sm text-blue-600 hover:text-blue-800 underline"
+              >
+                Logout and sign in with different account
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  // Redirect to appropriate dashboard
+                  const checkProfile = async () => {
+                    const { data: { session } } = await supabase.auth.getSession()
+                    if (session) {
+                      try {
+                        const { data: supervisorProfile } = await supabase
+                          .from('supervisor_profiles')
+                          .select('*')
+                          .eq('id', session.user.id)
+                          .single();
+                        
+                        if (supervisorProfile) {
+                          navigate('/dashboard/supervisor');
+                          return;
+                        }
+                        
+                        const { data: eitProfile } = await supabase
+                          .from('eit_profiles')
+                          .select('*')
+                          .eq('id', session.user.id)
+                          .single();
+                        
+                        if (eitProfile) {
+                          navigate('/dashboard');
+                          return;
+                        }
+                        
+                        navigate('/dashboard');
+                      } catch (profileError) {
+                        console.error('Error checking user profile:', profileError);
+                        navigate('/dashboard');
+                      }
+                    }
+                  }
+                  checkProfile()
+                }}
+                className="text-sm text-blue-600 hover:text-blue-800 underline"
+              >
+                Go to Dashboard
+              </button>
+            </div>
+          </div>
+        )}
+
+        <form className="mt-8 space-y-6" onSubmit={handleLogin} style={{ display: isAlreadyLoggedIn ? 'none' : 'block' }}>
           {error && (
             <div className="rounded-lg bg-red-50 p-4 border border-red-100">
               <div className="text-sm text-red-700">{error}</div>

@@ -67,16 +67,9 @@ const MobileLandingMenu: React.FC<MobileLandingMenuProps> = ({ isOpen, onClose }
                     className="block py-3 text-lg font-medium text-slate-700 hover:text-slate-900 transition-colors w-full text-left"
                     onClick={() => {
                       onClose();
-                      if (profileLoading) return;
-                      if (profile) {
-                        if (profile.account_type === 'supervisor') {
-                          navigate('/dashboard/supervisor');
-                        } else {
-                          navigate('/dashboard');
-                        }
-                      } else {
-                        navigate('/login');
-                      }
+                      // Always navigate to login page for security
+                      // Don't auto-redirect based on existing session
+                      navigate('/login');
                     }}
                   >
                     Sign In

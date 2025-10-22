@@ -110,11 +110,11 @@ function App() {
         <Route path="/terms" element={<Terms />} />
         <Route
           path="/login"
-          element={!session ? <Login /> : <Navigate to="/dashboard" />}
+          element={<Login />}
         />
         <Route
           path="/signup"
-          element={!session ? <SignUp /> : <Navigate to="/dashboard" />}
+          element={<SignUp />}
         />
         <Route
           path="/enterprise"
@@ -126,6 +126,10 @@ function App() {
         />
         <Route
           path="/reset-password"
+          element={<ResetPassword />}
+        />
+        <Route
+          path="/reset-password/*"
           element={<ResetPassword />}
         />
         <Route path="/thank-you" element={<ThankYou />} />

@@ -50,6 +50,9 @@ export default function ResetPassword() {
             setError('Invalid or expired reset link. Please request a new password reset.')
             return
           }
+          
+          // Clear the URL parameters after successful session setup
+          window.history.replaceState({}, document.title, window.location.pathname)
         }
 
         // Check for a valid session (user should be logged in via the reset link)
@@ -74,7 +77,7 @@ export default function ResetPassword() {
     }
 
     handleAuthCallback()
-  }, [navigate])
+  }, [])
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault()

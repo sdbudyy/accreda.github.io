@@ -790,16 +790,9 @@ const Landing: React.FC = () => {
               <button
                 className="text-slate-600 hover:text-slate-900 transition-colors"
                 onClick={() => {
-                  if (profileLoading) return;
-                  if (profile) {
-                    if (profile.account_type === 'supervisor') {
-                      navigate('/dashboard/supervisor');
-                    } else {
-                      navigate('/dashboard');
-                    }
-                  } else {
-                    navigate('/login');
-                  }
+                  // Always navigate to login page for security
+                  // Don't auto-redirect based on existing session
+                  navigate('/login');
                 }}
               >
                 Sign In
