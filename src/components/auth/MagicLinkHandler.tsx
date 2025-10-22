@@ -14,11 +14,20 @@ export default function MagicLinkHandler() {
       try {
         console.log('MagicLinkHandler: Current URL:', window.location.href);
         console.log('MagicLinkHandler: Search params:', Object.fromEntries(searchParams.entries()));
+        console.log('MagicLinkHandler: Hash:', window.location.hash);
         
-        // Get the access token and refresh token from URL parameters
-        const accessToken = searchParams.get('access_token');
-        const refreshToken = searchParams.get('refresh_token');
-        const type = searchParams.get('type');
+        // Check both URL search params and hash for tokens
+        let accessToken = searchParams.get('access_token');
+        let refreshToken = searchParams.get('refresh_token');
+        let type = searchParams.get('type');
+        
+        // If not found in search params, check the hash
+        if (!accessToken || !refreshToken) {
+          const hashParams = new URLSearchParams(window.location.hash.substring(1));
+          accessToken = accessToken || hashParams.get('access_token');
+          refreshToken = refreshToken || hashParams.get('refresh_token');
+          type = type || hashParams.get('type');
+        }
 
         console.log('MagicLinkHandler: Tokens found:', { 
           hasAccessToken: !!accessToken, 
