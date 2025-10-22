@@ -36,9 +36,8 @@ export default function ForgotPassword() {
     setLoading(true)
 
     try {
-      // Use Vercel production URL for password reset redirect
-      // Based on Supabase config, the app is deployed on Vercel
-      const baseUrl = 'https://accreda-github-io.vercel.app'
+      // Determine the correct base URL based on environment
+      const baseUrl = window.location.origin
       const redirectUrl = `${baseUrl}/reset-password`
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {

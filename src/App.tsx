@@ -128,10 +128,6 @@ function App() {
           path="/reset-password"
           element={<ResetPassword />}
         />
-        <Route
-          path="/reset-password/*"
-          element={<ResetPassword />}
-        />
         <Route path="/thank-you" element={<ThankYou />} />
 
         {/* Role-based dashboard entry point - only for initial routing */}

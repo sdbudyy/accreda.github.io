@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import AccredaLogo from '../../assets/accreda-logo.png'
 
 export default function ResetPassword() {
@@ -8,81 +8,72 @@ export default function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [isValidLink, setIsValidLink] = useState(false)
+  const [isCheckingLink, setIsCheckingLink] = useState(true)
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   useEffect(() => {
-    // Handle URL hash parameters from Supabase auth
-    const handleAuthCallback = async () => {
+    const handlePasswordReset = async () => {
       try {
-        console.log('ResetPassword: Current URL:', window.location.href)
-        console.log('ResetPassword: Hash:', window.location.hash)
-        console.log('ResetPassword: Search:', window.location.search)
-        
-        // Check if there are error parameters in the URL hash first
-        const hashParams = new URLSearchParams(window.location.hash.substring(1))
-        const errorParam = hashParams.get('error')
-        const errorDescription = hashParams.get('error_description')
-        
-        if (errorParam) {
-          console.log('ResetPassword: URL contains error parameters', { error: errorParam, description: errorDescription })
-          setError(errorDescription || 'Password reset link is invalid or has expired. Please try again.')
+        // Get the access token and refresh token from URL parameters
+        const accessToken = searchParams.get('access_token')
+        const refreshToken = searchParams.get('refresh_token')
+        const type = searchParams.get('type')
+
+        // Check if this is a password recovery link
+        if (type !== 'recovery') {
+          setError('Invalid password reset link. Please request a new one.')
+          setIsCheckingLink(false)
           return
         }
 
-        // Check for URL parameters that might contain the reset token
-        const urlParams = new URLSearchParams(window.location.search)
-        const accessToken = urlParams.get('access_token')
-        const refreshToken = urlParams.get('refresh_token')
-        const type = urlParams.get('type')
-
-        console.log('ResetPassword: URL params:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type })
-
-        // If we have tokens in the URL, set the session
-        if (accessToken && refreshToken && type === 'recovery') {
-          console.log('ResetPassword: Setting session from URL parameters')
-          const { error: sessionError } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken
-          })
-          
-          if (sessionError) {
-            console.error('ResetPassword: Error setting session', sessionError)
-            setError('Invalid or expired reset link. Please request a new password reset.')
-            return
-          }
-          
-          // Clear the URL parameters after successful session setup
-          window.history.replaceState({}, document.title, window.location.pathname)
-        }
-
-        // Check for a valid session (user should be logged in via the reset link)
-        const { data, error } = await supabase.auth.getSession()
-        
-        if (error) {
-          console.error('ResetPassword: Auth error', error)
-          setError('Authentication error. Please try requesting a new password reset link.')
+        if (!accessToken || !refreshToken) {
+          setError('Invalid password reset link. Please request a new one.')
+          setIsCheckingLink(false)
           return
         }
 
-        if (!data.session) {
-          console.log('ResetPassword: No session found - user needs to click the reset link')
-          setError('Please click the password reset link from your email to continue.')
-        } else {
-          console.log('ResetPassword: Valid session found', { user: data.session.user?.email })
+        // Set the session using the tokens from the URL
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken
+        })
+
+        if (sessionError) {
+          console.error('Error setting session:', sessionError)
+          setError('This password reset link is invalid or has expired. Please request a new one.')
+          setIsCheckingLink(false)
+          return
         }
+
+        // Verify the session is valid
+        const { data: { session }, error: sessionCheckError } = await supabase.auth.getSession()
+        
+        if (sessionCheckError || !session) {
+          setError('This password reset link is invalid or has expired. Please request a new one.')
+          setIsCheckingLink(false)
+          return
+        }
+
+        // Clear the URL parameters for security
+        window.history.replaceState({}, document.title, window.location.pathname)
+        
+        setIsValidLink(true)
+        setIsCheckingLink(false)
       } catch (err) {
-        console.error('ResetPassword: Error handling auth callback', err)
+        console.error('Error handling password reset:', err)
         setError('An error occurred while processing the password reset link.')
+        setIsCheckingLink(false)
       }
     }
 
-    handleAuthCallback()
-  }, [])
+    handlePasswordReset()
+  }, [searchParams])
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    console.log('ResetPassword: Form submitted')
 
     if (password !== confirmPassword) {
       setError('Passwords do not match')
@@ -102,7 +93,6 @@ export default function ResetPassword() {
     }
 
     setLoading(true)
-    console.log('ResetPassword: Updating password')
 
     try {
       const { error } = await supabase.auth.updateUser({
@@ -110,7 +100,6 @@ export default function ResetPassword() {
       })
 
       if (error) throw error
-      console.log('ResetPassword: Password updated successfully')
 
       // Sign out the user after password reset
       await supabase.auth.signOut()
@@ -120,11 +109,57 @@ export default function ResetPassword() {
         state: { message: 'Your password has been reset successfully. Please sign in with your new password.' }
       })
     } catch (err) {
-      console.error('ResetPassword: Error updating password', err)
+      console.error('Error updating password:', err)
       setError(err instanceof Error ? err.message : 'An error occurred while resetting your password')
     } finally {
       setLoading(false)
     }
+  }
+
+  if (isCheckingLink) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
+          <div className="flex flex-col items-center">
+            <img src={AccredaLogo} alt="Accreda Logo" className="h-24 w-auto mb-6" />
+            <h2 className="text-2xl font-bold text-slate-800">Verifying reset link...</h2>
+            <p className="mt-2 text-sm text-slate-600 text-center">
+              Please wait while we verify your password reset link.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isValidLink) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
+          <div className="flex flex-col items-center">
+            <img src={AccredaLogo} alt="Accreda Logo" className="h-24 w-auto mb-6" />
+            <h2 className="text-2xl font-bold text-slate-800">Invalid Reset Link</h2>
+            <p className="mt-2 text-sm text-slate-600 text-center">
+              {error || 'This password reset link is invalid or has expired.'}
+            </p>
+            <div className="mt-6 space-y-4">
+              <button
+                onClick={() => navigate('/forgot-password')}
+                className="w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-colors"
+              >
+                Request New Reset Link
+              </button>
+              <button
+                onClick={() => navigate('/login')}
+                className="w-full flex justify-center py-2.5 px-4 border border-slate-300 text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-colors"
+              >
+                Back to Login
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -133,7 +168,7 @@ export default function ResetPassword() {
         <div className="flex flex-col items-center">
           <img src={AccredaLogo} alt="Accreda Logo" className="h-24 w-auto mb-6" />
           <h2 className="text-2xl font-bold text-slate-800">
-            Set new password
+            Set New Password
           </h2>
           <p className="mt-2 text-sm text-slate-600 text-center">
             Please enter your new password below
@@ -142,16 +177,7 @@ export default function ResetPassword() {
 
         {error && (
           <div className="rounded-lg bg-red-50 p-4 border border-red-100">
-            <div className="text-sm text-red-700 mb-3">{error}</div>
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => navigate('/forgot-password')}
-                className="text-sm text-teal-600 hover:text-teal-500 font-medium transition-colors"
-              >
-                Request a new password reset link
-              </button>
-            </div>
+            <div className="text-sm text-red-700">{error}</div>
           </div>
         )}
 
@@ -204,4 +230,4 @@ export default function ResetPassword() {
       </div>
     </div>
   )
-} 
+}
