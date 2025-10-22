@@ -42,7 +42,7 @@ import accredaLogo from '../assets/accreda-logo.png';
 import dashboardImage from '../assets/eit-dashboard.png';
 import MobileLandingMenu from '../components/MobileLandingMenu';
 import LandingFeatureSlider from '../components/LandingFeatureSlider';
-import { useUserProfile } from '../context/UserProfileContext';
+// Removed useUserProfile import to prevent automatic login security issue
 
 const provinces = [
   'Alberta (APEGA)',
@@ -766,7 +766,8 @@ const Landing: React.FC = () => {
     }
   }, [location]);
 
-  const { profile, loading: profileLoading } = useUserProfile();
+  // Removed useUserProfile to prevent automatic login security issue
+  // Users must explicitly click Sign In to authenticate
 
   return (
     <div className="min-h-screen bg-white">

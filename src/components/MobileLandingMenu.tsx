@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useUserProfile } from '../context/UserProfileContext';
+// Removed useUserProfile import to prevent automatic login security issue
 
 interface MobileLandingMenuProps {
   isOpen: boolean;
@@ -11,7 +11,7 @@ interface MobileLandingMenuProps {
 
 const MobileLandingMenu: React.FC<MobileLandingMenuProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
-  const { profile, loading: profileLoading } = useUserProfile();
+  // Removed useUserProfile to prevent automatic login security issue
 
   const handlePricingClick = (e: React.MouseEvent) => {
     e.preventDefault();
