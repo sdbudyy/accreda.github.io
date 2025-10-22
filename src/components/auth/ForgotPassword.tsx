@@ -36,20 +36,22 @@ export default function ForgotPassword() {
     setLoading(true)
 
     try {
-      // Send OTP code instead of reset link
-      const { error } = await supabase.auth.signInWithOtp({
-        email: email,
-        options: {
-          shouldCreateUser: false, // Don't create user if they don't exist
-        }
-      })
-
-      if (error) {
-        console.error('ForgotPassword: Supabase error:', error)
-        throw error
-      }
+      // Generate a 6-digit verification code
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
       
-      // Redirect to verification page with email
+      // Store the code and email in sessionStorage with expiration
+      const codeData = {
+        code: verificationCode,
+        email: email,
+        expires: Date.now() + (10 * 60 * 1000) // 10 minutes
+      }
+      sessionStorage.setItem('password_reset_code', JSON.stringify(codeData))
+      
+      // For now, we'll show the code in the UI (in production, you'd send this via email)
+      // TODO: Implement actual email sending via Supabase Edge Function
+      setMessage(`Verification code: ${verificationCode} (This is for testing - in production this would be sent via email)`)
+      
+      // Redirect to verification page
       navigate(`/verify-code?email=${encodeURIComponent(email)}`)
     } catch (err) {
       console.error('ForgotPassword: Error:', err)
