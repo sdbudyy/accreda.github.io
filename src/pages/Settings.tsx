@@ -60,12 +60,6 @@ const Settings: React.FC = () => {
   const [supervisorRequestStatus, setSupervisorRequestStatus] = useState<'idle' | 'success' | 'error' | 'notfound' | 'already' | 'pending'>('idle');
   const [supervisorRequestMessage, setSupervisorRequestMessage] = useState('');
   const [supervisors, setSupervisors] = useState<{ id: string; full_name: string; email: string }[]>([]);
-  const [mfaEnrolled, setMfaEnrolled] = useState(false);
-  const [mfaQr, setMfaQr] = useState('');
-  const [mfaFactorId, setMfaFactorId] = useState('');
-  const [mfaCode, setMfaCode] = useState('');
-  const [mfaStatus, setMfaStatus] = useState<'idle' | 'enrolling' | 'verifying' | 'enabled' | 'error'>('idle');
-  const [mfaError, setMfaError] = useState('');
   const [showContactModal, setShowContactModal] = useState(false);
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
@@ -150,15 +144,6 @@ const Settings: React.FC = () => {
     fetchUser();
   }, []);
 
-  useEffect(() => {
-    // Check if user has TOTP enrolled
-    if (user) {
-      supabase.auth.mfa.listFactors().then(({ data }) => {
-        const totp = data?.all?.find(f => f.factor_type === 'totp' && f.status === 'verified');
-        setMfaEnrolled(!!totp);
-      });
-    }
-  }, [user]);
 
   useEffect(() => {
     fetchSubscription();
@@ -1563,152 +1548,6 @@ const Settings: React.FC = () => {
             </div>
           </div>
 
-          {/* Security Card */}
-          <section className="card p-6">
-            <h2 className="text-lg font-semibold flex items-center gap-2 mb-2">
-              <Lock /> Security
-            </h2>
-            <div className="space-y-4">
-              <div className="mt-4">
-                <label className="label">Password Reset</label>
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-gray-600">Can't remember your password?</p>
-                  <Link 
-                    to="/forgot-password" 
-                    className="text-sm text-teal-600 hover:text-teal-700 font-medium"
-                  >
-                    Reset Password
-                  </Link>
-                </div>
-              </div>
-              <div className="mt-4">
-                <label className="label">Two-Factor Authentication</label>
-                {mfaEnrolled ? (
-                  <div className="flex flex-col gap-2">
-                    <span className="text-green-700 font-medium">Enabled (TOTP)</span>
-                    <button
-                      className="btn btn-danger w-fit"
-                      onClick={async () => {
-                        setMfaStatus('idle');
-                        setMfaError('');
-                        try {
-                          const { data } = await supabase.auth.mfa.listFactors();
-                          const totp = data?.all?.find(f => f.factor_type === 'totp' && f.status === 'verified');
-                          if (totp) {
-                            await supabase.auth.mfa.unenroll({ factorId: totp.id });
-                            setMfaEnrolled(false);
-                          }
-                        } catch (err) {
-                          setMfaError('Failed to disable 2FA.');
-                        }
-                      }}
-                    >
-                      Disable 2FA
-                    </button>
-                    {mfaError && <span className="text-red-600 text-sm">{mfaError}</span>}
-                  </div>
-                ) : mfaStatus === 'enrolling' ? (
-                  <div className="flex flex-col gap-2">
-                    <span>Scan this QR code with your authenticator app:</span>
-                    {mfaQr && <img src={mfaQr} alt="TOTP QR Code" className="w-40 h-40" />}
-                    <input
-                      type="text"
-                      className="input mt-2"
-                      placeholder="Enter 6-digit code"
-                      value={mfaCode}
-                      onChange={e => setMfaCode(e.target.value)}
-                      maxLength={6}
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        className="btn btn-primary w-fit"
-                        onClick={async () => {
-                          setMfaStatus('verifying');
-                          setMfaError('');
-                          try {
-                            // Get challengeId for verification
-                            const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: mfaFactorId });
-                            if (challengeError) throw challengeError;
-                            const { error } = await supabase.auth.mfa.verify({
-                              factorId: mfaFactorId,
-                              challengeId: challengeData.id,
-                              code: mfaCode
-                            });
-                            if (error) throw error;
-                            setMfaEnrolled(true);
-                            setMfaStatus('enabled');
-                          } catch (err) {
-                            setMfaError('Invalid code. Please try again.');
-                            setMfaStatus('enrolling');
-                          }
-                        }}
-                        disabled={mfaCode.length !== 6}
-                      >
-                        Verify
-                      </button>
-                      <button
-                        className="btn btn-secondary w-fit"
-                        onClick={async () => {
-                          setMfaStatus('idle');
-                          setMfaQr('');
-                          setMfaFactorId('');
-                          setMfaCode('');
-                          setMfaError('');
-                          // Clean up any unverified TOTP factors
-                          try {
-                            const { data } = await supabase.auth.mfa.listFactors();
-                            if (data?.all) {
-                              for (const factor of data.all) {
-                                if (factor.factor_type === 'totp' && factor.status !== 'verified') {
-                                  await supabase.auth.mfa.unenroll({ factorId: factor.id });
-                                }
-                              }
-                            }
-                          } catch (e) { /* ignore */ }
-                        }}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                    {mfaError && <span className="text-red-600 text-sm">{mfaError}</span>}
-                  </div>
-                ) : (
-                  <button
-                    className="btn btn-primary w-fit"
-                    onClick={async () => {
-                      setMfaStatus('enrolling');
-                      setMfaError('');
-                      setMfaQr('');
-                      setMfaFactorId('');
-                      setMfaCode('');
-                      // Clean up any unverified TOTP factors before enrolling
-                      try {
-                        const { data } = await supabase.auth.mfa.listFactors();
-                        if (data?.all) {
-                          for (const factor of data.all) {
-                            if (factor.factor_type === 'totp' && factor.status !== 'verified') {
-                              await supabase.auth.mfa.unenroll({ factorId: factor.id });
-                            }
-                          }
-                        }
-                      } catch (e) { /* ignore */ }
-                      try {
-                        const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp' });
-                        if (error) throw error;
-                        setMfaQr(data.totp.qr_code);
-                        setMfaFactorId(data.id);
-                      } catch (err) {
-                        setMfaError('Failed to start 2FA enrollment.');
-                        setMfaStatus('idle');
-                      }
-                    }}
-                  >
-                    Set up Two-Factor Authentication
-                  </button>
-                )}
-              </div>
-            </div>
-          </section>
 
           {/* Notification Preferences */}
           <div className="bg-white shadow rounded-lg p-6">
