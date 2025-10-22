@@ -36,12 +36,11 @@ export default function ForgotPassword() {
     setLoading(true)
 
     try {
-      // Send magic link that redirects to dashboard
-      const redirectUrl = `${window.location.origin}/dashboard`
+      // Send magic link that redirects to homepage (no 404 issues)
+      const redirectUrl = `${window.location.origin}/`
       console.log('EmailLogin: Sending magic link with redirect URL:', redirectUrl)
-      console.log('EmailLogin: Current origin:', window.location.origin)
       
-      // Try using resetPasswordForEmail instead of signInWithOtp
+      // Use resetPasswordForEmail which is more reliable
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl
       })
@@ -51,7 +50,7 @@ export default function ForgotPassword() {
         throw error
       }
       
-      setMessage('A login link has been sent to your email address. Click the link to sign in.')
+      setMessage('A login link has been sent to your email address. Click the link to sign in, then click "Log In" on the homepage to access your account.')
       setEmail('')
     } catch (err) {
       console.error('EmailLogin: Error:', err)
