@@ -402,7 +402,6 @@ const Settings: React.FC = () => {
 
       setMessage({ type: 'success', text: 'Password updated successfully!' });
       setIsEditingPassword(false);
-      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (error) {
@@ -1065,6 +1064,79 @@ const Settings: React.FC = () => {
             </section>
           </div>
 
+          {/* Password Section */}
+          <section className="card p-6">
+            <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
+              <Lock /> Change Password
+            </h2>
+            <div className="space-y-4">
+              {isEditingPassword ? (
+                <form onSubmit={handlePasswordChange} className="space-y-4">
+                  <div>
+                    <label htmlFor="newPassword" className="block text-sm font-medium text-slate-700 mb-1">
+                      New Password
+                    </label>
+                    <input
+                      type="password"
+                      id="newPassword"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="input"
+                      placeholder="Enter new password"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700 mb-1">
+                      Confirm New Password
+                    </label>
+                    <input
+                      type="password"
+                      id="confirmPassword"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="input"
+                      placeholder="Confirm new password"
+                      required
+                    />
+                  </div>
+                  {passwordError && <p className="text-sm text-red-600">{passwordError}</p>}
+                  <div className="flex space-x-2">
+                    <button type="submit" disabled={loading} className="btn btn-primary">
+                      {loading ? 'Updating...' : 'Update Password'}
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setIsEditingPassword(false);
+                        setNewPassword('');
+                        setConfirmPassword('');
+                        setPasswordError('');
+                      }} 
+                      className="btn btn-secondary"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Password</p>
+                    <p className="text-sm text-gray-500">••••••••</p>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => setIsEditingPassword(true)} 
+                    className="text-sm text-teal-600 hover:text-teal-700 font-medium"
+                  >
+                    Change Password
+                  </button>
+                </div>
+              )}
+            </div>
+          </section>
+
           {/* Program Timeline Section (move this up) */}
           {userRole === 'eit' && (
             <section className="card p-6">
@@ -1497,48 +1569,6 @@ const Settings: React.FC = () => {
               <Lock /> Security
             </h2>
             <div className="space-y-4">
-              <div>
-                <label htmlFor="password" className="label">Password</label>
-                {isEditingPassword ? (
-                  <div className="space-y-4">
-                    <input
-                      type="password"
-                      id="currentPassword"
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      className="input"
-                      placeholder="Current password"
-                    />
-                    <input
-                      type="password"
-                      id="newPassword"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      className="input"
-                      placeholder="New password"
-                    />
-                    <input
-                      type="password"
-                      id="confirmPassword"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="input"
-                      placeholder="Confirm new password"
-                    />
-                    {passwordError && <p className="text-sm text-red-600">{passwordError}</p>}
-                    <div className="flex space-x-2">
-                      <button type="button" onClick={handlePasswordChange} disabled={loading} className="btn btn-primary">
-                        {loading ? 'Updating...' : 'Update Password'}</button>
-                      <button type="button" onClick={() => setIsEditingPassword(false)} className="btn btn-secondary">Cancel</button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between">
-                    <p>••••••••</p>
-                    <button type="button" onClick={() => setIsEditingPassword(true)} className="text-sm text-teal-600 hover:text-teal-700">Change</button>
-                  </div>
-                )}
-              </div>
               <div className="mt-4">
                 <label className="label">Password Reset</label>
                 <div className="flex items-center justify-between">
