@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 import { Session } from '@supabase/supabase-js'
@@ -50,8 +50,18 @@ function App() {
   const { loadProgress } = useProgressStore()
   const { loadSkills } = useSkillsStore()
   const { loadEssays } = useEssayStore()
+  const location = useLocation()
+
+  // Check if we're on the reset password page
+  const isResetPasswordPage = location.pathname === '/reset-password'
 
   useEffect(() => {
+    // Don't initialize auth on reset password page
+    if (isResetPasswordPage) {
+      setLoading(false)
+      return
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setLoading(false)
@@ -64,9 +74,14 @@ function App() {
     })
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [isResetPasswordPage])
 
   useEffect(() => {
+    // Don't initialize session-dependent features on reset password page
+    if (isResetPasswordPage) {
+      return
+    }
+
     if (session) {
       const progressStore = useProgressStore.getState();
       progressStore.initialize(true).then(() => {
@@ -75,16 +90,21 @@ function App() {
       loadSkills();
       loadEssays();
     }
-  }, [session, loadSkills, loadEssays]);
+  }, [session, loadSkills, loadEssays, isResetPasswordPage]);
 
   useEffect(() => {
+    // Don't initialize notifications on reset password page
+    if (isResetPasswordPage) {
+      return
+    }
+    
     // Always initialize notifications on app load or after login
     useNotificationsStore.getState().initialize();
-  }, []);
+  }, [isResetPasswordPage]);
 
   return (
     <UserProfileProvider>
-      {session && <RealtimeNotifications userId={session.user.id} />}
+      {session && !isResetPasswordPage && <RealtimeNotifications userId={session.user.id} />}
       <Toaster position="top-right" />
       <Routes>
         {/* Public routes */}

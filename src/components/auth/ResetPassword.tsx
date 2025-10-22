@@ -64,6 +64,9 @@ export default function ResetPassword() {
       }
     }
 
+    // Prevent any Supabase auth initialization on this page
+    console.log('ResetPassword: Preventing auth initialization')
+    
     handlePasswordReset()
   }, [searchParams])
 
