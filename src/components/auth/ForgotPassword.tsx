@@ -36,10 +36,9 @@ export default function ForgotPassword() {
     setLoading(true)
 
     try {
-      // Use production URL for password reset redirect
-      // Use environment variable if available, fallback to www.accreda.ca
-      // Also support GitHub Pages URL as fallback
-      const baseUrl = import.meta.env.VITE_API_URL || 'https://www.accreda.ca'
+      // Use Vercel production URL for password reset redirect
+      // Based on Supabase config, the app is deployed on Vercel
+      const baseUrl = 'https://accreda-github-io.vercel.app'
       const redirectUrl = `${baseUrl}/reset-password`
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
