@@ -40,15 +40,22 @@ export default function ForgotPassword() {
       const baseUrl = window.location.origin
       const redirectUrl = `${baseUrl}/reset-password`
       
+      console.log('ForgotPassword: Base URL:', baseUrl)
+      console.log('ForgotPassword: Redirect URL:', redirectUrl)
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
       })
 
-      if (error) throw error
+      if (error) {
+        console.error('ForgotPassword: Supabase error:', error)
+        throw error
+      }
       
       setMessage('Password reset instructions have been sent to your email address.')
       setEmail('')
     } catch (err) {
+      console.error('ForgotPassword: Error:', err)
       setError(err instanceof Error ? err.message : 'An error occurred while sending reset instructions')
     } finally {
       setLoading(false)

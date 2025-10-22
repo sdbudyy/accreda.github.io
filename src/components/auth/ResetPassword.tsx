@@ -16,19 +16,30 @@ export default function ResetPassword() {
   useEffect(() => {
     const handlePasswordReset = async () => {
       try {
+        console.log('ResetPassword: Current URL:', window.location.href)
+        console.log('ResetPassword: Search params:', Object.fromEntries(searchParams.entries()))
+        
         // Get the access token and refresh token from URL parameters
         const accessToken = searchParams.get('access_token')
         const refreshToken = searchParams.get('refresh_token')
         const type = searchParams.get('type')
 
+        console.log('ResetPassword: Tokens found:', { 
+          hasAccessToken: !!accessToken, 
+          hasRefreshToken: !!refreshToken, 
+          type 
+        })
+
         // Check if this is a password recovery link
         if (type !== 'recovery') {
+          console.log('ResetPassword: Invalid type:', type)
           setError('Invalid password reset link. Please request a new one.')
           setIsCheckingLink(false)
           return
         }
 
         if (!accessToken || !refreshToken) {
+          console.log('ResetPassword: Missing tokens')
           setError('Invalid password reset link. Please request a new one.')
           setIsCheckingLink(false)
           return
