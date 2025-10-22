@@ -1,32 +1,23 @@
-import React, { useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { Home } from 'lucide-react';
 
 const NotFound: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  useEffect(() => {
-    // Check if this is a magic link redirect that failed
-    const urlParams = new URLSearchParams(location.search);
-    const hash = location.hash;
-    
-    // If there are auth tokens in the URL, try to process them
-    if (hash.includes('access_token') || urlParams.get('access_token')) {
-      // This might be a magic link that failed to redirect properly
-      // Redirect to magic link handler to process the authentication
-      navigate('/auth/magic-link', { replace: true });
-    } else {
-      // Regular 404, redirect to homepage
-      navigate('/', { replace: true });
-    }
-  }, [navigate, location]);
-
-  // Show a brief loading message while redirecting
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F5F7FA] p-4">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
-        <p className="text-slate-600">Processing login...</p>
+        <h1 className="text-9xl font-bold text-teal-600">404</h1>
+        <h2 className="text-3xl font-semibold text-slate-800 mt-4">Page Not Found</h2>
+        <p className="text-slate-500 max-w-md mx-auto mt-2">
+          The page you're looking for doesn't exist or has been moved.
+        </p>
+        <Link 
+          to="/" 
+          className="inline-flex items-center px-4 py-2 mt-6 rounded-lg bg-teal-600 text-white hover:bg-teal-700 transition-colors"
+        >
+          <Home size={18} className="mr-2" />
+          Back to Dashboard
+        </Link>
       </div>
     </div>
   );

@@ -36,8 +36,8 @@ export default function ForgotPassword() {
     setLoading(true)
 
     try {
-      // Send magic link that logs user in and redirects to magic link handler
-      const redirectUrl = `${window.location.origin}/auth/magic-link`
+      // Send magic link that logs user in and redirects to dashboard
+      const redirectUrl = `${window.location.origin}/dashboard`
       console.log('EmailLogin: Sending magic link with redirect URL:', redirectUrl)
       
       // Use signInWithOtp to send magic link that logs user in
