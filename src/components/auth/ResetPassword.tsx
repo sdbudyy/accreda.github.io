@@ -45,27 +45,12 @@ export default function ResetPassword() {
           return
         }
 
-        // Set the session using the tokens from the URL
-        const { error: sessionError } = await supabase.auth.setSession({
+        // Store the tokens for later use but DON'T set the session yet
+        // This prevents auto-login and app initialization
+        sessionStorage.setItem('reset_tokens', JSON.stringify({
           access_token: accessToken,
           refresh_token: refreshToken
-        })
-
-        if (sessionError) {
-          console.error('Error setting session:', sessionError)
-          setError('This password reset link is invalid or has expired. Please request a new one.')
-          setIsCheckingLink(false)
-          return
-        }
-
-        // Verify the session is valid
-        const { data: { session }, error: sessionCheckError } = await supabase.auth.getSession()
-        
-        if (sessionCheckError || !session) {
-          setError('This password reset link is invalid or has expired. Please request a new one.')
-          setIsCheckingLink(false)
-          return
-        }
+        }))
 
         // Clear the URL parameters for security
         window.history.replaceState({}, document.title, window.location.pathname)
@@ -106,11 +91,33 @@ export default function ResetPassword() {
     setLoading(true)
 
     try {
+      // Get the stored tokens
+      const storedTokens = sessionStorage.getItem('reset_tokens')
+      if (!storedTokens) {
+        throw new Error('Reset tokens not found. Please request a new password reset link.')
+      }
+
+      const { access_token, refresh_token } = JSON.parse(storedTokens)
+
+      // Set the session temporarily to update the password
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token,
+        refresh_token
+      })
+
+      if (sessionError) {
+        throw new Error('Invalid or expired reset link. Please request a new one.')
+      }
+
+      // Update the password
       const { error } = await supabase.auth.updateUser({
         password: password
       })
 
       if (error) throw error
+
+      // Clear the stored tokens
+      sessionStorage.removeItem('reset_tokens')
 
       // Sign out the user after password reset
       await supabase.auth.signOut()
