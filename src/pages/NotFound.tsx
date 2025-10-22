@@ -13,8 +13,8 @@ const NotFound: React.FC = () => {
     // If there are auth tokens in the URL, try to process them
     if (hash.includes('access_token') || urlParams.get('access_token')) {
       // This might be a magic link that failed to redirect properly
-      // Redirect to dashboard to let the auth system handle it
-      navigate('/dashboard', { replace: true });
+      // Redirect to magic link handler to process the authentication
+      navigate('/auth/magic-link', { replace: true });
     } else {
       // Regular 404, redirect to homepage
       navigate('/', { replace: true });

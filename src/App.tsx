@@ -5,6 +5,7 @@ import { Session } from '@supabase/supabase-js'
 import Login from './components/auth/Login'
 import SignUp from './components/auth/SignUp'
 import ForgotPassword from './components/auth/ForgotPassword'
+import MagicLinkHandler from './components/auth/MagicLinkHandler'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import Skills from './pages/Skills'
@@ -125,6 +126,10 @@ function App() {
         <Route
           path="/forgot-password"
           element={<ForgotPassword />}
+        />
+        <Route
+          path="/auth/magic-link"
+          element={<MagicLinkHandler />}
         />
         <Route path="/thank-you" element={<ThankYou />} />
 
