@@ -36,15 +36,12 @@ export default function ForgotPassword() {
     setLoading(true)
 
     try {
-      // Determine the correct base URL based on environment
-      const baseUrl = window.location.origin
-      const redirectUrl = `${baseUrl}/reset-password`
-      
-      console.log('ForgotPassword: Base URL:', baseUrl)
-      console.log('ForgotPassword: Redirect URL:', redirectUrl)
-      
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: redirectUrl,
+      // Send OTP code instead of reset link
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email,
+        options: {
+          shouldCreateUser: false, // Don't create user if they don't exist
+        }
       })
 
       if (error) {
@@ -52,11 +49,11 @@ export default function ForgotPassword() {
         throw error
       }
       
-      setMessage('Password reset instructions have been sent to your email address.')
-      setEmail('')
+      // Redirect to verification page with email
+      navigate(`/verify-code?email=${encodeURIComponent(email)}`)
     } catch (err) {
       console.error('ForgotPassword: Error:', err)
-      setError(err instanceof Error ? err.message : 'An error occurred while sending reset instructions')
+      setError(err instanceof Error ? err.message : 'An error occurred while sending verification code')
     } finally {
       setLoading(false)
     }

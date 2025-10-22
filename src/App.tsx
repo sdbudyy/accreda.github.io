@@ -5,7 +5,7 @@ import { Session } from '@supabase/supabase-js'
 import Login from './components/auth/Login'
 import SignUp from './components/auth/SignUp'
 import ForgotPassword from './components/auth/ForgotPassword'
-import ResetPassword from './components/auth/ResetPassword'
+import VerifyCode from './components/auth/VerifyCode'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import Skills from './pages/Skills'
@@ -52,12 +52,12 @@ function App() {
   const { loadEssays } = useEssayStore()
   const location = useLocation()
 
-  // Check if we're on the reset password page
-  const isResetPasswordPage = location.pathname === '/reset-password'
+  // Check if we're on the verify code page
+  const isVerifyCodePage = location.pathname === '/verify-code'
 
   useEffect(() => {
-    // Don't initialize auth on reset password page
-    if (isResetPasswordPage) {
+    // Don't initialize auth on verify code page
+    if (isVerifyCodePage) {
       setLoading(false)
       return
     }
@@ -74,11 +74,11 @@ function App() {
     })
 
     return () => subscription.unsubscribe()
-  }, [isResetPasswordPage])
+  }, [isVerifyCodePage])
 
   useEffect(() => {
-    // Don't initialize session-dependent features on reset password page
-    if (isResetPasswordPage) {
+    // Don't initialize session-dependent features on verify code page
+    if (isVerifyCodePage) {
       return
     }
 
@@ -90,21 +90,21 @@ function App() {
       loadSkills();
       loadEssays();
     }
-  }, [session, loadSkills, loadEssays, isResetPasswordPage]);
+  }, [session, loadSkills, loadEssays, isVerifyCodePage]);
 
   useEffect(() => {
-    // Don't initialize notifications on reset password page
-    if (isResetPasswordPage) {
+    // Don't initialize notifications on verify code page
+    if (isVerifyCodePage) {
       return
     }
     
     // Always initialize notifications on app load or after login
     useNotificationsStore.getState().initialize();
-  }, [isResetPasswordPage]);
+  }, [isVerifyCodePage]);
 
   return (
     <UserProfileProvider>
-      {session && !isResetPasswordPage && <RealtimeNotifications userId={session.user.id} />}
+      {session && !isVerifyCodePage && <RealtimeNotifications userId={session.user.id} />}
       <Toaster position="top-right" />
       <Routes>
         {/* Public routes */}
@@ -145,8 +145,8 @@ function App() {
           element={<ForgotPassword />}
         />
         <Route
-          path="/reset-password"
-          element={<ResetPassword />}
+          path="/verify-code"
+          element={<VerifyCode />}
         />
         <Route path="/thank-you" element={<ThankYou />} />
 

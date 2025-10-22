@@ -1540,6 +1540,18 @@ const Settings: React.FC = () => {
                 )}
               </div>
               <div className="mt-4">
+                <label className="label">Password Reset</label>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-gray-600">Can't remember your password?</p>
+                  <Link 
+                    to="/forgot-password" 
+                    className="text-sm text-teal-600 hover:text-teal-700 font-medium"
+                  >
+                    Reset Password
+                  </Link>
+                </div>
+              </div>
+              <div className="mt-4">
                 <label className="label">Two-Factor Authentication</label>
                 {mfaEnrolled ? (
                   <div className="flex flex-col gap-2">
