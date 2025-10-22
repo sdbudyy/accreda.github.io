@@ -38,6 +38,7 @@ export default function ForgotPassword() {
     try {
       // Use production URL for password reset redirect
       // Use environment variable if available, fallback to www.accreda.ca
+      // Also support GitHub Pages URL as fallback
       const baseUrl = import.meta.env.VITE_API_URL || 'https://www.accreda.ca'
       const redirectUrl = `${baseUrl}/reset-password`
       
