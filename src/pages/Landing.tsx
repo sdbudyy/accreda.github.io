@@ -766,22 +766,6 @@ const Landing: React.FC = () => {
     }
   }, [location]);
 
-  // Check for magic link authentication tokens on landing page
-  useEffect(() => {
-    const checkForMagicLink = async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const hash = window.location.hash;
-      
-      // Check if there are auth tokens in URL or hash
-      if (hash.includes('access_token') || urlParams.get('access_token')) {
-        // Redirect to magic link handler to process authentication
-        window.location.href = '/auth/magic-link' + window.location.search + window.location.hash;
-        return;
-      }
-    };
-    
-    checkForMagicLink();
-  }, []);
 
   return (
     <div className="min-h-screen bg-white">

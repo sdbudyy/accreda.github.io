@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import LoadingSpinner from '../common/LoadingSpinner';
+import { CheckCircle, Loader2 } from 'lucide-react';
 
 export default function MagicLinkHandler() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [authComplete, setAuthComplete] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -67,11 +68,16 @@ export default function MagicLinkHandler() {
 
         console.log('MagicLinkHandler: Session established successfully');
 
+        // Show success state briefly
+        setAuthComplete(true);
+        
         // Clear the URL parameters for security
         window.history.replaceState({}, document.title, window.location.pathname);
 
-        // Navigate to dashboard - the RoleBasedDashboard will handle the role-based routing
-        navigate('/dashboard', { replace: true });
+        // Navigate to dashboard after showing success
+        setTimeout(() => {
+          navigate('/dashboard', { replace: true });
+        }, 1500);
 
       } catch (err) {
         console.error('MagicLinkHandler: Error:', err);
@@ -83,18 +89,60 @@ export default function MagicLinkHandler() {
     handleMagicLink();
   }, [searchParams, navigate]);
 
-  if (loading) {
-    return <LoadingSpinner />;
+  // Show authentication loading/success page
+  if (loading || authComplete) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 to-cyan-50 p-4">
+        <div className="text-center max-w-md mx-auto">
+          <div className="mb-8">
+            {authComplete ? (
+              <CheckCircle className="w-20 h-20 text-green-500 mx-auto animate-pulse" />
+            ) : (
+              <Loader2 className="w-20 h-20 text-teal-600 mx-auto animate-spin" />
+            )}
+          </div>
+          
+          <h1 className="text-4xl font-bold text-teal-600 mb-4">
+            {authComplete ? 'Welcome Back!' : 'Logging you in...'}
+          </h1>
+          
+          <p className="text-slate-600 text-lg mb-6">
+            {authComplete 
+              ? 'Authentication successful! Redirecting to your dashboard...'
+              : 'Please wait while we securely log you into your Accreda account.'
+            }
+          </p>
+          
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-teal-100">
+            <div className="flex items-center justify-center space-x-2 text-sm text-slate-500">
+              <div className="w-2 h-2 bg-teal-500 rounded-full animate-pulse"></div>
+              <span>Securing your connection</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-red-500 text-center">
-          <p>Error: {error}</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-pink-50 p-4">
+        <div className="text-center max-w-md mx-auto">
+          <div className="mb-8">
+            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+              <span className="text-red-600 text-2xl">⚠️</span>
+            </div>
+          </div>
+          
+          <h1 className="text-3xl font-bold text-red-600 mb-4">Authentication Failed</h1>
+          
+          <p className="text-slate-600 text-lg mb-6">
+            {error}
+          </p>
+          
           <button 
             onClick={() => navigate('/login')}
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium"
           >
             Return to Login
           </button>
@@ -103,5 +151,5 @@ export default function MagicLinkHandler() {
     );
   }
 
-  return <LoadingSpinner />;
+  return null;
 }
