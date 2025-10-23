@@ -9,6 +9,7 @@ export default function ForgotPassword() {
   const [message, setMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [isWaitingForAuth, setIsWaitingForAuth] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -21,7 +22,22 @@ export default function ForgotPassword() {
       // They might be here to reset their password even if they're logged in
       // The UI will show them a logout option instead
     })
-  }, [])
+
+    // Listen for auth state changes to auto-redirect when magic link is clicked
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        // User has successfully authenticated via magic link
+        console.log('ForgotPassword: User authenticated, redirecting to dashboard')
+        setIsWaitingForAuth(true)
+        navigate('/dashboard', { replace: true })
+      }
+    })
+
+    // Cleanup subscription on unmount
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [navigate])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -36,8 +52,8 @@ export default function ForgotPassword() {
     setLoading(true)
 
     try {
-      // Send magic link that logs user in and redirects to magic link handler
-      const redirectUrl = `${window.location.origin}/auth/magic-link`
+      // Send magic link that logs user in and redirects to dashboard
+      const redirectUrl = `${window.location.origin}/dashboard`
       console.log('EmailLogin: Sending magic link with redirect URL:', redirectUrl)
       
       // Use signInWithOtp to send magic link that logs user in
@@ -54,7 +70,7 @@ export default function ForgotPassword() {
         throw error
       }
       
-      setMessage('A magic link has been sent to your email address. Click the link to automatically sign in to your account.')
+      setMessage('A magic link has been sent to your email address. Click the link to automatically sign in to your account. This page will automatically redirect you to the dashboard once you click the link.')
       setEmail('')
     } catch (err) {
       console.error('EmailLogin: Error:', err)
@@ -97,6 +113,15 @@ export default function ForgotPassword() {
         {message && (
           <div className="rounded-lg bg-green-50 p-4 border border-green-100">
             <div className="text-sm text-green-700">{message}</div>
+          </div>
+        )}
+
+        {isWaitingForAuth && (
+          <div className="rounded-lg bg-blue-50 p-4 border border-blue-100">
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+              <div className="text-sm text-blue-700">Authentication successful! Redirecting to dashboard...</div>
+            </div>
           </div>
         )}
 
