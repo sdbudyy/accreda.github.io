@@ -51,7 +51,7 @@ export class EmailNotificationService {
         return true;
       }
 
-      return data[preferenceType] ?? true;
+      return (data as any)[preferenceType] ?? true;
     } catch (error) {
       console.error('Error fetching email preferences:', error);
       return true; // Default to enabled
