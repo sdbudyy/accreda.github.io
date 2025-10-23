@@ -94,23 +94,18 @@ const Settings: React.FC = () => {
   const [portfolioPrefsSaving, setPortfolioPrefsSaving] = useState(false);
   const [portfolioPrefsSaved, setPortfolioPrefsSaved] = useState(false);
 
+  // Add state for all notification preferences
+  const [supervisorReviews, setSupervisorReviews] = useState(true);
+  const [saoFeedback, setSaoFeedback] = useState(true);
+  const [relationships, setRelationships] = useState(true);
+  const [userSkills, setUserSkills] = useState(true);
+
   const { profile, loading: profileLoading, error: profileError, refresh: refreshProfile } = useUserProfile();
   const userRole = profile?.account_type || null;
   const fullName = profile?.full_name || '';
   const email = profile?.email || '';
   const [editFullName, setEditFullName] = useState(fullName);
   const [editEmail, setEditEmail] = useState(email);
-
-  const {
-    supervisorReviews,
-    saoFeedback,
-    relationships,
-    userSkills,
-    toggleSupervisorReviews,
-    toggleSaoFeedback,
-    toggleRelationships,
-    toggleUserSkills,
-  } = useNotificationPreferences();
 
   const { 
     tier,
@@ -197,37 +192,90 @@ const Settings: React.FC = () => {
     }
   }, [user]);
 
-  // Fetch notification preferences from the new table on mount
+  // Fetch notification preferences from the database on mount
   useEffect(() => {
     const fetchPortfolioPrefs = async () => {
       setPortfolioPrefsLoading(true);
-      const { data, error } = await supabase
-        .from('notification_preferences')
-        .select('portfolio_reminder_enabled, portfolio_reminder_frequency')
-        .eq('user_id', profile?.id)
-        .single();
-      if (!error && data) {
-        setPortfolioReminderEnabled(data.portfolio_reminder_enabled ?? true);
-        setPortfolioReminderFrequency(data.portfolio_reminder_frequency ?? 'weekly');
+      try {
+        const { data, error } = await supabase
+          .from('notification_preferences')
+          .select('*')
+          .eq('user_id', profile?.id)
+          .single();
+        
+        if (!error && data) {
+          setPortfolioReminderEnabled(data.portfolio_reminder_enabled ?? true);
+          setPortfolioReminderFrequency(data.portfolio_reminder_frequency ?? 'weekly');
+          setSupervisorReviews(data.supervisor_reviews ?? true);
+          setSaoFeedback(data.sao_feedback ?? true);
+          setRelationships(data.relationships ?? true);
+          setUserSkills(data.user_skills ?? true);
+        } else if (error && error.code === 'PGRST116') {
+          // No preferences found, create default ones
+          const { error: insertError } = await supabase
+            .from('notification_preferences')
+            .insert({
+              user_id: profile?.id,
+              portfolio_reminder_enabled: true,
+              portfolio_reminder_frequency: 'weekly',
+              supervisor_reviews: true,
+              sao_feedback: true,
+              relationships: true,
+              user_skills: true
+            });
+          
+          if (!insertError) {
+            setPortfolioReminderEnabled(true);
+            setPortfolioReminderFrequency('weekly');
+            setSupervisorReviews(true);
+            setSaoFeedback(true);
+            setRelationships(true);
+            setUserSkills(true);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching portfolio preferences:', err);
       }
       setPortfolioPrefsLoading(false);
     };
     if (profile?.id) fetchPortfolioPrefs();
   }, [profile?.id]);
 
-  // Handler to update the table when toggled/changed
-  const updatePortfolioPrefs = async (updates: Partial<{ portfolio_reminder_enabled: boolean; portfolio_reminder_frequency: string }>) => {
+  // Handler to update the notification preferences table
+  const updatePortfolioPrefs = async (updates: Partial<{ 
+    portfolio_reminder_enabled: boolean; 
+    portfolio_reminder_frequency: string;
+    supervisor_reviews?: boolean;
+    sao_feedback?: boolean;
+    relationships?: boolean;
+    user_skills?: boolean;
+  }>) => {
     setPortfolioPrefsLoading(true);
-    const { error } = await supabase
-      .from('notification_preferences')
-      .upsert({
-        user_id: profile?.id,
-        portfolio_reminder_enabled: updates.portfolio_reminder_enabled ?? portfolioReminderEnabled,
-        portfolio_reminder_frequency: updates.portfolio_reminder_frequency ?? portfolioReminderFrequency,
-      }, { onConflict: 'user_id' });
-    if (!error) {
-      if (updates.portfolio_reminder_enabled !== undefined) setPortfolioReminderEnabled(updates.portfolio_reminder_enabled);
-      if (updates.portfolio_reminder_frequency !== undefined) setPortfolioReminderFrequency(updates.portfolio_reminder_frequency);
+    try {
+      const { error } = await supabase
+        .from('notification_preferences')
+        .upsert({
+          user_id: profile?.id,
+          portfolio_reminder_enabled: updates.portfolio_reminder_enabled ?? portfolioReminderEnabled,
+          portfolio_reminder_frequency: updates.portfolio_reminder_frequency ?? portfolioReminderFrequency,
+          supervisor_reviews: updates.supervisor_reviews ?? true,
+          sao_feedback: updates.sao_feedback ?? true,
+          relationships: updates.relationships ?? true,
+          user_skills: updates.user_skills ?? true,
+        }, { onConflict: 'user_id' });
+      
+      if (!error) {
+        if (updates.portfolio_reminder_enabled !== undefined) setPortfolioReminderEnabled(updates.portfolio_reminder_enabled);
+        if (updates.portfolio_reminder_frequency !== undefined) setPortfolioReminderFrequency(updates.portfolio_reminder_frequency);
+        if (updates.supervisor_reviews !== undefined) setSupervisorReviews(updates.supervisor_reviews);
+        if (updates.sao_feedback !== undefined) setSaoFeedback(updates.sao_feedback);
+        if (updates.relationships !== undefined) setRelationships(updates.relationships);
+        if (updates.user_skills !== undefined) setUserSkills(updates.user_skills);
+      } else {
+        console.error('Error updating portfolio preferences:', error);
+      }
+    } catch (err) {
+      console.error('Error updating portfolio preferences:', err);
     }
     setPortfolioPrefsLoading(false);
   };
@@ -921,10 +969,38 @@ const Settings: React.FC = () => {
     setPortfolioReminderFrequency(frequency);
   };
 
+  // Toggle functions for notification preferences
+  const toggleSupervisorReviews = () => {
+    setSupervisorReviews(!supervisorReviews);
+    setPortfolioPrefsDirty(true);
+  };
+
+  const toggleSaoFeedback = () => {
+    setSaoFeedback(!saoFeedback);
+    setPortfolioPrefsDirty(true);
+  };
+
+  const toggleRelationships = () => {
+    setRelationships(!relationships);
+    setPortfolioPrefsDirty(true);
+  };
+
+  const toggleUserSkills = () => {
+    setUserSkills(!userSkills);
+    setPortfolioPrefsDirty(true);
+  };
+
   const handleSavePortfolioPrefs = async () => {
     setPortfolioPrefsSaving(true);
     setPortfolioPrefsSaved(false);
-    await updatePortfolioPrefs({ portfolio_reminder_enabled: portfolioReminderEnabled, portfolio_reminder_frequency: portfolioReminderFrequency });
+    await updatePortfolioPrefs({ 
+      portfolio_reminder_enabled: portfolioReminderEnabled, 
+      portfolio_reminder_frequency: portfolioReminderFrequency,
+      supervisor_reviews: supervisorReviews,
+      sao_feedback: saoFeedback,
+      relationships: relationships,
+      user_skills: userSkills
+    });
     setPortfolioPrefsSaving(false);
     setPortfolioPrefsSaved(true);
     setTimeout(() => setPortfolioPrefsSaved(false), 2000);

@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { EmailNotificationService } from '../services/emailNotificationService';
 
 export async function sendNotification({
   userId,
@@ -57,13 +58,21 @@ export async function markNotificationRead(notificationId: string) {
 
 // Helper functions for common notification types
 export const sendSupervisorRequestNotification = async (supervisorId: string, eitName: string) => {
-  return sendNotification({
+  // Send in-app notification
+  await sendNotification({
     userId: supervisorId,
     type: 'request',
     title: 'New EIT Connection Request',
     message: `${eitName} has requested to connect with you as their supervisor.`,
     data: { type: 'supervisor_request' }
   });
+
+  // Send email notification
+  try {
+    await EmailNotificationService.sendSupervisorReviewEmail(supervisorId, 'New EIT Connection Request', eitName);
+  } catch (error) {
+    console.error('Failed to send supervisor request email:', error);
+  }
 };
 
 export const sendScoreNotification = async (eitId: string, skillName: string, score: number) => {
@@ -127,13 +136,21 @@ export const sendNudgeNotification = async (userId: string, senderName: string) 
 };
 
 export const sendSAOFeedbackNotification = async (eitId: string, saoTitle: string) => {
-  return sendNotification({
+  // Send in-app notification
+  await sendNotification({
     userId: eitId,
     type: 'sao_feedback',
     title: 'New SAO Feedback',
     message: `You received feedback on your SAO: "${saoTitle}".`,
     data: { type: 'sao_feedback', saoTitle }
   });
+
+  // Send email notification
+  try {
+    await EmailNotificationService.sendSAOFeedbackEmail(eitId, saoTitle, 'New feedback has been provided on your SAO.');
+  } catch (error) {
+    console.error('Failed to send SAO feedback email:', error);
+  }
 };
 
 export const sendDocumentSharedNotification = async (recipientId: string, documentName: string, senderName: string) => {
