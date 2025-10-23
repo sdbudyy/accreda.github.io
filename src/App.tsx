@@ -42,6 +42,7 @@ import Enterprise from './pages/Enterprise'
 import { UserProfileProvider } from './context/UserProfileContext'
 import Privacy from './pages/Privacy'
 import Terms from './pages/Terms'
+import MagicLinkRedirect from './pages/MagicLinkRedirect'
 
 function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -125,6 +126,10 @@ function App() {
         <Route
           path="/forgot-password"
           element={<ForgotPassword />}
+        />
+        <Route
+          path="/magic-link-redirect"
+          element={<MagicLinkRedirect />}
         />
         <Route path="/thank-you" element={<ThankYou />} />
 

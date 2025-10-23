@@ -33,9 +33,23 @@ export default function ForgotPassword() {
       }
     })
 
-    // Cleanup subscription on unmount
+    // Listen for messages from the magic link redirect tab
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return
+      
+      if (event.data.type === 'MAGIC_LINK_AUTH_SUCCESS') {
+        console.log('ForgotPassword: Received auth success message from magic link tab')
+        setIsWaitingForAuth(true)
+        navigate('/dashboard', { replace: true })
+      }
+    }
+
+    window.addEventListener('message', handleMessage)
+
+    // Cleanup subscription and listener on unmount
     return () => {
       subscription.unsubscribe()
+      window.removeEventListener('message', handleMessage)
     }
   }, [navigate])
 
@@ -52,8 +66,8 @@ export default function ForgotPassword() {
     setLoading(true)
 
     try {
-      // Send magic link that logs user in and redirects to dashboard
-      const redirectUrl = `${window.location.origin}/dashboard`
+      // Send magic link that logs user in and redirects to our custom handler
+      const redirectUrl = `${window.location.origin}/magic-link-redirect`
       console.log('EmailLogin: Sending magic link with redirect URL:', redirectUrl)
       
       // Use signInWithOtp to send magic link that logs user in
@@ -70,7 +84,7 @@ export default function ForgotPassword() {
         throw error
       }
       
-      setMessage('A magic link has been sent to your email address. Click the link to automatically sign in to your account. This page will automatically redirect you to the dashboard once you click the link.')
+      setMessage('A magic link has been sent to your email address. Click the link to automatically sign in to your account. The new tab will close automatically and redirect this page to the dashboard.')
       setEmail('')
     } catch (err) {
       console.error('EmailLogin: Error:', err)
